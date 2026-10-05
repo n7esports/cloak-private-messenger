@@ -1,0 +1,33 @@
+{
+  "name": "@cloak/crypto-engine",
+  "version": "1.0.0",
+  "description": "Core client-side ECDH + AES-GCM encryption engine for Cloak Private Messenger.",
+  "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "crypto",
+    "ecdh",
+    "aes-gcm",
+    "webcrypto",
+    "cloak",
+    "e2ee"
+  ],
+  "license": "MIT"
+}
