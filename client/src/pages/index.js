@@ -31,7 +31,7 @@ export default function Home() {
 
   // Initialize CloakClient & handle URL invitation hash
   useEffect(() => {
-    const client = new CloakClient({ url: 'ws://localhost:8080' });
+    const client = new CloakClient();
     clientRef.current = client;
 
     client.onStatusCallback = (status) => setConnected(status === 'connected');
