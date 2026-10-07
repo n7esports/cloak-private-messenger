@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { CloakClient } from '../lib/websocketClient';
 import InviteModal from '../components/InviteModal';
+import {
+  requestNotificationPermission,
+  triggerIncomingMessageNotification,
+} from '../lib/notifications';
 
 const ICON_PATHS = {
   shield: (
@@ -211,6 +215,16 @@ export default function Home() {
       if (!targetSessionId || !sessionClientsRef.current.has(targetSessionId)) {
         return;
       }
+      triggerIncomingMessageNotification({
+        sender: 'Peer',
+        body: message.content,
+        roomId: targetSessionId,
+      }).catch((error) => {
+        console.error(
+          'Could not show an incoming message notification:',
+          error
+        );
+      });
       setSessions((previous) =>
         previous.map((session) => {
           if (session.id !== targetSessionId) return session;
@@ -477,6 +491,20 @@ export default function Home() {
   }
 
   async function connectWithKey(key, showAccessCode = false) {
+    requestNotificationPermission()
+      .then((result) => {
+        if (result.status === 'error') {
+          console.error('Notification setup failed:', result.error);
+        } else if (result.registration?.registered === false) {
+          console.info(
+            'Notifications are enabled locally but push token registration is not configured:',
+            result.registration.reason
+          );
+        }
+      })
+      .catch((error) => {
+        console.error('Notification setup failed:', error);
+      });
     const client = createSessionClient();
     try {
       await client.joinWithKey(key);
