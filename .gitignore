@@ -1,6 +1,23 @@
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Build & Packaging Outputs
 .next/
+**/.next/
 dist/
+**/dist/
 build/
-.env.local
+**/build/
+
+# Local Environment Overrides
+.env*.local
+.env
+
+# Allow production config
+!.env.production
+
+# Logs & System
+*.log
 .DS_Store
+.vscode/
