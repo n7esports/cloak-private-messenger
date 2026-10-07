@@ -2,12 +2,21 @@ import { Capacitor } from '@capacitor/core';
 
 const PASSCODE_STORAGE_KEY = 'cloak.security.passcodes.v1';
 const FAILURE_STORAGE_KEY = 'cloak.security.failures.v1';
+const SESSION_ACTIVE_KEY = 'cloak.security.session-active.v1';
+const SESSION_ACTIVITY_KEY = 'cloak.security.last-activity.v1';
+const SESSION_STATE_KEY = 'cloak.security.session-state.v1';
+const SESSION_CRYPTO_DATABASE = 'cloak-session-crypto';
+const SESSION_CRYPTO_STORE = 'keys';
+const SESSION_CRYPTO_KEY = 'session-state';
+export const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const PBKDF2_ITERATIONS = 600000;
 const PASSCODE_PATTERN = /^\d{4,12}$/;
 const MAX_FAILED_ATTEMPTS = 5;
 const INITIAL_LOCKOUT_MS = 30000;
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
 const sensitiveStateCleanups = new Set();
+let wipeGeneration = 0;
+let wipeInProgress = false;
 
 async function getStorage(key = PASSCODE_STORAGE_KEY) {
   if (Capacitor.isNativePlatform()) {
@@ -109,6 +118,204 @@ function validatePasscodes(primaryPasscode, decoyPasscode) {
 export async function hasPasscodes() {
   const storage = await getStorage();
   return Boolean(await storage.get());
+}
+
+export function isSessionActive() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const active = window.sessionStorage.getItem(SESSION_ACTIVE_KEY) === 'true';
+    const lastActivity = Number(
+      window.sessionStorage.getItem(SESSION_ACTIVITY_KEY)
+    );
+    if (
+      !active ||
+      !Number.isFinite(lastActivity) ||
+      Date.now() - lastActivity >= SESSION_IDLE_TIMEOUT_MS
+    ) {
+      clearSessionActive();
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw new Error(`Could not read the active browser session: ${error.message}`);
+  }
+}
+
+export function setSessionActive() {
+  if (typeof window === 'undefined') {
+    throw new Error('Browser session storage is unavailable.');
+  }
+  try {
+    window.sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+    window.sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
+  } catch (error) {
+    throw new Error(`Could not activate the browser session: ${error.message}`);
+  }
+}
+
+export function touchSessionActivity() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.sessionStorage.getItem(SESSION_ACTIVE_KEY) === 'true') {
+      window.sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
+    }
+  } catch (error) {
+    throw new Error(`Could not update session activity: ${error.message}`);
+  }
+}
+
+export function getSessionIdleRemainingMs() {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const lastActivity = Number(
+      window.sessionStorage.getItem(SESSION_ACTIVITY_KEY)
+    );
+    if (!Number.isFinite(lastActivity)) return 0;
+    return Math.max(0, SESSION_IDLE_TIMEOUT_MS - (Date.now() - lastActivity));
+  } catch (error) {
+    throw new Error(`Could not read session activity: ${error.message}`);
+  }
+}
+
+export function clearSessionActive() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(SESSION_ACTIVE_KEY);
+    window.sessionStorage.removeItem(SESSION_ACTIVITY_KEY);
+  } catch (error) {
+    throw new Error(`Could not clear the active browser session: ${error.message}`);
+  }
+}
+
+function openSessionCryptoDatabase() {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.reject(
+      new Error('Encrypted session persistence requires IndexedDB.')
+    );
+  }
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SESSION_CRYPTO_DATABASE, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(SESSION_CRYPTO_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () =>
+      reject(request.error || new Error('Could not open session key storage.'));
+    request.onblocked = () =>
+      reject(new Error('Session key storage upgrade was blocked.'));
+  });
+}
+
+async function getSessionCryptoKey(createIfMissing) {
+  const database = await openSessionCryptoDatabase();
+  try {
+    const existingKey = await new Promise((resolve, reject) => {
+      const transaction = database.transaction(
+        SESSION_CRYPTO_STORE,
+        'readonly'
+      );
+      const request = transaction
+        .objectStore(SESSION_CRYPTO_STORE)
+        .get(SESSION_CRYPTO_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () =>
+        reject(request.error || new Error('Could not read the session key.'));
+    });
+    if (existingKey || !createIfMissing) return existingKey;
+
+    const generatedKey = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(
+        SESSION_CRYPTO_STORE,
+        'readwrite'
+      );
+      transaction.objectStore(SESSION_CRYPTO_STORE).put(
+        generatedKey,
+        SESSION_CRYPTO_KEY
+      );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () =>
+        reject(
+          transaction.error || new Error('Could not save the session key.')
+        );
+      transaction.onabort = () =>
+        reject(transaction.error || new Error('Saving the session key was aborted.'));
+    });
+    return generatedKey;
+  } finally {
+    database.close();
+  }
+}
+
+export async function persistSessionState(state) {
+  if (typeof window === 'undefined') return;
+  if (wipeInProgress) return;
+  const generation = wipeGeneration;
+  const key = await getSessionCryptoKey(true);
+  if (!key) throw new Error('Could not create an encrypted session key.');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(state));
+  try {
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      plaintext
+    );
+    if (wipeInProgress || generation !== wipeGeneration) return;
+    window.sessionStorage.setItem(
+      SESSION_STATE_KEY,
+      JSON.stringify({
+        version: 1,
+        iv: toBase64Url(iv),
+        ciphertext: toBase64Url(new Uint8Array(ciphertext)),
+      })
+    );
+  } finally {
+    plaintext.fill(0);
+    iv.fill(0);
+  }
+}
+
+export async function restoreSessionState() {
+  if (typeof window === 'undefined') return null;
+  const savedState = window.sessionStorage.getItem(SESSION_STATE_KEY);
+  if (!savedState) return null;
+  const envelope = JSON.parse(savedState);
+  if (
+    envelope?.version !== 1 ||
+    typeof envelope.iv !== 'string' ||
+    typeof envelope.ciphertext !== 'string'
+  ) {
+    throw new Error('Saved session data is invalid.');
+  }
+  const key = await getSessionCryptoKey(false);
+  if (!key) {
+    throw new Error('The encrypted session key is missing; saved session cannot be restored.');
+  }
+  const iv = fromBase64Url(envelope.iv);
+  const ciphertext = fromBase64Url(envelope.ciphertext);
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      ciphertext
+    );
+    return JSON.parse(new TextDecoder().decode(plaintext));
+  } catch (error) {
+    throw new Error(`Could not decrypt saved session data: ${error.message}`);
+  } finally {
+    iv.fill(0);
+    ciphertext.fill(0);
+  }
+}
+
+export function clearPersistedSessionState() {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.removeItem(SESSION_STATE_KEY);
 }
 
 export async function setPasscodes(primaryPasscode, decoyPasscode) {
@@ -269,28 +476,33 @@ async function clearWebSessionData(preservePasscodes) {
     }
   }
 
-  if (window.indexedDB?.databases) {
+  if (window.indexedDB) {
     try {
-      const databases = await window.indexedDB.databases();
-      await Promise.all(
+      const databases =
+        typeof window.indexedDB.databases === 'function'
+          ? await window.indexedDB.databases()
+          : [{ name: SESSION_CRYPTO_DATABASE }];
+      const names = new Set(
         databases
-          .filter((database) => database.name)
-          .map(
-            (database) =>
-              new Promise((resolve, reject) => {
-                const request = window.indexedDB.deleteDatabase(database.name);
-                request.onsuccess = () => resolve();
-                request.onerror = () =>
-                  reject(
-                    request.error ||
-                      new Error(`Could not delete database ${database.name}.`)
-                  );
-                request.onblocked = () =>
-                  reject(
-                    new Error(`Database deletion was blocked: ${database.name}.`)
-                  );
-              })
-          )
+          .map((database) => database.name)
+          .filter((name) => typeof name === 'string')
+      );
+      names.add(SESSION_CRYPTO_DATABASE);
+      await Promise.all(
+        [...names].map(
+          (name) =>
+            new Promise((resolve, reject) => {
+              const request = window.indexedDB.deleteDatabase(name);
+              request.onsuccess = () => resolve();
+              request.onerror = () =>
+                reject(
+                  request.error ||
+                    new Error(`Could not delete database ${name}.`)
+                );
+              request.onblocked = () =>
+                reject(new Error(`Database deletion was blocked: ${name}.`));
+            })
+        )
       );
     } catch (error) {
       errors.push(error);
@@ -336,53 +548,67 @@ async function clearSessionData({ preservePasscodes }) {
 }
 
 export async function triggerDecoyWipe() {
-  const cleanupErrors = await runSensitiveStateCleanups();
-  let storageError;
+  wipeGeneration += 1;
+  wipeInProgress = true;
   try {
-    await clearSessionData({ preservePasscodes: true });
-  } catch (error) {
-    storageError = error;
-  }
-  if (cleanupErrors.length || storageError) {
-    throw new AggregateError(
-      [...cleanupErrors, ...(storageError ? [storageError] : [])],
-      'Could not completely clear sensitive session state.'
-    );
+    const cleanupErrors = await runSensitiveStateCleanups();
+    let storageError;
+    try {
+      await clearSessionData({ preservePasscodes: true });
+    } catch (error) {
+      storageError = error;
+    }
+    if (cleanupErrors.length || storageError) {
+      throw new AggregateError(
+        [...cleanupErrors, ...(storageError ? [storageError] : [])],
+        'Could not completely clear sensitive session state.'
+      );
+    }
+  } finally {
+    wipeInProgress = false;
   }
 }
 
-export async function triggerPanicWipe() {
-  const cleanupErrors = await runSensitiveStateCleanups();
-  let storageError;
+export async function nukeSessionData() {
+  wipeGeneration += 1;
+  wipeInProgress = true;
   try {
-    await clearSessionData({ preservePasscodes: false });
-  } catch (error) {
-    storageError = error;
-  }
-
-  if (typeof window !== 'undefined' && window.caches) {
+    const cleanupErrors = await runSensitiveStateCleanups();
+    let storageError;
     try {
-      await Promise.all(
-        (await window.caches.keys()).map((cacheName) =>
-          window.caches.delete(cacheName)
-        )
-      );
+      await clearSessionData({ preservePasscodes: false });
+    } catch (error) {
+      storageError = error;
+    }
+
+    if (typeof window !== 'undefined' && window.caches) {
+      try {
+        await Promise.all(
+          (await window.caches.keys()).map((cacheName) =>
+            window.caches.delete(cacheName)
+          )
+        );
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+
+    try {
+      const storage = await getStorage();
+      await storage.remove();
     } catch (error) {
       cleanupErrors.push(error);
     }
-  }
 
-  const storage = await getStorage();
-  try {
-    await storage.remove();
-  } catch (error) {
-    cleanupErrors.push(error);
-  }
-
-  if (cleanupErrors.length || storageError) {
-    throw new AggregateError(
-      [...cleanupErrors, ...(storageError ? [storageError] : [])],
-      'Panic wipe could not completely clear sensitive data.'
-    );
+    if (cleanupErrors.length || storageError) {
+      throw new AggregateError(
+        [...cleanupErrors, ...(storageError ? [storageError] : [])],
+        'Emergency session purge could not completely clear sensitive data.'
+      );
+    }
+  } finally {
+    wipeInProgress = false;
   }
 }
+
+export const triggerPanicWipe = nukeSessionData;

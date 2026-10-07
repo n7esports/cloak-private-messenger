@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
 import PasscodeModal from "../components/PasscodeModal";
 import {
+  clearSessionActive,
+  getSessionIdleRemainingMs,
   hasPasscodes,
+  isSessionActive,
+  nukeSessionData as purgeSessionData,
+  setSessionActive,
   setPasscodes,
   triggerDecoyWipe,
-  triggerPanicWipe,
+  touchSessionActivity,
   verifyPasscode,
 } from "../lib/security";
 import "../styles/globals.css";
-
-const IDLE_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
 
 export default function App({ Component, pageProps }) {
   const [ready, setReady] = useState(false);
@@ -25,20 +27,26 @@ export default function App({ Component, pageProps }) {
     if (!unlockedRef.current) return;
     unlockedRef.current = false;
     setUnlocked(false);
+    try {
+      clearSessionActive();
+    } catch (error) {
+      console.error("Could not clear active session state:", error);
+      setStartupError("Could not safely lock the current session.");
+    }
   }, []);
 
-  const panicWipe = useCallback(async () => {
+  const nukeSessionData = useCallback(async () => {
     unlockedRef.current = false;
     setUnlocked(false);
     setHasMountedApp(false);
     setDecoy(false);
     try {
-      await triggerPanicWipe();
+      await purgeSessionData();
       setConfigured(false);
       setStartupError("");
     } catch (error) {
-      console.error("Panic wipe failed:", error);
-      setStartupError("The panic wipe could not clear all data. Restart the app.");
+      console.error("Emergency session purge failed:", error);
+      setStartupError("The emergency purge could not clear all data. Restart the app.");
     }
   }, []);
 
@@ -48,6 +56,11 @@ export default function App({ Component, pageProps }) {
       .then((exists) => {
         if (!active) return;
         setConfigured(exists);
+        if (exists && isSessionActive()) {
+          unlockedRef.current = true;
+          setUnlocked(true);
+          setHasMountedApp(true);
+        }
         setReady(true);
       })
       .catch((error) => {
@@ -58,67 +71,64 @@ export default function App({ Component, pageProps }) {
       });
 
     if (typeof window !== "undefined") {
-      window.triggerPanicWipe = panicWipe;
+      window.nukeSessionData = nukeSessionData;
     }
     return () => {
       active = false;
-      if (typeof window !== "undefined" && window.triggerPanicWipe === panicWipe) {
-        delete window.triggerPanicWipe;
+      if (
+        typeof window !== "undefined" &&
+        window.nukeSessionData === nukeSessionData
+      ) {
+        delete window.nukeSessionData;
       }
     };
-  }, [panicWipe]);
+  }, [nukeSessionData]);
 
   useEffect(() => {
     if (!unlocked) return undefined;
 
     const onVisibilityChange = () => {
-      if (document.visibilityState !== "visible") {
+      if (document.visibilityState === "visible" && !isSessionActive()) {
         lockApp();
+        return;
       }
+      resetIdleTimeout();
     };
     let idleTimeout;
     const resetIdleTimeout = () => {
       window.clearTimeout(idleTimeout);
-      idleTimeout = window.setTimeout(lockApp, IDLE_LOCK_TIMEOUT_MS);
+      let remaining;
+      try {
+        remaining = getSessionIdleRemainingMs();
+      } catch (error) {
+        console.error("Could not check the session idle timeout:", error);
+        lockApp();
+        return;
+      }
+      idleTimeout = window.setTimeout(lockApp, remaining);
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    for (const eventName of ["pointerdown", "keydown", "touchstart"]) {
-      window.addEventListener(eventName, resetIdleTimeout, { passive: true });
-    }
     resetIdleTimeout();
-
-    let appStateListener;
-    let listenerCancelled = false;
-    if (Capacitor.isNativePlatform()) {
-      import("@capacitor/app")
-        .then(({ App }) =>
-          App.addListener("appStateChange", ({ isActive }) => {
-            if (!isActive) lockApp();
-          })
-        )
-        .then((listener) => {
-          if (listenerCancelled) {
-            listener.remove().catch((error) => {
-              console.error("Could not remove native app state listener:", error);
-            });
-          } else {
-            appStateListener = listener;
-          }
-        })
-        .catch((error) => {
-          console.error("Could not observe native app state:", error);
-        });
+    const activityHandlers = [];
+    for (const eventName of ["pointerdown", "keydown", "touchstart"]) {
+      const handler = () => {
+        try {
+          touchSessionActivity();
+          resetIdleTimeout();
+        } catch (error) {
+          console.error("Could not update session activity:", error);
+          lockApp();
+        }
+      };
+      activityHandlers.push([eventName, handler]);
+      window.addEventListener(eventName, handler, { passive: true });
     }
 
     return () => {
-      listenerCancelled = true;
       window.clearTimeout(idleTimeout);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      for (const eventName of ["pointerdown", "keydown", "touchstart"]) {
-        window.removeEventListener(eventName, resetIdleTimeout);
-      }
-      appStateListener?.remove().catch((error) => {
-        console.error("Could not remove native app state listener:", error);
+      activityHandlers.forEach(([eventName, handler]) => {
+        window.removeEventListener(eventName, handler);
       });
     };
   }, [lockApp, unlocked]);
@@ -126,6 +136,7 @@ export default function App({ Component, pageProps }) {
   const handleSetup = async (primaryPasscode, decoyPasscode) => {
     await setPasscodes(primaryPasscode, decoyPasscode);
     setConfigured(true);
+    setSessionActive();
     unlockedRef.current = true;
     setUnlocked(true);
     setHasMountedApp(true);
@@ -143,6 +154,7 @@ export default function App({ Component, pageProps }) {
       return result;
     }
     if (result === "primary") {
+      setSessionActive();
       unlockedRef.current = true;
       setUnlocked(true);
       setHasMountedApp(true);
@@ -185,7 +197,15 @@ export default function App({ Component, pageProps }) {
     }
     return (
       <>
-        {hasMountedApp && <Component {...pageProps} />}
+        {hasMountedApp && (
+          <div
+            aria-hidden={!unlocked}
+            className={unlocked ? "" : "invisible pointer-events-none"}
+            inert={unlocked ? undefined : ""}
+          >
+            <Component {...pageProps} />
+          </div>
+        )}
         <PasscodeModal
           configured={configured}
           error={startupError}

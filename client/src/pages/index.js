@@ -6,7 +6,11 @@ import {
   requestNotificationPermission,
   triggerIncomingMessageNotification,
 } from '../lib/notifications';
-import { registerSensitiveStateCleanup } from '../lib/security';
+import {
+  persistSessionState,
+  registerSensitiveStateCleanup,
+  restoreSessionState,
+} from '../lib/security';
 
 const ICON_PATHS = {
   shield: (
@@ -172,6 +176,9 @@ export default function Home() {
   const seenMessageIdsRef = useRef(new Set());
   const typingTimeoutsRef = useRef(new Map());
   const localTypingTimeoutsRef = useRef(new Map());
+  const roomKeysRef = useRef(new Map());
+  const sessionRestoreFailedRef = useRef(false);
+  const [sessionStateReady, setSessionStateReady] = useState(false);
   const totalUnreadCount = sessions.reduce(
     (total, session) =>
       total +
@@ -194,6 +201,7 @@ export default function Home() {
       registerSensitiveStateCleanup(() => {
         sessionClientsRef.current.forEach((client) => client.disconnect());
         sessionClientsRef.current.clear();
+        roomKeysRef.current.clear();
         relayClientRef.current?.disconnect();
         relayClientRef.current = null;
         typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
@@ -410,6 +418,118 @@ export default function Home() {
   }, [sessions, activeSessionId]);
 
   useEffect(() => {
+    let cancelled = false;
+    async function restoreSavedSession() {
+      try {
+        const savedState = await restoreSessionState();
+        if (cancelled) return;
+        if (!savedState) {
+          setSessionStateReady(true);
+          return;
+        }
+        if (
+          savedState.version !== 1 ||
+          !Array.isArray(savedState.sessions) ||
+          !['join', 'chats', 'chat'].includes(savedState.screen)
+        ) {
+          throw new Error('Saved chat session has an unsupported format.');
+        }
+
+        const savedSessions = savedState.sessions.filter(
+          (session) =>
+            session &&
+            typeof session.id === 'string' &&
+            typeof session.name === 'string' &&
+            Array.isArray(session.messages)
+        );
+        const restoredSessions = savedSessions.map(
+          ({ roomKey, ...session }) => session
+        );
+        setSessions(restoredSessions);
+        setActiveSessionId(
+          restoredSessions.some((session) => session.id === savedState.activeSessionId)
+            ? savedState.activeSessionId
+            : null
+        );
+        activeSessionIdRef.current = restoredSessions.some(
+          (session) => session.id === savedState.activeSessionId
+        )
+          ? savedState.activeSessionId
+          : null;
+        setScreen(savedState.screen);
+
+        await Promise.all(
+          savedSessions.map(async (session) => {
+            if (typeof session.roomKey !== 'string') return;
+            roomKeysRef.current.set(session.id, session.roomKey);
+            const client = createSessionClient();
+            sessionClientsRef.current.set(session.id, client);
+            try {
+              await client.joinWithKey(session.roomKey);
+              if (cancelled) {
+                sessionClientsRef.current.delete(session.id);
+                client.disconnect();
+              }
+            } catch (error) {
+              sessionClientsRef.current.delete(session.id);
+              client.disconnect();
+              console.error(
+                `Could not reconnect restored room ${session.id}:`,
+                error
+              );
+              if (!cancelled) {
+                setConnectionError(
+                  'A saved room could not reconnect. Check your network and reopen the room.'
+                );
+              }
+            }
+          })
+        );
+        if (!cancelled) setSessionStateReady(true);
+      } catch (error) {
+        sessionRestoreFailedRef.current = true;
+        console.error('Could not restore the encrypted chat session:', error);
+        if (!cancelled) {
+          setConnectionError(
+            'Saved chat state could not be restored. Your saved rooms remain encrypted.'
+          );
+          setSessionStateReady(true);
+        }
+      }
+    }
+
+    restoreSavedSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionStateReady || sessionRestoreFailedRef.current) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      const savedSessions = sessions.map((session) => ({
+        ...session,
+        roomKey:
+          roomKeysRef.current.get(session.id) ||
+          sessionClientsRef.current.get(session.id)?.roomKeyHex ||
+          undefined,
+      }));
+      persistSessionState({
+        version: 1,
+        sessions: savedSessions,
+        activeSessionId,
+        screen,
+      }).catch((error) => {
+        console.error('Could not save encrypted chat session state:', error);
+        setConnectionError(
+          'Chat state could not be saved for refresh recovery.'
+        );
+      });
+    }, 150);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSessionId, screen, sessionStateReady, sessions]);
+
+  useEffect(() => {
     const feed = chatFeedRef.current;
     if (
       !feed ||
@@ -560,6 +680,7 @@ export default function Home() {
       }
       sessionClientsRef.current.set(newSessionId, client);
       const normalizedKey = key.toLowerCase();
+      roomKeysRef.current.set(newSessionId, normalizedKey);
       const newSession = {
         id: newSessionId,
         name: `Peer ${normalizedKey.slice(0, 4)}...${normalizedKey.slice(-4)}`,
@@ -791,6 +912,7 @@ export default function Home() {
     setSessions((previous) =>
       previous.filter((session) => session.id !== activeSessionId)
     );
+    roomKeysRef.current.delete(activeSessionId);
     seenMessageIdsRef.current.clear();
     selectSession(null);
     setInputMessage('');
@@ -799,32 +921,19 @@ export default function Home() {
     setScreen('chats');
   }
 
-  function handleNuke() {
-    const clients = new Set([
-      relayClientRef.current,
-      ...sessionClientsRef.current.values(),
-    ]);
-    clients.forEach((client) => client?.disconnect());
-    sessionClientsRef.current.clear();
-    typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    typingTimeoutsRef.current.clear();
-    localTypingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-    localTypingTimeoutsRef.current.clear();
-    setSessions([]);
-    setActiveSessionId(null);
-    activeSessionIdRef.current = null;
-    setInputMessage('');
-    setRoomCode('');
-    seenMessageIdsRef.current.clear();
-    setShowNukeConfirm(false);
-    const relayClient = relayClientRef.current;
-    if (relayClient) {
-      relayClient.connect().catch((error) => {
-        console.error('Failed to reconnect after clearing the session:', error);
-        setConnectionError(
-          'Session cleared, but the relay could not reconnect. Check your connection and retry.'
-        );
-      });
+  async function handleNuke() {
+    if (typeof window.nukeSessionData !== 'function') {
+      setConnectionError('Emergency purge is unavailable. Restart the app.');
+      return;
+    }
+    try {
+      await window.nukeSessionData();
+      setShowNukeConfirm(false);
+    } catch (error) {
+      console.error('Emergency session purge failed:', error);
+      setConnectionError(
+        'Emergency purge failed. Sensitive data may remain on this device.'
+      );
     }
   }
 
@@ -1674,10 +1783,10 @@ export default function Home() {
               </span>
               <div>
                 <h2 className="font-semibold text-zinc-100" id="nuke-title">
-                  Nuke all active sessions?
+                  Purge all local app data?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  This disconnects all active rooms and removes their keys and messages from this device. You will need each key to reconnect.
+                  This disconnects every room and permanently deletes saved chats, room keys, passcodes, and local app data from this device. You will need to set up the vault again.
                 </p>
               </div>
             </div>
@@ -1694,7 +1803,7 @@ export default function Home() {
                 onClick={handleNuke}
                 type="button"
               >
-                Nuke all sessions
+                Purge local data
               </button>
             </div>
           </section>
