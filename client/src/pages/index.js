@@ -3,13 +3,6 @@ import Head from 'next/head';
 import { CloakClient, parseInvitation } from '../lib/websocketClient';
 import InviteModal from '../components/InviteModal';
 
-const NAV_ITEMS = [
-  { id: 'chats', label: 'Chats', icon: 'chat' },
-  { id: 'join', label: 'Join', icon: 'key' },
-  { id: 'qr', label: 'QR Code', icon: 'qr' },
-  { id: 'nuke', label: 'Nuke', icon: 'trash' },
-];
-
 const ICON_PATHS = {
   shield: (
     <>
@@ -165,6 +158,7 @@ export default function Home() {
   const [showBurnTimerDialog, setShowBurnTimerDialog] = useState(false);
   const [showMessageSearch, setShowMessageSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');
+  const [conversationSearch, setConversationSearch] = useState('');
   const [chatMenu, setChatMenu] = useState(null);
   const [inviteLink, setInviteLink] = useState('');
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -756,6 +750,11 @@ export default function Home() {
       .toLowerCase()
       .includes(messageSearch.toLowerCase())
   );
+  const filteredSessions = sessions.filter((session) =>
+    `${session.name} ${session.lastMessage || ''}`
+      .toLowerCase()
+      .includes(conversationSearch.toLowerCase())
+  );
 
   return (
     <>
@@ -772,9 +771,120 @@ export default function Home() {
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
 
-      <main className="flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[#09090b] pb-[calc(68px+env(safe-area-inset-bottom))] font-sans text-zinc-100 antialiased md:pb-0">
+      <main className="w-full h-screen overflow-hidden flex flex-row bg-[#09090b] font-sans text-zinc-100 antialiased">
+        <aside
+          className={`${screen === 'chat' && activeSession ? 'hidden' : 'flex'} md:flex w-full md:w-80 lg:w-96 h-full bg-[#18181b] border-r border-zinc-800 flex-col shrink-0`}
+        >
+          <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-zinc-800 px-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-200">
+                C
+              </span>
+              <h1 className="truncate text-base font-semibold text-zinc-100">
+                Cloak Vault
+              </h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                aria-label="Create a new room"
+                className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-emerald-300"
+                onClick={handleNewInvitation}
+                type="button"
+              >
+                <Icon name="plus" />
+              </button>
+              <button
+                aria-label="Join a room"
+                className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                onClick={openJoinDialog}
+                type="button"
+              >
+                <Icon name="key" />
+              </button>
+            </div>
+          </div>
+
+          <label className="relative mx-3 my-3 block shrink-0">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-500">
+              <Icon name="search" className="h-4 w-4" />
+            </span>
+            <input
+              aria-label="Search conversations"
+              className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/80 pl-10 pr-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-800"
+              onChange={(event) => setConversationSearch(event.target.value)}
+              placeholder="Search or start new room"
+              type="search"
+              value={conversationSearch}
+            />
+          </label>
+
+          <div className="flex-1 space-y-1 overflow-y-auto p-2">
+            {filteredSessions.map((session) => {
+              const unreadCount = session.messages.filter(
+                (message) =>
+                  message.sender === 'peer' && message.status !== 'seen'
+              ).length;
+              return (
+                <button
+                  className={`flex min-h-[76px] w-full items-center gap-3 border-l-2 px-3 py-2 text-left transition ${
+                    session.id === activeSessionId && screen === 'chat'
+                      ? 'border-emerald-500 bg-zinc-800/80'
+                      : 'border-transparent hover:bg-zinc-800/50'
+                  }`}
+                  key={session.id}
+                  onClick={() => handleSelectSession(session.id)}
+                  type="button"
+                >
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-200">
+                    {session.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-zinc-100">
+                        {session.name}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-zinc-500">
+                        {session.time || formatTime()}
+                      </span>
+                    </span>
+                    <span className="mt-1 flex items-center justify-between gap-2">
+                      <span className="truncate text-xs text-zinc-400">
+                        {session.lastMessage || 'No messages yet.'}
+                      </span>
+                      <span
+                        aria-label={`${unreadCount} unread messages`}
+                        className={`grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1 text-[10px] font-semibold ${
+                          unreadCount
+                            ? 'bg-emerald-500 text-zinc-950'
+                            : 'bg-zinc-700/70 text-zinc-400'
+                        }`}
+                      >
+                        {unreadCount}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+            {filteredSessions.length === 0 && (
+              <p className="px-3 py-6 text-center text-sm text-zinc-500">
+                {conversationSearch
+                  ? 'No matching conversations.'
+                  : 'No conversations yet. Create or join a room.'}
+              </p>
+            )}
+          </div>
+        </aside>
+
+        <div
+          className={`h-full min-w-0 flex-1 flex-col bg-[#09090b] ${
+            screen === 'chat' && activeSession
+              ? 'flex'
+              : 'hidden md:flex'
+          }`}
+        >
         <header
-          className="sticky top-0 z-20 shrink-0 border-b border-zinc-800 bg-[#0e0e10]/95 backdrop-blur-lg"
+          className="z-20 shrink-0 border-b border-zinc-800 bg-[#0e0e10]/95 backdrop-blur-lg"
           onContextMenu={(event) => {
             if (!activeSession) return;
             event.preventDefault();
@@ -1043,50 +1153,6 @@ export default function Home() {
                 <div ref={messagesEndRef} />
               </div>
             </div>
-          ) : screen === 'chats' ? (
-            <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
-              <h2 className="mb-4 text-lg font-semibold text-zinc-100">Chats</h2>
-              {sessions.length ? (
-                <ul className="divide-y divide-zinc-800 overflow-hidden rounded-2xl border border-zinc-800">
-                  {sessions.map((session) => {
-                    const unreadCount = session.messages.filter(
-                      (message) =>
-                        message.sender === 'peer' && message.status !== 'seen'
-                    ).length;
-                    return (
-                      <li key={session.id}>
-                        <button
-                          className="flex min-h-[76px] w-full items-center gap-3 px-4 text-left hover:bg-zinc-900"
-                          onClick={() => handleSelectSession(session.id)}
-                          type="button"
-                        >
-                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-200">
-                            {session.name.slice(0, 1).toUpperCase()}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-zinc-100">
-                              {session.name}
-                            </span>
-                            <span className="mt-1 block truncate text-xs text-zinc-500">
-                              {session.lastMessage || 'No messages yet.'}
-                            </span>
-                          </span>
-                          {unreadCount > 0 && (
-                            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-emerald-500 px-1.5 text-xs font-semibold text-zinc-950">
-                              {unreadCount}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="rounded-xl border border-zinc-800 p-5 text-sm text-zinc-400">
-                  No conversations yet. Create an invitation or join a room.
-                </p>
-              )}
-            </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-8 text-center">
               <span className="grid h-16 w-16 place-items-center rounded-2xl border border-emerald-900/70 bg-emerald-950/40 text-emerald-300">
@@ -1191,29 +1257,7 @@ export default function Home() {
           )}
         </footer>
 
-        <nav
-          aria-label="Mobile navigation"
-          className="fixed inset-x-0 bottom-0 z-30 grid min-h-16 grid-cols-4 border-t border-zinc-800 bg-[#101012]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
-        >
-          {NAV_ITEMS.map((item) => (
-            <button
-              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${item.id === 'nuke' ? 'text-rose-300' : 'text-zinc-400 hover:text-emerald-300'}`}
-              key={item.id}
-              onClick={() => {
-                  if (item.id === 'chats') {
-                    selectSession(null);
-                    setScreen('chats');
-                  } else if (item.id === 'join') openJoinDialog();
-                  else if (item.id === 'qr') handleOpenQr();
-                  else if (item.id === 'nuke') setShowNukeConfirm(true);
-                }}
-              type="button"
-            >
-              <Icon name={item.icon} className="h-5 w-5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        </div>
       </main>
 
       {chatMenu && activeSession && (
