@@ -5,9 +5,32 @@
 html,
 body,
 #__next {
+  width: 100%;
   min-height: 100%;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
+  background: #09090b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: #09090b;
+  background: #6ee7b7;
 }

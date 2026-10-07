@@ -1,82 +1,228 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { CloakClient, parseInvitation } from '../lib/websocketClient';
 import InviteModal from '../components/InviteModal';
 
+const NAV_ITEMS = [
+  { id: 'chats', label: 'Chats', icon: 'chat' },
+  { id: 'join', label: 'Join', icon: 'key' },
+  { id: 'qr', label: 'QR Code', icon: 'qr' },
+  { id: 'nuke', label: 'Nuke', icon: 'trash' },
+];
+
+const ICON_PATHS = {
+  shield: (
+    <>
+      <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" />
+      <path d="m9 12 2 2 4-4" />
+    </>
+  ),
+  chat: (
+    <>
+      <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
+      <path d="M8 12h.01M12 12h.01M16 12h.01" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="8" cy="15" r="5" />
+      <path d="m21 2-9.6 9.6M15.5 7.5l3 3L21 8l-3-3" />
+    </>
+  ),
+  back: (
+    <>
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </>
+  ),
+  minimize: (
+    <>
+      <path d="M5 12h14" />
+    </>
+  ),
+  qr: (
+    <>
+      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" />
+      <path d="M14 14h3v3h-3zM19 14h2M19 18v3M14 20h3" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6" />
+    </>
+  ),
+  camera: (
+    <>
+      <path d="M14 5 12.5 3h-5L6 5H3v14h18V5h-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  paperclip: (
+    <>
+      <path d="m21.4 11.1-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6l8.5-8.5" />
+    </>
+  ),
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 1 1 8 0v4m-4 4v2" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="m16 4 4 4L8 20l-5 1 1-5L16 4Z" />
+      <path d="m14 6 4 4" />
+    </>
+  ),
+  close: (
+    <>
+      <path d="m18 6-12 12M6 6l12 12" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </>
+  ),
+  plus: (
+    <>
+      <path d="M12 5v14m-7-7h14" />
+    </>
+  ),
+  check: (
+    <>
+      <path d="m5 12 4 4L19 6" />
+    </>
+  ),
+};
+
+function Icon({ name, className = 'h-5 w-5' }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.7"
+      viewBox="0 0 24 24"
+    >
+      {ICON_PATHS[name]}
+    </svg>
+  );
+}
+
+function formatTime(date = new Date()) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function Home() {
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
+  const [screen, setScreen] = useState('join');
   const [inputMessage, setInputMessage] = useState('');
   const [connected, setConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showNukeConfirm, setShowNukeConfirm] = useState(false);
+  const [showDeleteChatConfirm, setShowDeleteChatConfirm] = useState(false);
+  const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
+  const [showPeerInfo, setShowPeerInfo] = useState(false);
+  const [showBurnTimerDialog, setShowBurnTimerDialog] = useState(false);
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [messageSearch, setMessageSearch] = useState('');
+  const [chatMenu, setChatMenu] = useState(null);
   const [inviteLink, setInviteLink] = useState('');
   const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [burnAfterSec, setBurnAfterSec] = useState(0);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const clientRef = useRef(null);
+  const relayClientRef = useRef(null);
+  const sessionClientsRef = useRef(new Map());
   const messagesEndRef = useRef(null);
   const chatFeedRef = useRef(null);
   const activeSessionIdRef = useRef(null);
   const seenMessageIdsRef = useRef(new Set());
+  const totalUnreadCount = sessions.reduce(
+    (total, session) =>
+      total +
+      session.messages.filter(
+        (message) => message.sender === 'peer' && message.status !== 'seen'
+      ).length,
+    0
+  );
 
   const selectSession = (sessionId) => {
     activeSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
   };
+  const activeSession = sessions.find(
+    (session) => session.id === activeSessionId
+  );
 
-  const activeSession =
-    sessions.find((s) => s.id === activeSessionId) || sessions[0];
-
-  // Initialize CloakClient & handle URL invitation hash
-  useEffect(() => {
-    const client = new CloakClient();
-    clientRef.current = client;
-
-    client.onStatusCallback = (status) => setConnected(status === 'connected');
-
-    client.onMessageCallback = (msg) => {
-      const targetSessionId =
-        activeSessionIdRef.current || client.localQueueId;
-      if (!targetSessionId) return;
-
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === targetSessionId) {
-            const incomingMsg = {
-              id: msg.msgId || `${Date.now()}-${Math.random()}`,
-              msgId: msg.msgId,
-              sender: 'peer',
-              text: msg.content,
-              burnAfterSec: msg.burnAfterSec || 0,
-              burnExpiresAt: null,
-              remainingSec: null,
-              status: 'delivered',
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            };
-            return {
-              ...s,
-              lastMessage: msg.content,
-              time: 'Just now',
-              messages: [...s.messages, incomingMsg],
-            };
-          }
-          return s;
+  function configureClient(client) {
+    client.onStatusCallback = (status) => {
+      if (status === 'connected') {
+        setConnected(true);
+        setConnectionError('');
+      }
+      if (status === 'disconnected' && client === relayClientRef.current) {
+        setConnected(false);
+      }
+    };
+    client.onMessageCallback = (message) => {
+      const targetSessionId = client.localQueueId;
+      if (!targetSessionId || !sessionClientsRef.current.has(targetSessionId)) {
+        return;
+      }
+      setSessions((previous) =>
+        previous.map((session) => {
+          if (session.id !== targetSessionId) return session;
+          const incomingMessage = {
+            id: message.msgId,
+            msgId: message.msgId,
+            sender: 'peer',
+            text: message.content,
+            burnAfterSec: message.burnAfterSec || 0,
+            burnExpiresAt: null,
+            remainingSec: null,
+            status: 'delivered',
+            time: formatTime(),
+          };
+          return {
+            ...session,
+            lastMessage: message.content,
+            time: 'Just now',
+            messages: [...session.messages, incomingMessage],
+          };
         })
       );
     };
-
     client.onReceiptCallback = (msgId, status) => {
       const now = Date.now();
-      setSessions((prev) =>
-        prev.map((session) => {
+      setSessions((previous) =>
+        previous.map((session) => {
           let changed = false;
           const messages = session.messages.map((message) => {
             if (message.msgId !== msgId || message.sender !== 'me') {
               return message;
             }
-
             const statusRank = { sent: 0, delivered: 1, seen: 2 };
             const nextStatus =
               statusRank[status] > (statusRank[message.status] ?? -1)
@@ -88,99 +234,128 @@ export default function Home() {
               !message.burnExpiresAt
                 ? now + message.burnAfterSec * 1000
                 : message.burnExpiresAt;
-
             if (
-              nextStatus !== message.status ||
-              burnExpiresAt !== message.burnExpiresAt
+              nextStatus === message.status &&
+              burnExpiresAt === message.burnExpiresAt
             ) {
-              changed = true;
-              return {
-                ...message,
-                status: nextStatus,
-                burnExpiresAt,
-                remainingSec: burnExpiresAt
-                  ? Math.max(1, Math.ceil((burnExpiresAt - now) / 1000))
-                  : message.remainingSec,
-              };
+              return message;
             }
-            return message;
+            changed = true;
+            return {
+              ...message,
+              status: nextStatus,
+              burnExpiresAt,
+              remainingSec: burnExpiresAt
+                ? Math.max(1, Math.ceil((burnExpiresAt - now) / 1000))
+                : message.remainingSec,
+            };
           });
           return changed ? { ...session, messages } : session;
         })
       );
     };
+  }
+
+  function createSessionClient() {
+    const client = new CloakClient();
+    configureClient(client);
+    return client;
+  }
+
+  useEffect(() => {
+    const client = new CloakClient();
+    relayClientRef.current = client;
+    configureClient(client);
 
     let cancelled = false;
-
     client
       .connect()
       .then(async () => {
         if (cancelled) return;
-
-        const hash = window.location.hash;
-        if (hash && hash.includes('queueId=') && hash.includes('pubKey=')) {
-          const { queueId, pubKey } = parseInvitation(hash);
-
-          if (queueId && pubKey) {
-            try {
-              await client.acceptInvitation(queueId, pubKey);
-              if (cancelled) return;
-              const localSessionId = client.localQueueId;
-              const newSession = {
-                id: localSessionId,
-                name: `Peer #${queueId.slice(0, 4)}`,
-                fingerprint: pubKey.slice(0, 16),
-                lastMessage: 'Session handshaked over blind relay.',
-                time: 'Just now',
-                active: true,
-                cipherSuite: 'ECDH P-256 + AES-GCM',
-                queueLatency: '18ms',
-                messages: [
-                  { id: 1, sender: 'system', text: 'Ephemeral queue connected via invitation link.', time: 'Now' },
-                  { id: 2, sender: 'system', text: 'Session key derived via ECDH P-256.', time: 'Now' },
-                ],
-              };
-              setSessions((prev) => [newSession, ...prev]);
-              selectSession(localSessionId);
-              client.startPolling(2000);
-              window.history.replaceState(null, '', window.location.pathname);
-            } catch (err) {
-              if (!cancelled) {
-                console.error('Failed to accept invitation from URL hash:', err);
-              }
-            }
+        const invitationHash = window.location.hash;
+        if (
+          !invitationHash.includes('queueId=') ||
+          !invitationHash.includes('pubKey=')
+        ) {
+          return;
+        }
+        const { queueId, pubKey } = parseInvitation(invitationHash);
+        sessionClientsRef.current.set(queueId, client);
+        try {
+          await client.acceptInvitation(queueId, pubKey);
+          if (cancelled) return;
+          const localSessionId = client.localQueueId;
+          const session = {
+            id: localSessionId,
+            name: `Peer ${queueId.slice(0, 4)}`,
+            fingerprint: pubKey.slice(0, 16),
+            lastMessage: 'Session established over blind relay.',
+            time: 'Just now',
+            active: true,
+            cipherSuite: 'ECDH P-256 + AES-GCM',
+            messages: [
+              {
+                id: `${localSessionId}-system`,
+                sender: 'system',
+                text: 'Ephemeral queue connected via invitation link.',
+                time: 'Now',
+              },
+            ],
+          };
+          setSessions((previous) => [session, ...previous]);
+          selectSession(localSessionId);
+          setScreen('chat');
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch (error) {
+          sessionClientsRef.current.delete(queueId);
+          if (!cancelled) {
+            console.error('Failed to accept invitation from URL hash:', error);
+            setConnectionError(
+              'The invitation could not be accepted. Check the link and try again.'
+            );
           }
         }
       })
-      .catch((err) => {
+      .catch((error) => {
         if (!cancelled) {
-          console.error('Client initialization failed:', err);
+          console.error('Cloak relay initialization failed:', error);
+          setConnectionError(
+            'Relay unavailable. Check your connection and retry the page.'
+          );
         }
       });
 
     return () => {
       cancelled = true;
       client.disconnect();
-      if (clientRef.current === client) clientRef.current = null;
+      sessionClientsRef.current.forEach((sessionClient) => {
+        if (sessionClient !== client) sessionClient.disconnect();
+      });
+      sessionClientsRef.current.clear();
+      if (relayClientRef.current === client) relayClientRef.current = null;
     };
   }, []);
 
-  // Auto-scroll message feed
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sessions, activeSessionId]);
 
   useEffect(() => {
     const feed = chatFeedRef.current;
-    if (!feed || !activeSession) return undefined;
+    if (
+      !feed ||
+      !activeSession ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      return undefined;
+    }
 
     const markSeen = (element) => {
       const msgId = element.dataset.messageId;
       if (!msgId || seenMessageIdsRef.current.has(msgId)) return;
       seenMessageIdsRef.current.add(msgId);
-
-      setSessions((prev) =>
-        prev.map((session) => ({
+      setSessions((previous) =>
+        previous.map((session) => ({
           ...session,
           messages: session.messages.map((message) => {
             if (message.msgId !== msgId || message.sender !== 'peer') {
@@ -199,35 +374,11 @@ export default function Home() {
           }),
         }))
       );
-
-      clientRef.current
+      sessionClientsRef.current
+        .get(activeSessionId)
         ?.sendAck(msgId, 'seen')
         .catch((error) => console.error('Failed to send seen receipt:', error));
     };
-
-    const incomingMessages = feed.querySelectorAll(
-      '[data-incoming-message="true"]'
-    );
-    const markVisibleMessagesSeen = () => {
-      if (document.visibilityState !== 'visible') return;
-      const feedBounds = feed.getBoundingClientRect();
-      incomingMessages.forEach((element) => {
-        if (seenMessageIdsRef.current.has(element.dataset.messageId)) return;
-        const messageBounds = element.getBoundingClientRect();
-        const visibleHeight =
-          Math.min(messageBounds.bottom, feedBounds.bottom) -
-          Math.max(messageBounds.top, feedBounds.top);
-        if (visibleHeight >= Math.min(messageBounds.height * 0.6, 1)) {
-          markSeen(element);
-        }
-      });
-    };
-
-    if (typeof IntersectionObserver === 'undefined') {
-      markVisibleMessagesSeen();
-      const visibilityInterval = setInterval(markVisibleMessagesSeen, 250);
-      return () => clearInterval(visibilityInterval);
-    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -240,155 +391,156 @@ export default function Home() {
       },
       { threshold: 0.6 }
     );
-
-    incomingMessages.forEach((element) => {
-      if (!seenMessageIdsRef.current.has(element.dataset.messageId)) {
-        observer.observe(element);
-      }
-    });
-
-    markVisibleMessagesSeen();
-    const visibilityInterval = setInterval(markVisibleMessagesSeen, 250);
-    return () => {
-      observer.disconnect();
-      clearInterval(visibilityInterval);
-    };
-  }, [activeSession, activeSessionId, sessions]);
+    feed
+      .querySelectorAll('[data-incoming-message="true"]')
+      .forEach((element) => {
+        if (!seenMessageIdsRef.current.has(element.dataset.messageId)) {
+          observer.observe(element);
+        }
+      });
+    return () => observer.disconnect();
+  }, [activeSessionId, activeSession?.messages.length]);
 
   useEffect(() => {
     const burnInterval = setInterval(() => {
       const now = Date.now();
-      setSessions((prev) => {
-        let sessionsChanged = false;
-        const nextSessions = prev.map((session) => {
+      setSessions((previous) => {
+        let changed = false;
+        const updated = previous.map((session) => {
           let sessionChanged = false;
           let lastMessageBurned = false;
           const messages = [];
-
           session.messages.forEach((message) => {
             if (message.burnExpiresAt && message.burnExpiresAt <= now) {
-              if (session.lastMessage === message.text) {
-                lastMessageBurned = true;
-              }
-              message.text = '';
               sessionChanged = true;
+              if (session.lastMessage === message.text) lastMessageBurned = true;
               seenMessageIdsRef.current.delete(message.msgId);
               return;
             }
-
             if (message.burnExpiresAt) {
               const remainingSec = Math.max(
                 1,
                 Math.ceil((message.burnExpiresAt - now) / 1000)
               );
               if (remainingSec !== message.remainingSec) {
-                messages.push({ ...message, remainingSec });
                 sessionChanged = true;
+                messages.push({ ...message, remainingSec });
                 return;
               }
             }
             messages.push(message);
           });
-
           if (!sessionChanged) return session;
-          sessionsChanged = true;
+          changed = true;
           return {
             ...session,
             messages,
             ...(lastMessageBurned ? { lastMessage: 'Message burned' } : {}),
           };
         });
-
-        return sessionsChanged ? nextSessions : prev;
+        return changed ? updated : previous;
       });
     }, 1000);
-
     return () => clearInterval(burnInterval);
   }, []);
 
-  // Generate new invitation link
-  const handleNewInvitation = async () => {
-    if (!clientRef.current || !connected) {
-      alert('Relay Server disconnected. Make sure the Node server is running on port 8080.');
+  async function handleNewInvitation() {
+    if (!connected) {
+      setConnectionError('Connect to the relay before creating an invitation.');
       return;
     }
-
+    const client = createSessionClient();
     try {
-      const link = await clientRef.current.createInvitationLink();
-      const newQueueId = clientRef.current.localQueueId;
-
+      const link = await client.createInvitationLink();
+      const newSessionId = client.localQueueId;
+      sessionClientsRef.current.set(newSessionId, client);
       setInviteLink(link);
       setShowInviteModal(true);
-
       const newSession = {
-        id: newQueueId,
-        name: `Peer #${newQueueId.slice(0, 4)}`,
-        fingerprint: 'Pending Handshake',
+        id: newSessionId,
+        name: `Peer ${newSessionId.slice(0, 4)}`,
+        fingerprint: 'Pending handshake',
+        inviteLink: link,
         lastMessage: 'Awaiting peer handshake...',
         time: 'Just now',
         active: true,
         cipherSuite: 'ECDH P-256 + AES-GCM',
-        queueLatency: '15ms',
         messages: [
-          { id: 1, sender: 'system', text: 'Ephemeral queue created. Share invitation link with peer.', time: 'Now' },
+          {
+            id: `${newSessionId}-system`,
+            sender: 'system',
+            text: 'Ephemeral queue created. Share the invitation with your peer.',
+            time: 'Now',
+          },
         ],
       };
-
-      setSessions((prev) => [newSession, ...prev]);
-      selectSession(newQueueId);
-      clientRef.current.startPolling(2000);
-    } catch (err) {
-      console.error('Error generating invitation link:', err);
-      alert('Failed to obtain queue ID from relay server.');
+      setSessions((previous) => [newSession, ...previous]);
+      selectSession(newSessionId);
+      setScreen('chat');
+    } catch (error) {
+      client.disconnect();
+      console.error('Failed to generate an invitation:', error);
+      setConnectionError('Could not create an invitation. Please try again.');
     }
-  };
+  }
 
-  // Join session manually using code or URL
-  const handleConnectSession = async (e) => {
-    e.preventDefault();
-    if (!inviteCodeInput.trim() || !clientRef.current) return;
-
+  async function handleConnectSession(event) {
+    event.preventDefault();
+    if (!inviteCodeInput.trim()) {
+      setJoinError('Paste a valid invitation link or code to continue.');
+      return;
+    }
+    setJoinError('');
+    let sessionClient;
+    let queueId;
     try {
-      const { queueId, pubKey } = parseInvitation(inviteCodeInput);
-
-      await clientRef.current.acceptInvitation(queueId, pubKey);
-      const localSessionId = clientRef.current.localQueueId;
-
-      const newSession = {
+      const invitation = parseInvitation(inviteCodeInput);
+      queueId = invitation.queueId;
+      sessionClient = createSessionClient();
+      sessionClientsRef.current.set(queueId, sessionClient);
+      await sessionClient.acceptInvitation(queueId, invitation.pubKey);
+      const localSessionId = sessionClient.localQueueId;
+      const session = {
         id: localSessionId,
-        name: `Peer #${queueId.slice(0, 4)}`,
-        fingerprint: pubKey.slice(0, 16),
+        name: `Peer ${queueId.slice(0, 4)}`,
+        fingerprint: invitation.pubKey.slice(0, 16),
         lastMessage: 'Session handshaked manually.',
         time: 'Just now',
         active: true,
         cipherSuite: 'ECDH P-256 + AES-GCM',
-        queueLatency: '20ms',
         messages: [
-          { id: 1, sender: 'system', text: 'Connected to queue via manual code import.', time: 'Now' },
-          { id: 2, sender: 'system', text: 'Session key derived via ECDH P-256.', time: 'Now' },
+          {
+            id: `${localSessionId}-system`,
+            sender: 'system',
+            text: 'Connected to queue using a one-time invitation.',
+            time: 'Now',
+          },
         ],
       };
-
-      setSessions((prev) => [newSession, ...prev]);
+      setSessions((previous) => [session, ...previous]);
       selectSession(localSessionId);
-      clientRef.current.startPolling(2000);
+      setScreen('chat');
       setInviteCodeInput('');
       setShowJoinModal(false);
-    } catch (err) {
-      console.error('Failed to connect via code:', err);
-      alert('Error establishing key exchange. Verify the code.');
+    } catch (error) {
+      if (queueId) sessionClientsRef.current.delete(queueId);
+      sessionClient?.disconnect();
+      console.error('Failed to connect with invitation:', error);
+      setJoinError(
+        error instanceof Error
+          ? error.message
+          : 'Could not establish the secure session.'
+      );
     }
-  };
+  }
 
-  // Encrypt & send message
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || !clientRef.current || !activeSessionId) return;
-
+  async function handleSendMessage(event) {
+    event.preventDefault();
+    const client = sessionClientsRef.current.get(activeSessionId);
+    if (!inputMessage.trim() || !client || !activeSessionId) return;
     const textToSend = inputMessage.trim();
-
     try {
-      const { msgId, status } = await clientRef.current.sendMessage(
+      const { msgId, status } = await client.sendMessage(
         textToSend,
         burnAfterSec
       );
@@ -396,8 +548,7 @@ export default function Home() {
         status === 'seen' && burnAfterSec > 0
           ? Date.now() + burnAfterSec * 1000
           : null;
-
-      const newMsg = {
+      const newMessage = {
         id: msgId,
         msgId,
         sender: 'me',
@@ -406,403 +557,752 @@ export default function Home() {
         burnExpiresAt,
         remainingSec: burnExpiresAt ? burnAfterSec : null,
         status,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(),
       };
-
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === activeSessionId) {
-            return {
-              ...s,
-              lastMessage: textToSend,
-              time: 'Just now',
-              messages: [...s.messages, newMsg],
-            };
-          }
-          return s;
-        })
+      setSessions((previous) =>
+        previous.map((session) =>
+          session.id === activeSessionId
+            ? {
+                ...session,
+                lastMessage: textToSend,
+                time: 'Just now',
+                messages: [...session.messages, newMessage],
+              }
+            : session
+        )
       );
-
       setInputMessage('');
-    } catch (err) {
-      console.error('Failed to send encrypted message:', err);
-      alert('Cannot send message: Verify that the session key is established.');
+    } catch (error) {
+      console.error('Failed to send encrypted message:', error);
+      setConnectionError(
+        'Message could not be sent. Check the secure connection.'
+      );
     }
-  };
+  }
+
+  function openJoinDialog() {
+    setJoinError('');
+    setShowJoinModal(true);
+    setScreen('join');
+  }
+
+  async function handleOpenQr() {
+    const invitationLink = activeSession?.inviteLink || inviteLink;
+    if (invitationLink) {
+      setInviteLink(invitationLink);
+      setShowInviteModal(true);
+      return;
+    }
+    await handleNewInvitation();
+  }
+
+  function handleSelectSession(sessionId) {
+    selectSession(sessionId);
+    const session = sessions.find((entry) => entry.id === sessionId);
+    setInviteLink(session?.inviteLink || '');
+    setInputMessage('');
+    setScreen('chat');
+  }
+
+  function handleBackFromChat() {
+    selectSession(null);
+    setInputMessage('');
+    setChatMenu(null);
+    setScreen('chats');
+  }
+
+  function openChatMenu(x, y) {
+    const menuWidth = 248;
+    const menuHeight = 336;
+    setChatMenu({
+      x: Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8)),
+    });
+  }
+
+  function handleChatMenuAction(action) {
+    setChatMenu(null);
+    if (!activeSession) return;
+    switch (action) {
+      case 'info':
+        setShowPeerInfo(true);
+        break;
+      case 'search':
+        setShowMessageSearch(true);
+        break;
+      case 'burn':
+        setShowBurnTimerDialog(true);
+        break;
+      case 'export': {
+        try {
+          const content = activeSession.messages
+            .map((message) => `[${message.time}] ${message.sender}: ${message.text}`)
+            .join('\n');
+          const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(file);
+          const download = document.createElement('a');
+          download.href = url;
+          download.download = `${activeSession.name.replace(/[^a-z0-9-_]/gi, '_')}.txt`;
+          download.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Failed to export the chat:', error);
+          setConnectionError('Could not export this chat.');
+        }
+        break;
+      }
+      case 'close':
+        handleBackFromChat();
+        break;
+      case 'clear':
+        setShowClearChatConfirm(true);
+        break;
+      case 'delete':
+        setShowDeleteChatConfirm(true);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function handleClearChat() {
+    if (!activeSessionId) return;
+    setSessions((previous) =>
+      previous.map((session) =>
+        session.id === activeSessionId
+          ? { ...session, lastMessage: '', messages: [] }
+          : session
+      )
+    );
+    seenMessageIdsRef.current.clear();
+    setShowClearChatConfirm(false);
+  }
+
+  function handleDeleteChat() {
+    if (!activeSessionId) return;
+    const roomClient = sessionClientsRef.current.get(activeSessionId);
+    if (roomClient) {
+      roomClient.disconnect();
+      sessionClientsRef.current.delete(activeSessionId);
+      if (roomClient === relayClientRef.current) {
+        relayClientRef.current = null;
+        setConnected(false);
+      }
+    }
+    setSessions((previous) =>
+      previous.filter((session) => session.id !== activeSessionId)
+    );
+    seenMessageIdsRef.current.clear();
+    selectSession(null);
+    setInputMessage('');
+    setInviteLink('');
+    setShowDeleteChatConfirm(false);
+    setScreen('chats');
+  }
+
+  function handleNuke() {
+    const clients = new Set([
+      relayClientRef.current,
+      ...sessionClientsRef.current.values(),
+    ]);
+    clients.forEach((client) => client?.disconnect());
+    relayClientRef.current = null;
+    sessionClientsRef.current.clear();
+    setSessions([]);
+    setActiveSessionId(null);
+    activeSessionIdRef.current = null;
+    setInputMessage('');
+    setInviteLink('');
+    seenMessageIdsRef.current.clear();
+    setShowNukeConfirm(false);
+    window.history.replaceState(null, '', window.location.pathname);
+    window.requestAnimationFrame(() => window.location.reload());
+  }
+
+  const currentRoomName =
+    screen === 'join'
+      ? 'Join a room'
+      : screen === 'chats'
+        ? 'Your chats'
+        : activeSession?.name || 'Cloak';
+  const visibleMessages = activeSession?.messages.filter((message) =>
+    `${message.sender} ${message.text || ''}`
+      .toLowerCase()
+      .includes(messageSearch.toLowerCase())
+  );
 
   return (
     <>
       <Head>
+        <title>Cloak — Private Messenger</title>
+        <meta
+          name="description"
+          content="Ephemeral end-to-end encrypted messaging"
+        />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
-      <div className="flex h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 font-sans antialiased">
-      {/* 1. LEFT NAVIGATION SIDEBAR */}
-      <aside className="w-[320px] flex-shrink-0 flex flex-col border-r border-[#1e293b] bg-[#090d16]/95 backdrop-blur-md relative z-10">
-        <div className="p-4 border-b border-[#1e293b]/80 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-600/30 border border-indigo-300/20">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <div>
-                <h1
-                  className="text-base font-bold tracking-tight text-white flex items-center gap-1.5"
-                  style={{ fontSize: '1rem', margin: 0 }}
-                >
-                  Cloak
-                  <span className="text-[10px] uppercase tracking-widest font-mono font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    Zero-Meta
+
+      <main className="flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[#09090b] pb-[calc(68px+env(safe-area-inset-bottom))] font-sans text-zinc-100 antialiased md:pb-0">
+        <header
+          className="sticky top-0 z-20 shrink-0 border-b border-zinc-800 bg-[#0e0e10]/95 backdrop-blur-lg"
+          onContextMenu={(event) => {
+            if (!activeSession) return;
+            event.preventDefault();
+            openChatMenu(event.clientX, event.clientY);
+          }}
+        >
+          <div className="mx-auto flex min-h-[68px] w-full max-w-5xl items-center justify-between gap-3 px-3 sm:px-5 md:min-h-[76px] md:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              {activeSession && (
+                <>
+                  <button
+                    aria-label="Back to chats"
+                    className="grid h-11 w-10 shrink-0 place-items-center rounded-xl text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                    onClick={handleBackFromChat}
+                    type="button"
+                  >
+                    <Icon name="back" className="h-5 w-5" />
+                  </button>
+                  <span
+                    aria-label={`${totalUnreadCount} unread messages across all conversations`}
+                    className="min-w-5 text-center font-mono text-xs font-semibold tabular-nums text-emerald-300"
+                  >
+                    {totalUnreadCount}
                   </span>
-                </h1>
-                <p className="text-[11px] text-slate-400 font-mono">P2P Blind Onion Relay</p>
+                </>
+              )}
+              <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-mono text-sm font-semibold text-emerald-200">
+                {currentRoomName.slice(0, 1).toUpperCase()}
+                <span
+                  aria-label={connected ? 'Relay connected' : 'Relay disconnected'}
+                  className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0e0e10] ${connected ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                />
               </div>
-            </div>
-
-            <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-full ${connected ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-              <span className="relative flex h-2 w-2">
-                {connected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-              </span>
-              <span className={`text-[11px] font-medium tracking-wide font-mono ${connected ? 'text-emerald-400' : 'text-red-400'}`}>
-                {connected ? 'Relay Connected' : 'Disconnected'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 pt-2">
-            <button
-              onClick={handleNewInvitation}
-              className="w-full h-10 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98] border border-indigo-400/30 cursor-pointer"
-            >
-              <span>+ New Invitation</span>
-            </button>
-
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="w-full h-9 rounded-lg bg-[#111726] hover:bg-[#1e293b] text-slate-200 hover:text-white font-medium text-sm flex items-center justify-center gap-2 border border-[#334155]/60 hover:border-slate-500 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <span>+ Join Session</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="px-4 py-2.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 bg-[#090d16]/70">
-          <span>Active Ephemeral Queues</span>
-          <span className="bg-[#1e293b] text-slate-300 px-2 py-0.5 rounded-full font-mono text-[10px]">
-            {sessions.length}
-          </span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
-          {sessions.length === 0 ? (
-            <p className="text-xs text-slate-500 text-center mt-6">No active session queues.</p>
-          ) : (
-            sessions.map((s) => {
-              const isSelected = s.id === activeSessionId;
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => selectSession(s.id)}
-                  className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-150 border ${
-                    isSelected
-                      ? 'bg-[#1e293b]/90 border-indigo-500/50 shadow-md shadow-indigo-950/40'
-                      : 'bg-[#111726]/60 border-transparent hover:bg-[#161f33] hover:border-slate-700/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center space-x-2.5 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono text-xs font-bold border transition-colors ${
-                        isSelected
-                          ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm shadow-indigo-600/30'
-                          : 'bg-[#1e293b] text-slate-300 border-slate-700'
-                      }`}>
-                        🔑
-                      </div>
-
-                      <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-100 truncate block">
-                          {s.name}
-                        </span>
-                        <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-400/90 font-medium">
-                          <span>#{s.id.substring(0, 10)}...</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap">
-                      {s.time}
-                    </span>
-                  </div>
-
-                  <p className="mt-1.5 text-xs text-slate-400 truncate pl-[38px] leading-relaxed">
-                    {s.lastMessage}
-                  </p>
-
-                  {isSelected && (
-                    <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-indigo-500"></div>
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-1">
+                  <h1 className="max-w-[55vw] truncate text-sm font-semibold text-zinc-100 sm:max-w-sm md:text-base">
+                    {currentRoomName}
+                  </h1>
+                  {activeSession && (
+                    <button
+                      aria-label="Edit room title"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                      onClick={() => {
+                        const nextName = window.prompt('Room title', currentRoomName);
+                        if (nextName?.trim() && activeSession) {
+                          setSessions((previous) =>
+                            previous.map((session) =>
+                              session.id === activeSession.id
+                                ? { ...session, name: nextName.trim() }
+                                : session
+                            )
+                          );
+                        }
+                      }}
+                      type="button"
+                    >
+                      <Icon name="edit" className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="p-3 border-t border-[#1e293b] bg-[#0c121e] flex items-center justify-between text-[11px] text-slate-400 font-mono">
-          <span>Mem-RAM Only</span>
-          <span className="text-[10px] text-slate-400">No Disk Write</span>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CHAT PANEL */}
-      <main className="flex-1 flex flex-col h-full bg-[#090d16] relative overflow-hidden">
-        {activeSession ? (
-          <>
-            <header className="h-16 px-6 border-b border-[#1e293b] bg-[#090d16]/80 backdrop-blur-md flex items-center justify-between flex-shrink-0 z-10">
-              <div className="flex items-center space-x-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#1e293b] border border-slate-700/80 flex items-center justify-center text-indigo-400 font-mono text-sm font-semibold shadow-inner">
-                  🔒
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-white tracking-wide">
-                      {activeSession.name}
-                    </h2>
-                    <span className="text-xs font-mono font-medium text-slate-400 bg-[#1e293b] px-2 py-0.5 rounded border border-slate-700/50">
-                      ID: {activeSession.id}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 font-mono">
-                      <span>✓ End-to-End Encrypted</span>
-                    </div>
-                  </div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                  />
+                  <span className="truncate text-zinc-400">
+                    {inputMessage.trim()
+                      ? 'You are typing…'
+                      : activeSession
+                        ? 'End-to-end encrypted'
+                        : connected
+                          ? 'Ready to connect'
+                          : 'Connecting to relay…'}
+                  </span>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center space-x-2.5">
-                <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#111726] border border-slate-800 text-[11px] font-mono text-slate-300">
-                  <span>{activeSession.cipherSuite}</span>
-                </div>
-              </div>
-            </header>
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+              <span
+                className={`hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] md:inline-flex ${connected ? 'border-emerald-900/70 bg-emerald-950/30 text-emerald-300' : 'border-rose-900/70 bg-rose-950/30 text-rose-300'}`}
+              >
+                <Icon name="lock" className="h-3.5 w-3.5" />
+                {connected ? 'Relay connected' : 'Relay disconnected'}
+              </span>
+              <button
+                aria-label="Join a room"
+                className={`${activeSession ? 'hidden md:grid' : 'grid'} h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100`}
+                onClick={openJoinDialog}
+                type="button"
+              >
+                <Icon name="camera" />
+              </button>
+              <button
+                aria-label="Open QR access"
+                className={`${activeSession ? 'hidden md:grid' : 'grid'} h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100`}
+                onClick={handleOpenQr}
+                type="button"
+              >
+                <Icon name="qr" />
+              </button>
+              <button
+                aria-label="Nuke session"
+                className="hidden h-11 items-center gap-2 rounded-xl border border-rose-900/80 px-3 text-xs font-semibold text-rose-300 transition hover:bg-rose-950/50 md:inline-flex"
+                onClick={() => setShowNukeConfirm(true)}
+                type="button"
+              >
+                <Icon name="trash" className="h-4 w-4" />
+                Nuke
+              </button>
+              {activeSession && (
+                <button
+                  aria-label="Open chat menu"
+                  className="grid h-11 w-11 place-items-center rounded-xl text-zinc-300 hover:bg-zinc-800 hover:text-white md:hidden"
+                  onClick={(event) => {
+                    const bounds = event.currentTarget.getBoundingClientRect();
+                    openChatMenu(bounds.right - 248, bounds.bottom + 4);
+                  }}
+                  type="button"
+                >
+                  <Icon name="more" />
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
 
-            <div
-              ref={chatFeedRef}
-              className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
+        {connectionError && (
+          <div
+            aria-live="polite"
+            className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-rose-900/70 bg-rose-950/30 px-4 py-2 text-xs text-rose-200"
+            role="status"
+          >
+            <span className="min-w-0">{connectionError}</span>
+            <button
+              aria-label="Dismiss message"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg hover:bg-rose-900/40"
+              onClick={() => setConnectionError('')}
+              type="button"
             >
-              <div className="max-w-xl mx-auto p-3 rounded-xl bg-[#111726]/80 border border-slate-800 text-center">
-                <div className="flex items-center justify-center gap-2 text-indigo-400 font-medium text-xs">
-                  <span>Forward Secrecy Engaged</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Messages are encrypted locally and wiped immediately upon retrieval.
-                </p>
-              </div>
+              <Icon name="close" className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
-              {activeSession.messages.map((msg) => {
-                if (msg.sender === 'system') {
+        <section className="flex min-h-0 w-full flex-1 flex-col">
+          {screen === 'chat' && activeSession ? (
+            <div
+              aria-label="Encrypted message stream"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 md:px-8 md:py-7"
+              ref={chatFeedRef}
+            >
+              {showMessageSearch && (
+                <div className="mx-auto mb-4 flex w-full max-w-3xl items-center gap-2">
+                  <input
+                    aria-label="Search messages"
+                    autoFocus
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-700"
+                    onChange={(event) => setMessageSearch(event.target.value)}
+                    placeholder="Search messages"
+                    type="search"
+                    value={messageSearch}
+                  />
+                  <button
+                    aria-label="Close message search"
+                    className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800"
+                    onClick={() => {
+                      setShowMessageSearch(false);
+                      setMessageSearch('');
+                    }}
+                    type="button"
+                  >
+                    <Icon name="close" />
+                  </button>
+                </div>
+              )}
+              <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+                <div className="mx-auto max-w-lg rounded-xl border border-emerald-900/40 bg-emerald-950/20 px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-2 text-xs font-medium text-emerald-300">
+                    <Icon name="lock" className="h-3.5 w-3.5" />
+                    Forward secrecy engaged
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-zinc-500">
+                    Messages are encrypted in the client and removed from this view when they burn.
+                  </p>
+                </div>
+
+                {visibleMessages.map((message) => {
+                  if (message.sender === 'system') {
+                    return (
+                      <div
+                        className="flex justify-center py-1"
+                        key={message.id}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          openChatMenu(event.clientX, event.clientY);
+                        }}
+                      >
+                        <span className="max-w-full rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1.5 text-center font-mono text-[10px] leading-4 text-zinc-400">
+                          {message.text}
+                        </span>
+                      </div>
+                    );
+                  }
+                  const isMe = message.sender === 'me';
                   return (
-                    <div key={msg.id} className="flex justify-center my-3">
-                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1e293b]/70 border border-slate-700/60 text-[11px] font-mono text-slate-300 shadow-sm">
-                        <span>{msg.text}</span>
-                        <span className="text-slate-500 text-[10px] pl-1 font-sans">{msg.time}</span>
+                    <div
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                      data-incoming-message={
+                        message.sender === 'peer' && message.msgId
+                          ? 'true'
+                          : undefined
+                      }
+                      data-message-id={message.msgId || undefined}
+                      key={message.id}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        openChatMenu(event.clientX, event.clientY);
+                      }}
+                    >
+                      <div
+                        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[75%] ${isMe ? 'rounded-br-md border border-emerald-700/50 bg-emerald-900/70 text-emerald-50' : 'rounded-bl-md border border-zinc-700/80 bg-zinc-800 text-zinc-100'}`}
+                      >
+                        {!isMe && (
+                          <p className="mb-1 font-mono text-[10px] font-medium text-emerald-300">
+                            Verified peer
+                          </p>
+                        )}
+                        {message.text && (
+                          <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.45]">
+                            {message.text}
+                          </p>
+                        )}
+                        <div
+                          className={`mt-1.5 flex items-center justify-end gap-1.5 font-mono text-[10px] ${isMe ? 'text-emerald-200/70' : 'text-zinc-500'}`}
+                        >
+                          {message.burnExpiresAt && (
+                            <span className="mr-auto inline-flex items-center gap-1 rounded-md bg-rose-950/60 px-1.5 py-0.5 text-rose-200">
+                              <Icon name="clock" className="h-3 w-3" />
+                              {message.remainingSec}s
+                            </span>
+                          )}
+                          <span>{message.time}</span>
+                          {isMe && (
+                            <span
+                              aria-label={`${message.status || 'sent'}`}
+                              className={`inline-flex items-center ${message.status === 'seen' ? 'text-sky-300' : 'text-emerald-300/70'}`}
+                              title={message.status || 'sent'}
+                            >
+                              <Icon name="check" className="h-3 w-3" />
+                              {(message.status === 'seen' ||
+                                message.status === 'delivered') && (
+                                <Icon name="check" className="-ml-1 h-3 w-3" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
-                }
-
-                const isMe = msg.sender === 'me';
-
-                return (
-                  <div
-                    key={msg.id}
-                    data-message-id={msg.msgId || undefined}
-                    data-incoming-message={msg.sender === 'peer' && msg.msgId ? 'true' : undefined}
-                    className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} transition-all`}
-                  >
-                    <div className="flex items-end gap-2 max-w-[70%]">
-                      <div
-                        className={`rounded-2xl px-4 py-3 shadow-md ${
-                          isMe
-                            ? 'bg-indigo-600 text-white rounded-br-none border border-indigo-400/30'
-                            : 'bg-[#1e293b] text-slate-100 rounded-bl-none border border-[#334155]/80'
-                        }`}
-                      >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap select-text">
-                          {msg.text}
-                        </p>
-                        <div
-                          className={`flex items-center justify-end gap-1.5 mt-1 text-[10px] font-mono ${
-                            isMe ? 'text-indigo-200' : 'text-slate-400'
-                          }`}
+                })}
+                {visibleMessages.length === 0 && (
+                  <p className="py-6 text-center text-sm text-zinc-500">
+                    {messageSearch ? 'No matching messages.' : 'No messages yet.'}
+                  </p>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          ) : screen === 'chats' ? (
+            <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-3 py-5 sm:px-5 md:px-8">
+              <h2 className="mb-4 text-lg font-semibold text-zinc-100">Chats</h2>
+              {sessions.length ? (
+                <ul className="divide-y divide-zinc-800 overflow-hidden rounded-2xl border border-zinc-800">
+                  {sessions.map((session) => {
+                    const unreadCount = session.messages.filter(
+                      (message) =>
+                        message.sender === 'peer' && message.status !== 'seen'
+                    ).length;
+                    return (
+                      <li key={session.id}>
+                        <button
+                          className="flex min-h-[76px] w-full items-center gap-3 px-4 text-left hover:bg-zinc-900"
+                          onClick={() => handleSelectSession(session.id)}
+                          type="button"
                         >
-                          {msg.burnExpiresAt && (
-                            <span
-                              className="mr-auto rounded bg-red-500/15 px-1.5 py-0.5 text-red-300"
-                              aria-label={`Message burns in ${msg.remainingSec} seconds`}
-                            >
-                              🔥 {msg.remainingSec}s
+                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-200">
+                            {session.name.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-zinc-100">
+                              {session.name}
+                            </span>
+                            <span className="mt-1 block truncate text-xs text-zinc-500">
+                              {session.lastMessage || 'No messages yet.'}
+                            </span>
+                          </span>
+                          {unreadCount > 0 && (
+                            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-emerald-500 px-1.5 text-xs font-semibold text-zinc-950">
+                              {unreadCount}
                             </span>
                           )}
-                          <span>{msg.time}</span>
-                          {isMe && (
-                            <span
-                              className={
-                                msg.status === 'seen'
-                                  ? 'text-indigo-300'
-                                  : 'text-slate-400'
-                              }
-                              aria-label={`${msg.status || 'sent'}`}
-                              title={msg.status || 'sent'}
-                            >
-                              {msg.status === 'seen' ||
-                              msg.status === 'delivered'
-                                ? '✓✓'
-                                : '✓'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div ref={messagesEndRef} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="rounded-xl border border-zinc-800 p-5 text-sm text-zinc-400">
+                  No conversations yet. Create an invitation or join a room.
+                </p>
+              )}
             </div>
-
-            <div className="p-4 border-t border-[#1e293b] bg-[#090d16]/95 backdrop-blur-md">
-              <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type an encrypted message..."
-                    className="w-full h-11 pl-4 pr-12 rounded-xl bg-[#111726] border border-[#334155] focus:border-indigo-500 text-slate-100 text-sm outline-none"
-                  />
-                  <button
-                    type="button"
-                    aria-label="Choose emoji"
-                    aria-expanded={showEmojiPicker}
-                    onClick={() => setShowEmojiPicker((open) => !open)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-lg hover:bg-slate-700/60"
-                  >
-                    😊
-                  </button>
-                  {showEmojiPicker && (
-                    <div
-                      role="group"
-                      aria-label="Emoji picker"
-                      className="absolute bottom-14 right-0 z-20 flex gap-1 rounded-xl border border-slate-700 bg-[#111726] p-2 shadow-xl"
-                    >
-                      {['😀', '😂', '😊', '😍', '👍', '🙏', '🔥', '❤️'].map(
-                        (emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            aria-label={`Insert ${emoji}`}
-                            onClick={() => {
-                              setInputMessage((current) => current + emoji);
-                              setShowEmojiPicker(false);
-                            }}
-                            className="rounded-md p-1 text-xl hover:bg-slate-700/70"
-                          >
-                            {emoji}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <label className="flex h-11 items-center gap-2 rounded-xl border border-[#334155] bg-[#111726] px-2 text-xs text-slate-400">
-                  <span className="whitespace-nowrap">Burn</span>
-                  <select
-                    aria-label="Burn timer"
-                    value={burnAfterSec}
-                    onChange={(event) =>
-                      setBurnAfterSec(Number(event.target.value))
-                    }
-                    className="max-w-20 bg-transparent text-slate-100 outline-none"
-                  >
-                    <option value={0}>Off</option>
-                    <option value={5}>5s</option>
-                    <option value={30}>30s</option>
-                    <option value={60}>1m</option>
-                  </select>
-                </label>
-
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-8 text-center">
+              <span className="grid h-16 w-16 place-items-center rounded-2xl border border-emerald-900/70 bg-emerald-950/40 text-emerald-300">
+                <Icon name="shield" className="h-8 w-8" />
+              </span>
+              <h2 className="mt-5 text-xl font-semibold text-zinc-100">
+                Start a private conversation
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-zinc-400">
+                Create a one-time invitation or join a peer&apos;s room. No account or saved chat history required.
+              </p>
+              <div className="mt-6 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                 <button
-                  type="submit"
-                  disabled={!inputMessage.trim()}
-                  className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer"
-                >
-                  Send
-                </button>
-              </form>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
-            Select or create a session queue to start messaging.
-          </div>
-        )}
-      </main>
-
-      <InviteModal
-        open={showInviteModal}
-        inviteLink={inviteLink}
-        onClose={() => setShowInviteModal(false)}
-      />
-
-      {/* 4. JOIN SESSION MODAL */}
-      {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#111726] border border-slate-700 shadow-2xl p-6 relative">
-            <button
-              onClick={() => setShowJoinModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
-            >
-              ✕
-            </button>
-
-            <h3 className="text-base font-bold text-white mb-4">Join Private Session</h3>
-
-            <form onSubmit={handleConnectSession} className="space-y-4">
-              <textarea
-                rows="3"
-                required
-                value={inviteCodeInput}
-                onChange={(e) => setInviteCodeInput(e.target.value)}
-                placeholder="Paste invitation URL or parameters (#queueId=...&pubKey=...)"
-                className="w-full p-3 rounded-xl bg-[#090d16] border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-
-              <div className="flex justify-end gap-2">
-                <button
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!connected}
+                  onClick={handleNewInvitation}
                   type="button"
-                  onClick={() => setShowJoinModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs cursor-pointer"
                 >
-                  Cancel
+                  <Icon name="plus" className="h-4 w-4" />
+                  Create invitation
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium cursor-pointer"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+                  onClick={openJoinDialog}
+                  type="button"
                 >
-                  Connect
+                  <Icon name="key" className="h-4 w-4" />
+                  Join with code
                 </button>
               </div>
+            </div>
+          )}
+        </section>
+
+        <footer className="z-10 shrink-0 border-t border-zinc-800 bg-[#101012]">
+          <form
+            className="mx-auto flex w-full max-w-4xl items-end gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-4 md:px-6 md:py-4"
+            onSubmit={handleSendMessage}
+          >
+            <button
+              aria-label="Attachments are not available yet"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-zinc-500 sm:rounded-xl"
+              disabled
+              title="Attachments are not available yet"
+              type="button"
+            >
+              <Icon name="paperclip" />
+            </button>
+            <input
+              autoComplete="off"
+              className="h-11 min-w-0 flex-1 rounded-full border border-zinc-700 bg-zinc-900 px-4 text-[14px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-xl"
+              disabled={!activeSession}
+              onChange={(event) => setInputMessage(event.target.value)}
+              placeholder="Message securely"
+              type="text"
+              value={inputMessage}
+            />
+            <label className="hidden h-11 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-2.5 text-xs text-zinc-400 sm:flex">
+              <Icon name="clock" className="h-4 w-4 text-rose-300" />
+              <select
+                aria-label="Message burn timer"
+                className="max-w-[76px] bg-transparent text-zinc-200 outline-none disabled:opacity-50"
+                disabled={!activeSession}
+                onChange={(event) => setBurnAfterSec(Number(event.target.value))}
+                value={burnAfterSec}
+              >
+                <option className="bg-zinc-900" value={0}>Off</option>
+                <option className="bg-zinc-900" value={5}>5 sec</option>
+                <option className="bg-zinc-900" value={30}>30 sec</option>
+                <option className="bg-zinc-900" value={60}>60 sec</option>
+              </select>
+            </label>
+            <button
+              aria-label="Send encrypted message"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-xl"
+              disabled={!activeSession || !inputMessage.trim()}
+              type="submit"
+            >
+              <Icon name="send" className="h-[18px] w-[18px]" />
+            </button>
+          </form>
+          {activeSession && (
+            <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 pb-2 sm:hidden">
+              <span className="text-[10px] text-zinc-500">Burn after</span>
+              <label className="inline-flex min-h-9 items-center gap-1.5 rounded-lg text-[11px] text-zinc-400">
+                <Icon name="clock" className="h-3.5 w-3.5 text-rose-300" />
+                <select
+                  aria-label="Message burn timer"
+                  className="max-w-[76px] bg-transparent text-zinc-200 outline-none"
+                  onChange={(event) => setBurnAfterSec(Number(event.target.value))}
+                  value={burnAfterSec}
+                >
+                  <option className="bg-zinc-900" value={0}>Off</option>
+                  <option className="bg-zinc-900" value={5}>5 sec</option>
+                  <option className="bg-zinc-900" value={30}>30 sec</option>
+                  <option className="bg-zinc-900" value={60}>60 sec</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </footer>
+
+        <nav
+          aria-label="Mobile navigation"
+          className="fixed inset-x-0 bottom-0 z-30 grid min-h-16 grid-cols-4 border-t border-zinc-800 bg-[#101012]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
+        >
+          {NAV_ITEMS.map((item) => (
+            <button
+              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${item.id === 'nuke' ? 'text-rose-300' : 'text-zinc-400 hover:text-emerald-300'}`}
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'join') openJoinDialog();
+                else if (item.id === 'qr') handleOpenQr();
+                else if (item.id === 'nuke') setShowNukeConfirm(true);
+              }}
+              type="button"
+            >
+              <Icon name={item.icon} className="h-5 w-5" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </main>
+
+      {showJoinModal && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setShowJoinModal(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="join-title"
+            aria-modal="true"
+            className="my-auto w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl sm:p-7"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100" id="join-title">
+                  Join a private room
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Paste the one-time invitation link shared by your peer.
+                </p>
+              </div>
+              <button
+                aria-label="Close join dialog"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                onClick={() => setShowJoinModal(false)}
+                type="button"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <form className="mt-5 space-y-3" onSubmit={handleConnectSession}>
+              <label
+                className="block text-xs font-medium uppercase tracking-wider text-zinc-400"
+                htmlFor="invitation-code"
+              >
+                Invitation link or code
+              </label>
+              <textarea
+                autoComplete="off"
+                className="min-h-24 w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 font-mono text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                id="invitation-code"
+                onChange={(event) => setInviteCodeInput(event.target.value)}
+                placeholder="https://…/#queueId=…&pubKey=…"
+                value={inviteCodeInput}
+              />
+              {joinError && (
+                <p
+                  aria-live="polite"
+                  className="text-sm text-rose-300"
+                  role="alert"
+                >
+                  {joinError}
+                </p>
+              )}
+              <button
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+                type="submit"
+              >
+                <Icon name="key" className="h-4 w-4" />
+                Establish secure session
+              </button>
             </form>
-          </div>
+          </section>
         </div>
       )}
-      </div>
+      {showInviteModal && (
+        <InviteModal
+          inviteLink={inviteLink}
+          onClose={() => setShowInviteModal(false)}
+          open={showInviteModal}
+        />
+      )}
+      {showNukeConfirm && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setShowNukeConfirm(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="nuke-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-rose-900/70 bg-zinc-900 p-5 shadow-2xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+            role="alertdialog"
+          >
+            <div className="flex items-start gap-4">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-rose-950/70 text-rose-300">
+                <Icon name="trash" />
+              </span>
+              <div>
+                <h2 className="font-semibold text-zinc-100" id="nuke-title">
+                  Clear this session?
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  This disconnects the relay, clears the in-memory room and messages, and reloads a clean conversation.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                className="min-h-11 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+                onClick={() => setShowNukeConfirm(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="min-h-11 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500"
+                onClick={handleNuke}
+                type="button"
+              >
+                Clear and reload
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

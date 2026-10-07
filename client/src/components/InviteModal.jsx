@@ -1,27 +1,65 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-export default function InviteModal({ open, inviteLink, onClose }) {
-  const [qrCode, setQrCode] = useState("");
-  const [error, setError] = useState("");
+function CopyIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.7"
+      viewBox="0 0 24 24"
+    >
+      <rect x="8" y="8" width="13" height="13" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.7"
+      viewBox="0 0 24 24"
+    >
+      <path d="m18 6-12 12M6 6l12 12" />
+    </svg>
+  );
+}
+
+export default function InviteModal({
+  open,
+  inviteLink,
+  roomCode,
+  onClose,
+}) {
+  const [qrCode, setQrCode] = useState('');
+  const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const qrValue = inviteLink || roomCode;
 
   useEffect(() => {
-    if (!open || !inviteLink) return undefined;
+    if (!open || !qrValue) return undefined;
 
     let cancelled = false;
-    setQrCode("");
-    setError("");
+    setQrCode('');
+    setError('');
 
-    import("qrcode")
+    import('qrcode')
       .then((QRCode) =>
-        QRCode.toDataURL(inviteLink, {
-          errorCorrectionLevel: "M",
+        QRCode.toDataURL(qrValue, {
+          errorCorrectionLevel: 'M',
           margin: 2,
-          width: 240,
-          color: {
-            dark: "#0f172a",
-            light: "#ffffff",
-          },
+          width: 256,
+          color: { dark: '#09090b', light: '#ffffff' },
         })
       )
       .then((dataUrl) => {
@@ -32,7 +70,7 @@ export default function InviteModal({ open, inviteLink, onClose }) {
           setError(
             qrError instanceof Error
               ? qrError.message
-              : "Unable to generate an invitation QR code."
+              : 'Unable to generate the access QR code.'
           );
         }
       });
@@ -40,173 +78,126 @@ export default function InviteModal({ open, inviteLink, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [open, inviteLink]);
+  }, [open, qrValue]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
-  async function copyInvitation() {
+  async function copyAccessCode() {
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(roomCode || inviteLink);
       setCopied(true);
-    } catch {
-      setError("Unable to copy the invitation link.");
+    } catch (copyError) {
+      console.error('Unable to copy the room access code:', copyError);
+      setError('Clipboard access failed. Select and copy the code manually.');
     }
   }
 
   return (
     <div
-      role="presentation"
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm"
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 10,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-        background: "rgba(2, 6, 23, .78)",
-      }}
+      role="presentation"
     >
       <section
-        role="dialog"
+        aria-labelledby="access-qr-title"
         aria-modal="true"
-        aria-labelledby="invitation-title"
+        className="my-auto w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 text-left shadow-2xl sm:p-6"
         onClick={(event) => event.stopPropagation()}
-        style={{
-          boxSizing: "border-box",
-          width: "100%",
-          maxWidth: 520,
-          padding: 24,
-          background: "#0f172a",
-          border: "1px solid #334155",
-          borderRadius: 12,
-          color: "#f8fafc",
-          textAlign: "center",
-        }}
+        role="dialog"
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2 id="invitation-title" style={{ margin: 0 }}>
-            New Invitation
-          </h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[.18em] text-emerald-400">
+              Out-of-band access
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-zinc-100" id="access-qr-title">
+              Scan to connect
+            </h2>
+          </div>
           <button
-            type="button"
+            aria-label="Close QR access"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
             onClick={onClose}
-            aria-label="Close"
-            style={{
-              border: 0,
-              background: "transparent",
-              color: "#cbd5e1",
-              fontSize: 24,
-              cursor: "pointer",
-            }}
+            type="button"
           >
-            ×
+            <CloseIcon />
           </button>
         </div>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>
-          Share the link or scan this QR code to join the private session.
+
+        <p className="mt-2 text-sm leading-5 text-zinc-400">
+          {inviteLink
+            ? 'Share this one-time invitation link with your peer.'
+            : 'This local 256-bit workbench key is a design preview, not a relay invitation.'}
         </p>
-        {qrCode ? (
-          <img
-            src={qrCode}
-            alt="QR code for the invitation link"
-            width="240"
-            height="240"
-            style={{
-              display: "block",
-              width: 240,
-              height: 240,
-              maxWidth: "100%",
-              margin: "16px auto",
-              borderRadius: 6,
-            }}
-          />
-        ) : (
-          <div
-            aria-live="polite"
-            style={{
-              width: 240,
-              height: 240,
-              maxWidth: "100%",
-              margin: "16px auto",
-              display: "grid",
-              placeItems: "center",
-              background: "#1e293b",
-              borderRadius: 6,
-              color: "#94a3b8",
-              fontSize: 13,
-            }}
-          >
-            Generating QR code…
-          </div>
-        )}
-        <input
-          aria-label="Invitation link"
-          readOnly
-          value={inviteLink}
-          onFocus={(event) => event.currentTarget.select()}
-          style={{
-            boxSizing: "border-box",
-            width: "100%",
-            padding: 10,
-            background: "#1e293b",
-            border: "1px solid #334155",
-            color: "#cbd5e1",
-            borderRadius: 6,
-            fontSize: 12,
-          }}
-        />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 10,
-            marginTop: 14,
-          }}
+
+        <div className="mx-auto my-5 grid aspect-square w-full max-w-[256px] place-items-center rounded-2xl bg-white p-3">
+          {qrCode ? (
+            <img
+              alt="QR code for Cloak room access"
+              className="h-full w-full rounded-lg"
+              height="232"
+              src={qrCode}
+              width="232"
+            />
+          ) : (
+            <div
+              aria-live="polite"
+              className="grid h-full w-full place-items-center rounded-lg bg-zinc-100 px-5 text-center text-sm text-zinc-600"
+            >
+              {error ? 'QR code unavailable' : 'Generating QR code…'}
+            </div>
+          )}
+        </div>
+
+        <label
+          className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500"
+          htmlFor="access-code"
         >
+          {roomCode ? '256-bit room code' : 'One-time invitation link'}
+        </label>
+        <textarea
+          className="max-h-28 min-h-16 w-full resize-y break-all rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 font-mono text-[11px] leading-5 text-zinc-300 outline-none focus:border-emerald-700"
+          id="access-code"
+          onFocus={(event) => event.currentTarget.select()}
+          readOnly
+          value={roomCode || inviteLink}
+        />
+        {roomCode && inviteLink && (
+          <p className="mt-2 break-all font-mono text-[10px] leading-4 text-zinc-500">
+            Relay invitation: {inviteLink}
+          </p>
+        )}
+
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row">
           <button
+            className="min-h-11 flex-1 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+            onClick={onClose}
             type="button"
-            onClick={copyInvitation}
-            style={{
-              padding: "10px 16px",
-              border: 0,
-              borderRadius: 6,
-              background: "#6366f1",
-              color: "#fff",
-              cursor: "pointer",
-            }}
           >
-            {copied ? "Copied!" : "Copy link"}
+            Close
           </button>
           <button
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
+            onClick={copyAccessCode}
             type="button"
-            onClick={onClose}
-            style={{
-              padding: "10px 16px",
-              border: "1px solid #334155",
-              borderRadius: 6,
-              background: "transparent",
-              color: "#cbd5e1",
-              cursor: "pointer",
-            }}
           >
-            Done
+            <CopyIcon />
+            {copied ? 'Copied' : 'Copy access code'}
           </button>
         </div>
         {error && (
-          <div
-            role="alert"
-            style={{ marginTop: 12, color: "#fca5a5", fontSize: 13 }}
-          >
+          <p aria-live="polite" className="mt-3 text-sm text-rose-300" role="alert">
             {error}
-          </div>
+          </p>
         )}
       </section>
     </div>
