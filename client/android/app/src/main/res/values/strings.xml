@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cloak</string>
+    <string name="title_activity_main">Cloak</string>
+    <string name="package_name">com.cloak.messenger</string>
+    <string name="custom_url_scheme">com.cloak.messenger</string>
+</resources>
