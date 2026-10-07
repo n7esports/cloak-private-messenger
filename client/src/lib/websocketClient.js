@@ -142,6 +142,9 @@ export class CloakClient {
     }
     this.sharedKey = null;
     this.roomKeyHex = null;
+    this.activeQueueId = null;
+    this.localQueueId = null;
+    this.peerQueueId = null;
     this.receiptStatuses.clear();
     this.setStatus("disconnected");
   }
@@ -154,25 +157,32 @@ export class CloakClient {
     const keyBytes = new Uint8Array(
       normalizedKey.match(/.{2}/g).map((byte) => Number.parseInt(byte, 16))
     );
-    const roomDigest = await globalThis.crypto.subtle.digest("SHA-256", keyBytes);
-    const roomId = Array.from(new Uint8Array(roomDigest), (byte) =>
-      byte.toString(16).padStart(2, "0")
-    ).join("");
-    await this.connect();
-    this.leaveQueue();
-    this.receiptStatuses.clear();
-    this.sharedKey = await globalThis.crypto.subtle.importKey(
-      "raw",
-      keyBytes,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt", "decrypt"]
-    );
-    this.roomKeyHex = normalizedKey;
-    this.activeQueueId = roomId;
-    this.localQueueId = roomId;
-    this.peerQueueId = roomId;
-    await this.joinQueue(roomId);
+    try {
+      const roomDigest = await globalThis.crypto.subtle.digest(
+        "SHA-256",
+        keyBytes
+      );
+      const roomId = Array.from(new Uint8Array(roomDigest), (byte) =>
+        byte.toString(16).padStart(2, "0")
+      ).join("");
+      await this.connect();
+      this.leaveQueue();
+      this.receiptStatuses.clear();
+      this.sharedKey = await globalThis.crypto.subtle.importKey(
+        "raw",
+        keyBytes,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      this.roomKeyHex = normalizedKey;
+      this.activeQueueId = roomId;
+      this.localQueueId = roomId;
+      this.peerQueueId = roomId;
+      await this.joinQueue(roomId);
+    } finally {
+      keyBytes.fill(0);
+    }
   }
 
   async joinQueue(queueId) {

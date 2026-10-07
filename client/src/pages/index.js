@@ -6,6 +6,7 @@ import {
   requestNotificationPermission,
   triggerIncomingMessageNotification,
 } from '../lib/notifications';
+import { registerSensitiveStateCleanup } from '../lib/security';
 
 const ICON_PATHS = {
   shield: (
@@ -186,6 +187,45 @@ export default function Home() {
   };
   const activeSession = sessions.find(
     (session) => session.id === activeSessionId
+  );
+
+  useEffect(
+    () =>
+      registerSensitiveStateCleanup(() => {
+        sessionClientsRef.current.forEach((client) => client.disconnect());
+        sessionClientsRef.current.clear();
+        relayClientRef.current?.disconnect();
+        relayClientRef.current = null;
+        typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+        typingTimeoutsRef.current.clear();
+        localTypingTimeoutsRef.current.forEach((timeout) =>
+          clearTimeout(timeout)
+        );
+        localTypingTimeoutsRef.current.clear();
+        seenMessageIdsRef.current.clear();
+        activeSessionIdRef.current = null;
+        setSessions([]);
+        setActiveSessionId(null);
+        setScreen('join');
+        setInputMessage('');
+        setRoomCode('');
+        setKeyInput('');
+        setConversationSearch('');
+        setMessageSearch('');
+        setChatMenu(null);
+        setConnected(false);
+        setConnectionError('');
+        setJoinError('');
+        setShowKeyModal(false);
+        setShowJoinModal(false);
+        setShowNukeConfirm(false);
+        setShowDeleteChatConfirm(false);
+        setShowClearChatConfirm(false);
+        setShowPeerInfo(false);
+        setShowBurnTimerDialog(false);
+        setShowMessageSearch(false);
+      }),
+    []
   );
 
   useEffect(() => {
