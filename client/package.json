@@ -1,11 +1,17 @@
 {
   "name": "cloak-client",
   "version": "1.0.0",
+  "description": "Zero-Trust Ephemeral E2EE Messenger",
+  "author": "Abdul Wassay",
   "private": true,
+  "main": "main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http-get://127.0.0.1:3000 && electron .\"",
+    "build:desktop": "electron-builder",
+    "cap:build": "next build && npx cap copy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
@@ -15,8 +21,37 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "autoprefixer": "^10.6.1",
+    "concurrently": "^8.2.2",
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0",
+    "next-pwa": "^5.6.0",
     "postcss": "^8.5.29",
-    "tailwindcss": "^3.4.19"
+    "tailwindcss": "^3.4.19",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.cloak.messenger",
+    "productName": "Cloak Private Messenger",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "public/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
