@@ -184,6 +184,7 @@ export class CloakClient {
       supabase.removeChannel(channel).catch((error) => this.onError(error));
     }
     this.privateKey = null;
+    this.publicKey = null;
     this.sharedKey = null;
     this.receiptStatuses.clear();
     this.setStatus("disconnected");

@@ -98,6 +98,24 @@ const ICON_PATHS = {
       <circle cx="12" cy="19" r="1" />
     </>
   ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5m0-8h.01" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="10.8" cy="10.8" r="6.8" />
+      <path d="m16 16 5 5" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12m-5-5 5 5 5-5" />
+      <path d="M5 17v4h14v-4" />
+    </>
+  ),
   plus: (
     <>
       <path d="M12 5v14m-7-7h14" />
@@ -175,6 +193,15 @@ export default function Home() {
   const activeSession = sessions.find(
     (session) => session.id === activeSessionId
   );
+
+  useEffect(() => {
+    if (!chatMenu) return undefined;
+    function closeOnEscape(event) {
+      if (event.key === 'Escape') setChatMenu(null);
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [chatMenu]);
 
   function configureClient(client) {
     client.onStatusCallback = (status) => {
@@ -583,7 +610,6 @@ export default function Home() {
   function openJoinDialog() {
     setJoinError('');
     setShowJoinModal(true);
-    setScreen('join');
   }
 
   async function handleOpenQr() {
@@ -644,7 +670,7 @@ export default function Home() {
           download.href = url;
           download.download = `${activeSession.name.replace(/[^a-z0-9-_]/gi, '_')}.txt`;
           download.click();
-          URL.revokeObjectURL(url);
+          window.setTimeout(() => URL.revokeObjectURL(url), 0);
         } catch (error) {
           console.error('Failed to export the chat:', error);
           setConnectionError('Could not export this chat.');
@@ -1095,7 +1121,9 @@ export default function Home() {
           )}
         </section>
 
-        <footer className="z-10 shrink-0 border-t border-zinc-800 bg-[#101012]">
+        <footer
+          className={`${screen === 'chat' && activeSession ? '' : 'hidden'} z-10 shrink-0 border-t border-zinc-800 bg-[#101012]`}
+        >
           <form
             className="mx-auto flex w-full max-w-4xl items-end gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-4 md:px-6 md:py-4"
             onSubmit={handleSendMessage}
@@ -1172,10 +1200,13 @@ export default function Home() {
               className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${item.id === 'nuke' ? 'text-rose-300' : 'text-zinc-400 hover:text-emerald-300'}`}
               key={item.id}
               onClick={() => {
-                if (item.id === 'join') openJoinDialog();
-                else if (item.id === 'qr') handleOpenQr();
-                else if (item.id === 'nuke') setShowNukeConfirm(true);
-              }}
+                  if (item.id === 'chats') {
+                    selectSession(null);
+                    setScreen('chats');
+                  } else if (item.id === 'join') openJoinDialog();
+                  else if (item.id === 'qr') handleOpenQr();
+                  else if (item.id === 'nuke') setShowNukeConfirm(true);
+                }}
               type="button"
             >
               <Icon name={item.icon} className="h-5 w-5" />
@@ -1184,6 +1215,212 @@ export default function Home() {
           ))}
         </nav>
       </main>
+
+      {chatMenu && activeSession && (
+        <>
+          <button
+            aria-label="Close chat menu"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setChatMenu(null)}
+            type="button"
+          />
+          <div
+            className="fixed z-50 w-60 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-2xl"
+            role="menu"
+            style={{ left: chatMenu.x, top: chatMenu.y }}
+          >
+            {[
+              { id: 'info', label: 'Contact / Peer Info', icon: 'info' },
+              { id: 'search', label: 'Search Messages', icon: 'search' },
+              { id: 'burn', label: 'Disappearing Messages / Burn Timer', icon: 'clock' },
+              { id: 'export', label: 'Export Chat', icon: 'download' },
+              { id: 'close', label: 'Close Chat', icon: 'minimize' },
+              { id: 'clear', label: 'Clear Chat', icon: 'close' },
+              { id: 'delete', label: 'Delete / Nuke Chat', icon: 'trash' },
+            ].map((item) => (
+              <button
+                className={`flex min-h-11 w-full items-center gap-3 px-3 text-left text-sm transition hover:bg-zinc-800 ${
+                  item.id === 'delete'
+                    ? 'text-rose-300 hover:text-rose-200'
+                    : 'text-zinc-200'
+                }`}
+                key={item.id}
+                onClick={() => handleChatMenuAction(item.id)}
+                role="menuitem"
+                type="button"
+              >
+                <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {showPeerInfo && activeSession && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setShowPeerInfo(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="peer-info-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[.18em] text-emerald-400">
+                  Secure conversation
+                </p>
+                <h2 className="mt-1 text-lg font-semibold" id="peer-info-title">
+                  {activeSession.name}
+                </h2>
+              </div>
+              <button
+                aria-label="Close peer information"
+                className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800"
+                onClick={() => setShowPeerInfo(false)}
+                type="button"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <dl className="mt-5 space-y-4 text-sm">
+              <div>
+                <dt className="text-xs text-zinc-500">Fingerprint</dt>
+                <dd className="mt-1 break-all font-mono text-zinc-200">
+                  {activeSession.fingerprint}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500">Cipher suite</dt>
+                <dd className="mt-1 text-zinc-200">{activeSession.cipherSuite}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      )}
+
+      {showBurnTimerDialog && activeSession && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setShowBurnTimerDialog(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="burn-timer-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <h2 className="text-lg font-semibold" id="burn-timer-title">
+              Disappearing messages
+            </h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Choose how long sent messages remain after they are seen.
+            </p>
+            <label className="mt-5 block text-xs font-medium text-zinc-400" htmlFor="chat-burn-timer">
+              Burn timer
+            </label>
+            <select
+              className="mt-2 h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-emerald-600"
+              id="chat-burn-timer"
+              onChange={(event) => setBurnAfterSec(Number(event.target.value))}
+              value={burnAfterSec}
+            >
+              <option value={0}>Off</option>
+              <option value={5}>5 seconds</option>
+              <option value={30}>30 seconds</option>
+              <option value={60}>60 seconds</option>
+            </select>
+            <button
+              className="mt-5 min-h-11 w-full rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
+              onClick={() => setShowBurnTimerDialog(false)}
+              type="button"
+            >
+              Done
+            </button>
+          </section>
+        </div>
+      )}
+
+      {showClearChatConfirm && activeSession && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setShowClearChatConfirm(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="clear-chat-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            role="alertdialog"
+          >
+            <h2 className="font-semibold" id="clear-chat-title">Clear chat history?</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              This removes all messages from this device but keeps the secure room and its key.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="min-h-11 rounded-xl border border-zinc-700 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
+                onClick={() => setShowClearChatConfirm(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="min-h-11 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500"
+                onClick={handleClearChat}
+                type="button"
+              >
+                Clear messages
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showDeleteChatConfirm && activeSession && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setShowDeleteChatConfirm(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="delete-chat-title"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-rose-900/70 bg-zinc-900 p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            role="alertdialog"
+          >
+            <h2 className="font-semibold" id="delete-chat-title">Delete this chat?</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              This disconnects the room and purges its key material from this device. This cannot be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="min-h-11 rounded-xl border border-zinc-700 px-4 text-sm text-zinc-300 hover:bg-zinc-800"
+                onClick={() => setShowDeleteChatConfirm(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="min-h-11 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500"
+                onClick={handleDeleteChat}
+                type="button"
+              >
+                Delete chat
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {showJoinModal && (
         <div
