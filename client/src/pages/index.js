@@ -787,16 +787,16 @@ export default function Home() {
         />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
 
-      <main className="w-full h-screen overflow-hidden flex flex-row bg-[#09090b] font-sans text-zinc-100 antialiased">
+      <main className="safe-area-layout flex h-[100dvh] w-full flex-row overflow-hidden bg-[#09090b] font-sans text-zinc-100 antialiased">
         <aside
           className={`${screen === 'chat' && activeSession ? 'hidden' : 'flex'} md:flex w-full md:w-80 lg:w-96 h-full bg-[#18181b] border-r border-zinc-800 flex-col shrink-0`}
         >
-          <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-zinc-800 px-4">
+          <div className="safe-area-header flex min-h-[76px] shrink-0 items-center justify-between border-b border-zinc-800 px-4">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-200">
                 C
@@ -910,7 +910,7 @@ export default function Home() {
           }`}
         >
         <header
-          className="z-20 shrink-0 border-b border-zinc-800 bg-[#0e0e10]/95 backdrop-blur-lg"
+          className="safe-area-header z-20 shrink-0 border-b border-zinc-800 bg-[#0e0e10]/95 backdrop-blur-lg"
           onContextMenu={(event) => {
             if (!activeSession) return;
             event.preventDefault();
@@ -1231,7 +1231,7 @@ export default function Home() {
         </section>
 
         <footer
-          className={`${screen === 'chat' && activeSession ? '' : 'hidden'} z-10 shrink-0 border-t border-zinc-800 bg-[#101012]`}
+          className={`safe-area-footer ${screen === 'chat' && activeSession ? '' : 'hidden'} z-10 shrink-0 border-t border-zinc-800 bg-[#101012]`}
         >
           <form
             className="mx-auto flex w-full max-w-4xl items-end gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-4 md:px-6 md:py-4"
