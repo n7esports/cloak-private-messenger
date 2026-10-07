@@ -1,70 +1,13 @@
 import {
   decryptPayload,
-  deriveSharedSecret,
   encryptPayload,
-  generateEphemeralKeyPair,
 } from "../../../crypto-engine/src/index.js";
 import { supabase } from "./supabaseClient.js";
 
 const CHANNEL_TIMEOUT_MS = 10000;
+const MAX_CONNECTION_ATTEMPTS = 3;
 const ACK_STATUSES = new Set(["delivered", "seen"]);
 const BURN_DURATIONS = new Set([0, 5, 30, 60]);
-
-function encodePublicKey(publicKey) {
-  return Array.from(new Uint8Array(publicKey), (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("");
-}
-
-function decodePublicKey(hexPublicKey) {
-  if (!/^(?:04[0-9a-fA-F]{128}|[0-9a-fA-F]{128})$/.test(hexPublicKey)) {
-    throw new Error("Invitation contains an invalid public key.");
-  }
-
-  const normalized =
-    hexPublicKey.length === 128 ? `04${hexPublicKey}` : hexPublicKey;
-  const bytes = new Uint8Array(normalized.length / 2);
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(
-      normalized.slice(index * 2, index * 2 + 2),
-      16
-    );
-  }
-  return bytes;
-}
-
-export function parseInvitation(value) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error("Enter an invitation link or queue code.");
-  }
-
-  let invitationText = value.trim();
-  if (/^https?:\/\//i.test(invitationText)) {
-    try {
-      invitationText = new URL(invitationText).hash.slice(1);
-    } catch {
-      throw new Error("The invitation URL is invalid.");
-    }
-  } else {
-    invitationText = invitationText.replace(/^[#?]/, "");
-  }
-
-  const params = new URLSearchParams(invitationText);
-  const queueId = params.get("queueId")?.trim();
-  const pubKey = params.get("pubKey")?.trim();
-
-  if (!queueId || !/^[A-Za-z0-9_-]{8,128}$/.test(queueId)) {
-    throw new Error("The invitation queue ID is invalid or missing.");
-  }
-  if (
-    !pubKey ||
-    !/^(?:04[0-9a-fA-F]{128}|[0-9a-fA-F]{128})$/.test(pubKey)
-  ) {
-    throw new Error("The invitation public key is invalid or missing.");
-  }
-
-  return { queueId, pubKey };
-}
 
 export class CloakClient {
   constructor({ onError } = {}) {
@@ -73,13 +16,13 @@ export class CloakClient {
     this.activeQueueId = null;
     this.localQueueId = null;
     this.peerQueueId = null;
-    this.privateKey = null;
-    this.publicKey = null;
     this.sharedKey = null;
+    this.roomKeyHex = null;
     this.receiptStatuses = new Map();
     this.connectionPromise = null;
     this.onMessageCallback = () => {};
     this.onReceiptCallback = () => {};
+    this.onTypingCallback = () => {};
     this.onStatusCallback = () => {};
     this.onError = onError || (() => {});
   }
@@ -152,18 +95,32 @@ export class CloakClient {
 
     this.setStatus("connecting");
     this.connectionPromise = (async () => {
-      const healthChannel = supabase.channel(
-        `cloak_client_${globalThis.crypto.randomUUID()}`,
-        { config: { broadcast: { self: false } } }
-      );
-      this.healthChannel = healthChannel;
-
       try {
-        await this.subscribe(healthChannel);
-      } catch (error) {
-        this.healthChannel = null;
-        await supabase.removeChannel(healthChannel);
-        throw error;
+        let lastError;
+        for (let attempt = 0; attempt < MAX_CONNECTION_ATTEMPTS; attempt += 1) {
+          const healthChannel = supabase.channel(
+            `cloak_client_${globalThis.crypto.randomUUID()}`,
+            { config: { broadcast: { self: false } } }
+          );
+          this.healthChannel = healthChannel;
+
+          try {
+            await this.subscribe(healthChannel);
+            return;
+          } catch (error) {
+            lastError = error;
+            if (this.healthChannel === healthChannel) {
+              this.healthChannel = null;
+            }
+            await supabase.removeChannel(healthChannel);
+            if (attempt < MAX_CONNECTION_ATTEMPTS - 1) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, 500 * 2 ** attempt)
+              );
+            }
+          }
+        }
+        throw lastError;
       } finally {
         this.connectionPromise = null;
       }
@@ -183,83 +140,39 @@ export class CloakClient {
       this.healthChannel = null;
       supabase.removeChannel(channel).catch((error) => this.onError(error));
     }
-    this.privateKey = null;
-    this.publicKey = null;
     this.sharedKey = null;
+    this.roomKeyHex = null;
     this.receiptStatuses.clear();
     this.setStatus("disconnected");
   }
 
-  async createInvitationLink() {
-    await this.connect();
-    this.leaveQueue();
-    this.sharedKey = null;
-    this.peerQueueId = null;
-    this.activeQueueId = null;
-    this.localQueueId = null;
-    this.privateKey = null;
-    this.publicKey = null;
-    this.receiptStatuses.clear();
-
-    const keyPair = await generateEphemeralKeyPair({ extractable: true });
-    const publicKey = encodePublicKey(
-      await globalThis.crypto.subtle.exportKey("raw", keyPair.publicKey)
+  async joinWithKey(hexKey) {
+    if (typeof hexKey !== "string" || !/^[0-9a-fA-F]{64}$/.test(hexKey)) {
+      throw new Error("Enter a valid 64-character hexadecimal key.");
+    }
+    const normalizedKey = hexKey.toLowerCase();
+    const keyBytes = new Uint8Array(
+      normalizedKey.match(/.{2}/g).map((byte) => Number.parseInt(byte, 16))
     );
-    const queueId = globalThis.crypto.randomUUID();
-
-    this.privateKey = keyPair.privateKey;
-    this.publicKey = publicKey;
-    this.localQueueId = queueId;
-    this.activeQueueId = queueId;
-
-    await this.joinQueue(queueId);
-
-    const params = new URLSearchParams({ queueId, pubKey: publicKey });
-    return `${window.location.origin}/#${params.toString()}`;
-  }
-
-  async acceptInvitation(queueId, hexPubKey) {
-    const validatedInvitation = parseInvitation(
-      `queueId=${encodeURIComponent(queueId || "")}&pubKey=${encodeURIComponent(hexPubKey || "")}`
-    );
-    queueId = validatedInvitation.queueId;
-    hexPubKey = validatedInvitation.pubKey;
-
+    const roomDigest = await globalThis.crypto.subtle.digest("SHA-256", keyBytes);
+    const roomId = Array.from(new Uint8Array(roomDigest), (byte) =>
+      byte.toString(16).padStart(2, "0")
+    ).join("");
     await this.connect();
     this.leaveQueue();
     this.receiptStatuses.clear();
-
-    const keyPair = await generateEphemeralKeyPair({ extractable: true });
-    const remotePublicKey = await globalThis.crypto.subtle.importKey(
+    this.sharedKey = await globalThis.crypto.subtle.importKey(
       "raw",
-      decodePublicKey(hexPubKey),
-      { name: "ECDH", namedCurve: "P-256" },
+      keyBytes,
+      { name: "AES-GCM", length: 256 },
       false,
-      []
+      ["encrypt", "decrypt"]
     );
-    const sharedKey = await deriveSharedSecret(
-      keyPair.privateKey,
-      remotePublicKey
-    );
-    const ownPublicKey = encodePublicKey(
-      await globalThis.crypto.subtle.exportKey("raw", keyPair.publicKey)
-    );
-
-    this.privateKey = keyPair.privateKey;
-    this.publicKey = ownPublicKey;
-    this.sharedKey = sharedKey;
-    this.activeQueueId = queueId;
-    this.localQueueId = queueId;
-    this.peerQueueId = queueId;
-
-    await this.joinQueue(queueId);
-    await this.sendBroadcast(
-      this.channel,
-      JSON.stringify({
-        type: "cloak-handshake",
-        publicKey: ownPublicKey,
-      })
-    );
+    this.roomKeyHex = normalizedKey;
+    this.activeQueueId = roomId;
+    this.localQueueId = roomId;
+    this.peerQueueId = roomId;
+    await this.joinQueue(roomId);
   }
 
   async joinQueue(queueId) {
@@ -281,6 +194,12 @@ export class CloakClient {
         }
       }
     );
+    channel.on("broadcast", { event: "client_typing" }, () => {
+      this.onTypingCallback(true);
+    });
+    channel.on("broadcast", { event: "client_stopped_typing" }, () => {
+      this.onTypingCallback(false);
+    });
 
     this.channel = channel;
     try {
@@ -305,7 +224,7 @@ export class CloakClient {
 
   async sendMessage(plaintext, burnAfterSec = 0) {
     if (!this.sharedKey || !this.activeQueueId) {
-      throw new Error("The invitation session is not ready to send messages.");
+      throw new Error("The key-based session is not ready to send messages.");
     }
     if (!BURN_DURATIONS.has(burnAfterSec)) {
       throw new Error("Burn timer must be off, 5, 30, or 60 seconds.");
@@ -329,14 +248,28 @@ export class CloakClient {
 
   async sendEnvelope(envelope) {
     if (!this.sharedKey || !this.channel) {
-      throw new Error("The invitation session is not ready to send messages.");
+      throw new Error("The key-based session is not ready to send messages.");
     }
-
     const encryptedMessage = await encryptPayload(
       this.sharedKey,
       JSON.stringify(envelope)
     );
     return this.sendBroadcast(this.channel, encryptedMessage);
+  }
+
+  async sendTyping(isTyping) {
+    if (!this.channel || typeof isTyping !== "boolean") {
+      throw new Error("A connected room and typing state are required.");
+    }
+    const result = await this.channel.send({
+      type: "broadcast",
+      event: isTyping ? "client_typing" : "client_stopped_typing",
+      payload: {},
+    });
+    if (result?.status === "error") {
+      throw new Error(result.message || "Could not broadcast typing state.");
+    }
+    return result;
   }
 
   async sendAck(msgId, status) {
@@ -361,28 +294,6 @@ export class CloakClient {
       envelope = JSON.parse(message);
     } catch {
       this.onError(new Error("Received an invalid channel message."));
-      return;
-    }
-
-    if (envelope?.type === "cloak-handshake") {
-      try {
-        if (!this.privateKey || typeof envelope.publicKey !== "string") {
-          throw new Error("Received an invalid invitation handshake.");
-        }
-        const remotePublicKey = await globalThis.crypto.subtle.importKey(
-          "raw",
-          decodePublicKey(envelope.publicKey),
-          { name: "ECDH", namedCurve: "P-256" },
-          false,
-          []
-        );
-        this.sharedKey = await deriveSharedSecret(
-          this.privateKey,
-          remotePublicKey
-        );
-      } catch (error) {
-        this.onError(error);
-      }
       return;
     }
 

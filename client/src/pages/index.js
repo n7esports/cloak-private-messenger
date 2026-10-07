@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import { CloakClient, parseInvitation } from '../lib/websocketClient';
+import { CloakClient } from '../lib/websocketClient';
 import InviteModal from '../components/InviteModal';
 
 const ICON_PATHS = {
@@ -103,12 +103,6 @@ const ICON_PATHS = {
       <path d="m16 16 5 5" />
     </>
   ),
-  download: (
-    <>
-      <path d="M12 3v12m-5-5 5 5 5-5" />
-      <path d="M5 17v4h14v-4" />
-    </>
-  ),
   plus: (
     <>
       <path d="M12 5v14m-7-7h14" />
@@ -149,7 +143,7 @@ export default function Home() {
   const [inputMessage, setInputMessage] = useState('');
   const [connected, setConnected] = useState(false);
   const [connectionError, setConnectionError] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showNukeConfirm, setShowNukeConfirm] = useState(false);
   const [showDeleteChatConfirm, setShowDeleteChatConfirm] = useState(false);
@@ -160,8 +154,8 @@ export default function Home() {
   const [messageSearch, setMessageSearch] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
   const [chatMenu, setChatMenu] = useState(null);
-  const [inviteLink, setInviteLink] = useState('');
-  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [roomCode, setRoomCode] = useState('');
+  const [keyInput, setKeyInput] = useState('');
   const [joinError, setJoinError] = useState('');
   const [burnAfterSec, setBurnAfterSec] = useState(0);
 
@@ -171,6 +165,8 @@ export default function Home() {
   const chatFeedRef = useRef(null);
   const activeSessionIdRef = useRef(null);
   const seenMessageIdsRef = useRef(new Set());
+  const typingTimeoutsRef = useRef(new Map());
+  const localTypingTimeoutsRef = useRef(new Map());
   const totalUnreadCount = sessions.reduce(
     (total, session) =>
       total +
@@ -205,6 +201,9 @@ export default function Home() {
       }
       if (status === 'disconnected' && client === relayClientRef.current) {
         setConnected(false);
+        setConnectionError(
+          'Relay connection lost. The client will retry automatically.'
+        );
       }
     };
     client.onMessageCallback = (message) => {
@@ -230,6 +229,7 @@ export default function Home() {
             ...session,
             lastMessage: message.content,
             time: 'Just now',
+            peerTyping: false,
             messages: [...session.messages, incomingMessage],
           };
         })
@@ -275,6 +275,43 @@ export default function Home() {
         })
       );
     };
+    client.onTypingCallback = (isTyping) => {
+      const targetSessionId = client.localQueueId;
+      if (!targetSessionId) return;
+      const existingTimeout = typingTimeoutsRef.current.get(targetSessionId);
+      if (existingTimeout) clearTimeout(existingTimeout);
+      if (!isTyping) {
+        typingTimeoutsRef.current.delete(targetSessionId);
+        setSessions((previous) =>
+          previous.map((session) =>
+            session.id === targetSessionId
+              ? { ...session, peerTyping: false }
+              : session
+          )
+        );
+        return;
+      }
+      setSessions((previous) =>
+        previous.map((session) =>
+          session.id === targetSessionId
+            ? { ...session, peerTyping: true }
+            : session
+        )
+      );
+      typingTimeoutsRef.current.set(
+        targetSessionId,
+        setTimeout(() => {
+          typingTimeoutsRef.current.delete(targetSessionId);
+          setSessions((previous) =>
+            previous.map((session) =>
+              session.id === targetSessionId
+                ? { ...session, peerTyping: false }
+                : session
+            )
+          );
+        }, 4000)
+      );
+    };
   }
 
   function createSessionClient() {
@@ -289,54 +326,7 @@ export default function Home() {
     configureClient(client);
 
     let cancelled = false;
-    client
-      .connect()
-      .then(async () => {
-        if (cancelled) return;
-        const invitationHash = window.location.hash;
-        if (
-          !invitationHash.includes('queueId=') ||
-          !invitationHash.includes('pubKey=')
-        ) {
-          return;
-        }
-        const { queueId, pubKey } = parseInvitation(invitationHash);
-        sessionClientsRef.current.set(queueId, client);
-        try {
-          await client.acceptInvitation(queueId, pubKey);
-          if (cancelled) return;
-          const localSessionId = client.localQueueId;
-          const session = {
-            id: localSessionId,
-            name: `Peer ${queueId.slice(0, 4)}`,
-            fingerprint: pubKey.slice(0, 16),
-            lastMessage: 'Session established over blind relay.',
-            time: 'Just now',
-            active: true,
-            cipherSuite: 'ECDH P-256 + AES-GCM',
-            messages: [
-              {
-                id: `${localSessionId}-system`,
-                sender: 'system',
-                text: 'Ephemeral queue connected via invitation link.',
-                time: 'Now',
-              },
-            ],
-          };
-          setSessions((previous) => [session, ...previous]);
-          selectSession(localSessionId);
-          setScreen('chat');
-          window.history.replaceState(null, '', window.location.pathname);
-        } catch (error) {
-          sessionClientsRef.current.delete(queueId);
-          if (!cancelled) {
-            console.error('Failed to accept invitation from URL hash:', error);
-            setConnectionError(
-              'The invitation could not be accepted. Check the link and try again.'
-            );
-          }
-        }
-      })
+    client.connect()
       .catch((error) => {
         if (!cancelled) {
           console.error('Cloak relay initialization failed:', error);
@@ -353,6 +343,10 @@ export default function Home() {
         if (sessionClient !== client) sessionClient.disconnect();
       });
       sessionClientsRef.current.clear();
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+      localTypingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      localTypingTimeoutsRef.current.clear();
       if (relayClientRef.current === client) relayClientRef.current = null;
     };
   }, []);
@@ -465,32 +459,52 @@ export default function Home() {
     return () => clearInterval(burnInterval);
   }, []);
 
-  async function handleNewInvitation() {
+  async function handleGenerateKey() {
     if (!connected) {
-      setConnectionError('Connect to the relay before creating an invitation.');
+      setConnectionError('Connect to the relay before creating a secure room.');
       return;
     }
+    try {
+      const keyBytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
+      const key = Array.from(keyBytes, (byte) =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+      await connectWithKey(key, true);
+    } catch (error) {
+      console.error('Failed to generate a secure room key:', error);
+      setConnectionError('Could not generate a secure room key.');
+    }
+  }
+
+  async function connectWithKey(key, showAccessCode = false) {
     const client = createSessionClient();
     try {
-      const link = await client.createInvitationLink();
+      await client.joinWithKey(key);
       const newSessionId = client.localQueueId;
+      const existingSession = sessionClientsRef.current.get(newSessionId);
+      if (existingSession) {
+        client.disconnect();
+        selectSession(newSessionId);
+        setScreen('chat');
+        setShowJoinModal(false);
+        setKeyInput('');
+        return;
+      }
       sessionClientsRef.current.set(newSessionId, client);
-      setInviteLink(link);
-      setShowInviteModal(true);
+      const normalizedKey = key.toLowerCase();
       const newSession = {
         id: newSessionId,
-        name: `Peer ${newSessionId.slice(0, 4)}`,
-        fingerprint: 'Pending handshake',
-        inviteLink: link,
-        lastMessage: 'Awaiting peer handshake...',
+        name: `Peer ${normalizedKey.slice(0, 4)}...${normalizedKey.slice(-4)}`,
+        fingerprint: newSessionId,
+        lastMessage: 'Secure room ready. Share the 256-bit key.',
         time: 'Just now',
         active: true,
-        cipherSuite: 'ECDH P-256 + AES-GCM',
+        cipherSuite: 'AES-256-GCM',
         messages: [
           {
             id: `${newSessionId}-system`,
             sender: 'system',
-            text: 'Ephemeral queue created. Share the invitation with your peer.',
+            text: 'Ephemeral encrypted room ready. Share its 256-bit key with your peer.',
             time: 'Now',
           },
         ],
@@ -498,61 +512,31 @@ export default function Home() {
       setSessions((previous) => [newSession, ...previous]);
       selectSession(newSessionId);
       setScreen('chat');
+      setRoomCode(normalizedKey);
+      setShowJoinModal(false);
+      setKeyInput('');
+      if (showAccessCode) setShowKeyModal(true);
     } catch (error) {
       client.disconnect();
-      console.error('Failed to generate an invitation:', error);
-      setConnectionError('Could not create an invitation. Please try again.');
+      console.error('Failed to establish a key-based room:', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Could not establish the secure room.';
+      if (showAccessCode) setConnectionError(message);
+      else setJoinError(message);
     }
   }
 
   async function handleConnectSession(event) {
     event.preventDefault();
-    if (!inviteCodeInput.trim()) {
-      setJoinError('Paste a valid invitation link or code to continue.');
+    const key = keyInput.trim();
+    if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+      setJoinError('Enter the 64-character hexadecimal 256-bit room key.');
       return;
     }
     setJoinError('');
-    let sessionClient;
-    let queueId;
-    try {
-      const invitation = parseInvitation(inviteCodeInput);
-      queueId = invitation.queueId;
-      sessionClient = createSessionClient();
-      sessionClientsRef.current.set(queueId, sessionClient);
-      await sessionClient.acceptInvitation(queueId, invitation.pubKey);
-      const localSessionId = sessionClient.localQueueId;
-      const session = {
-        id: localSessionId,
-        name: `Peer ${queueId.slice(0, 4)}`,
-        fingerprint: invitation.pubKey.slice(0, 16),
-        lastMessage: 'Session handshaked manually.',
-        time: 'Just now',
-        active: true,
-        cipherSuite: 'ECDH P-256 + AES-GCM',
-        messages: [
-          {
-            id: `${localSessionId}-system`,
-            sender: 'system',
-            text: 'Connected to queue using a one-time invitation.',
-            time: 'Now',
-          },
-        ],
-      };
-      setSessions((previous) => [session, ...previous]);
-      selectSession(localSessionId);
-      setScreen('chat');
-      setInviteCodeInput('');
-      setShowJoinModal(false);
-    } catch (error) {
-      if (queueId) sessionClientsRef.current.delete(queueId);
-      sessionClient?.disconnect();
-      console.error('Failed to connect with invitation:', error);
-      setJoinError(
-        error instanceof Error
-          ? error.message
-          : 'Could not establish the secure session.'
-      );
-    }
+    await connectWithKey(key);
   }
 
   async function handleSendMessage(event) {
@@ -592,6 +576,12 @@ export default function Home() {
             : session
         )
       );
+      const typingTimeout = localTypingTimeoutsRef.current.get(activeSessionId);
+      if (typingTimeout) clearTimeout(typingTimeout);
+      localTypingTimeoutsRef.current.delete(activeSessionId);
+      client
+        .sendTyping(false)
+        .catch((error) => console.error('Failed to stop typing state:', error));
       setInputMessage('');
     } catch (error) {
       console.error('Failed to send encrypted message:', error);
@@ -601,25 +591,58 @@ export default function Home() {
     }
   }
 
+  function handleMessageInputChange(event) {
+    const value = event.target.value;
+    setInputMessage(value);
+    const client = sessionClientsRef.current.get(activeSessionId);
+    if (!client) return;
+
+    const existingTimeout = localTypingTimeoutsRef.current.get(activeSessionId);
+    if (existingTimeout) clearTimeout(existingTimeout);
+    if (!value.trim()) {
+      localTypingTimeoutsRef.current.delete(activeSessionId);
+      client
+        .sendTyping(false)
+        .catch((error) => console.error('Failed to send typing state:', error));
+      return;
+    }
+
+    client
+      .sendTyping(true)
+      .catch((error) => {
+        console.error('Failed to send typing state:', error);
+        setConnectionError('Could not update the live typing indicator.');
+      });
+    localTypingTimeoutsRef.current.set(
+      activeSessionId,
+      setTimeout(() => {
+        localTypingTimeoutsRef.current.delete(activeSessionId);
+        client
+          .sendTyping(false)
+          .catch((error) => console.error('Failed to stop typing state:', error));
+      }, 1400)
+    );
+  }
+
   function openJoinDialog() {
     setJoinError('');
     setShowJoinModal(true);
   }
 
   async function handleOpenQr() {
-    const invitationLink = activeSession?.inviteLink || inviteLink;
-    if (invitationLink) {
-      setInviteLink(invitationLink);
-      setShowInviteModal(true);
-      return;
-    }
-    await handleNewInvitation();
+    const activeClient = activeSessionId
+      ? sessionClientsRef.current.get(activeSessionId)
+      : null;
+    if (!activeClient?.roomKeyHex) return;
+    setRoomCode(activeClient.roomKeyHex);
+    setShowKeyModal(true);
   }
 
   function handleSelectSession(sessionId) {
     selectSession(sessionId);
     const session = sessions.find((entry) => entry.id === sessionId);
-    setInviteLink(session?.inviteLink || '');
+    const roomKey = sessionClientsRef.current.get(sessionId)?.roomKeyHex;
+    if (roomKey) setRoomCode(roomKey);
     setInputMessage('');
     setScreen('chat');
   }
@@ -653,32 +676,14 @@ export default function Home() {
       case 'burn':
         setShowBurnTimerDialog(true);
         break;
-      case 'export': {
-        try {
-          const content = activeSession.messages
-            .map((message) => `[${message.time}] ${message.sender}: ${message.text}`)
-            .join('\n');
-          const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
-          const url = URL.createObjectURL(file);
-          const download = document.createElement('a');
-          download.href = url;
-          download.download = `${activeSession.name.replace(/[^a-z0-9-_]/gi, '_')}.txt`;
-          download.click();
-          window.setTimeout(() => URL.revokeObjectURL(url), 0);
-        } catch (error) {
-          console.error('Failed to export the chat:', error);
-          setConnectionError('Could not export this chat.');
-        }
-        break;
-      }
       case 'close':
-        handleBackFromChat();
+        setShowDeleteChatConfirm(true);
         break;
       case 'clear':
         setShowClearChatConfirm(true);
         break;
       case 'delete':
-        setShowDeleteChatConfirm(true);
+        setShowNukeConfirm(true);
         break;
       default:
         break;
@@ -708,6 +713,12 @@ export default function Home() {
         relayClientRef.current = null;
         setConnected(false);
       }
+      const typingTimeout = typingTimeoutsRef.current.get(activeSessionId);
+      if (typingTimeout) clearTimeout(typingTimeout);
+      typingTimeoutsRef.current.delete(activeSessionId);
+      const localTypingTimeout = localTypingTimeoutsRef.current.get(activeSessionId);
+      if (localTypingTimeout) clearTimeout(localTypingTimeout);
+      localTypingTimeoutsRef.current.delete(activeSessionId);
     }
     setSessions((previous) =>
       previous.filter((session) => session.id !== activeSessionId)
@@ -715,7 +726,7 @@ export default function Home() {
     seenMessageIdsRef.current.clear();
     selectSession(null);
     setInputMessage('');
-    setInviteLink('');
+    setRoomCode('');
     setShowDeleteChatConfirm(false);
     setScreen('chats');
   }
@@ -726,17 +737,27 @@ export default function Home() {
       ...sessionClientsRef.current.values(),
     ]);
     clients.forEach((client) => client?.disconnect());
-    relayClientRef.current = null;
     sessionClientsRef.current.clear();
+    typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+    typingTimeoutsRef.current.clear();
+    localTypingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+    localTypingTimeoutsRef.current.clear();
     setSessions([]);
     setActiveSessionId(null);
     activeSessionIdRef.current = null;
     setInputMessage('');
-    setInviteLink('');
+    setRoomCode('');
     seenMessageIdsRef.current.clear();
     setShowNukeConfirm(false);
-    window.history.replaceState(null, '', window.location.pathname);
-    window.requestAnimationFrame(() => window.location.reload());
+    const relayClient = relayClientRef.current;
+    if (relayClient) {
+      relayClient.connect().catch((error) => {
+        console.error('Failed to reconnect after clearing the session:', error);
+        setConnectionError(
+          'Session cleared, but the relay could not reconnect. Check your connection and retry.'
+        );
+      });
+    }
   }
 
   const currentRoomName =
@@ -786,15 +807,16 @@ export default function Home() {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
-                aria-label="Create a new room"
-                className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-emerald-300"
-                onClick={handleNewInvitation}
+                aria-label="Generate a new 256-bit key"
+                className="inline-flex h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-emerald-300"
+                onClick={handleGenerateKey}
                 type="button"
               >
-                <Icon name="plus" />
+                <Icon name="plus" className="h-5 w-5" />
+                <span>New Key</span>
               </button>
               <button
-                aria-label="Join a room"
+                aria-label="Join with a 256-bit key"
                 className="grid h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                 onClick={openJoinDialog}
                 type="button"
@@ -809,10 +831,10 @@ export default function Home() {
               <Icon name="search" className="h-4 w-4" />
             </span>
             <input
-              aria-label="Search conversations"
+              aria-label="Search active sessions"
               className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/80 pl-10 pr-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-800"
               onChange={(event) => setConversationSearch(event.target.value)}
-              placeholder="Search or start new room"
+              placeholder="Search active sessions"
               type="search"
               value={conversationSearch}
             />
@@ -849,7 +871,11 @@ export default function Home() {
                     </span>
                     <span className="mt-1 flex items-center justify-between gap-2">
                       <span className="truncate text-xs text-zinc-400">
-                        {session.lastMessage || 'No messages yet.'}
+                        {session.peerTyping ? (
+                          <span className="animate-pulse text-emerald-300">typing...</span>
+                        ) : (
+                          session.lastMessage || 'No messages yet.'
+                        )}
                       </span>
                       <span
                         aria-label={`${unreadCount} unread messages`}
@@ -921,7 +947,9 @@ export default function Home() {
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-1">
                   <h1 className="max-w-[55vw] truncate text-sm font-semibold text-zinc-100 sm:max-w-sm md:text-base">
-                    {currentRoomName}
+                    {activeSession
+                      ? `${activeSession.fingerprint.slice(0, 12)}...${activeSession.fingerprint.slice(-8)}`
+                      : currentRoomName}
                   </h1>
                   {activeSession && (
                     <button
@@ -950,10 +978,12 @@ export default function Home() {
                     className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-rose-400'}`}
                   />
                   <span className="truncate text-zinc-400">
-                    {inputMessage.trim()
+                    {activeSession?.peerTyping
+                      ? `Peer ${activeSession.name.slice(5)} is typing...`
+                      : inputMessage.trim()
                       ? 'You are typing…'
                       : activeSession
-                        ? 'End-to-end encrypted'
+                        ? 'AES-256-GCM end-to-end encrypted'
                         : connected
                           ? 'Ready to connect'
                           : 'Connecting to relay…'}
@@ -970,29 +1000,29 @@ export default function Home() {
                 {connected ? 'Relay connected' : 'Relay disconnected'}
               </span>
               <button
-                aria-label="Join a room"
-                className={`${activeSession ? 'hidden md:grid' : 'grid'} h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100`}
-                onClick={openJoinDialog}
+                aria-label="Start a voice or video call"
+                className="hidden h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 md:grid"
+                disabled
                 type="button"
               >
                 <Icon name="camera" />
               </button>
               <button
                 aria-label="Open QR access"
-                className={`${activeSession ? 'hidden md:grid' : 'grid'} h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100`}
+                className={`${activeSession ? 'grid' : 'hidden'} h-11 w-11 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100`}
                 onClick={handleOpenQr}
                 type="button"
               >
                 <Icon name="qr" />
               </button>
               <button
-                aria-label="Nuke session"
+                aria-label="Nuke Chamber"
                 className="hidden h-11 items-center gap-2 rounded-xl border border-rose-900/80 px-3 text-xs font-semibold text-rose-300 transition hover:bg-rose-950/50 md:inline-flex"
                 onClick={() => setShowNukeConfirm(true)}
                 type="button"
               >
                 <Icon name="trash" className="h-4 w-4" />
-                Nuke
+                Nuke Chamber
               </button>
               {activeSession && (
                 <button
@@ -1064,10 +1094,10 @@ export default function Home() {
                 <div className="mx-auto max-w-lg rounded-xl border border-emerald-900/40 bg-emerald-950/20 px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-2 text-xs font-medium text-emerald-300">
                     <Icon name="lock" className="h-3.5 w-3.5" />
-                    Forward secrecy engaged
+                    256-bit key encryption active
                   </div>
                   <p className="mt-1 text-[11px] leading-5 text-zinc-500">
-                    Messages are encrypted in the client and removed from this view when they burn.
+                    Messages use AES-256-GCM with a key shared directly between peers. Message timers are applied on this device.
                   </p>
                 </div>
 
@@ -1150,6 +1180,19 @@ export default function Home() {
                     {messageSearch ? 'No matching messages.' : 'No messages yet.'}
                   </p>
                 )}
+                {activeSession.peerTyping && (
+                  <div className="flex justify-start" role="status" aria-label="Peer is typing">
+                    <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-zinc-700/80 bg-zinc-800 px-4 py-3">
+                      {[0, 1, 2].map((dot) => (
+                        <span
+                          className="h-2 w-2 animate-bounce rounded-full bg-zinc-400"
+                          key={dot}
+                          style={{ animationDelay: `${dot * 150}ms` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -1159,20 +1202,20 @@ export default function Home() {
                 <Icon name="shield" className="h-8 w-8" />
               </span>
               <h2 className="mt-5 text-xl font-semibold text-zinc-100">
-                Start a private conversation
+                Join or create a key-based room
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-zinc-400">
-                Create a one-time invitation or join a peer&apos;s room. No account or saved chat history required.
+                Generate a 256-bit room key or paste a peer&apos;s key. Keys and messages remain in memory only.
               </p>
               <div className="mt-6 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                 <button
                   className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={!connected}
-                  onClick={handleNewInvitation}
+                  onClick={handleGenerateKey}
                   type="button"
                 >
                   <Icon name="plus" className="h-4 w-4" />
-                  Create invitation
+                  Generate 256-Bit Key
                 </button>
                 <button
                   className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
@@ -1180,7 +1223,7 @@ export default function Home() {
                   type="button"
                 >
                   <Icon name="key" className="h-4 w-4" />
-                  Join with code
+                  Join with 256-Bit Key
                 </button>
               </div>
             </div>
@@ -1207,7 +1250,7 @@ export default function Home() {
               autoComplete="off"
               className="h-11 min-w-0 flex-1 rounded-full border border-zinc-700 bg-zinc-900 px-4 text-[14px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-xl"
               disabled={!activeSession}
-              onChange={(event) => setInputMessage(event.target.value)}
+              onChange={handleMessageInputChange}
               placeholder="Message securely"
               type="text"
               value={inputMessage}
@@ -1274,13 +1317,12 @@ export default function Home() {
             style={{ left: chatMenu.x, top: chatMenu.y }}
           >
             {[
-              { id: 'info', label: 'Contact / Peer Info', icon: 'info' },
-              { id: 'search', label: 'Search Messages', icon: 'search' },
-              { id: 'burn', label: 'Disappearing Messages / Burn Timer', icon: 'clock' },
-              { id: 'export', label: 'Export Chat', icon: 'download' },
-              { id: 'close', label: 'Close Chat', icon: 'minimize' },
-              { id: 'clear', label: 'Clear Chat', icon: 'close' },
-              { id: 'delete', label: 'Delete / Nuke Chat', icon: 'trash' },
+              { id: 'info', label: 'Peer Info', icon: 'info' },
+              { id: 'search', label: 'Search', icon: 'search' },
+              { id: 'burn', label: 'Disappearing Messages', icon: 'clock' },
+              { id: 'close', label: 'Close Session', icon: 'minimize' },
+              { id: 'clear', label: 'Clear History', icon: 'close' },
+              { id: 'delete', label: 'Nuke', icon: 'trash' },
             ].map((item) => (
               <button
                 className={`flex min-h-11 w-full items-center gap-3 px-3 text-left text-sm transition hover:bg-zinc-800 ${
@@ -1442,7 +1484,7 @@ export default function Home() {
             onClick={(event) => event.stopPropagation()}
             role="alertdialog"
           >
-            <h2 className="font-semibold" id="delete-chat-title">Delete this chat?</h2>
+            <h2 className="font-semibold" id="delete-chat-title">Close this session?</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               This disconnects the room and purges its key material from this device. This cannot be undone.
             </p>
@@ -1459,7 +1501,7 @@ export default function Home() {
                 onClick={handleDeleteChat}
                 type="button"
               >
-                Delete chat
+                Close session
               </button>
             </div>
           </section>
@@ -1482,10 +1524,10 @@ export default function Home() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-zinc-100" id="join-title">
-                  Join a private room
+                  Join with a 256-bit key
                 </h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Paste the one-time invitation link shared by your peer.
+                  Paste the 64-character hexadecimal key shared by your peer.
                 </p>
               </div>
               <button
@@ -1500,17 +1542,23 @@ export default function Home() {
             <form className="mt-5 space-y-3" onSubmit={handleConnectSession}>
               <label
                 className="block text-xs font-medium uppercase tracking-wider text-zinc-400"
-                htmlFor="invitation-code"
+                htmlFor="room-key"
               >
-                Invitation link or code
+                256-bit room key
               </label>
-              <textarea
+              <input
+                autoCapitalize="off"
                 autoComplete="off"
-                className="min-h-24 w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 font-mono text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
-                id="invitation-code"
-                onChange={(event) => setInviteCodeInput(event.target.value)}
-                placeholder="https://…/#queueId=…&pubKey=…"
-                value={inviteCodeInput}
+                autoCorrect="off"
+                className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 font-mono text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                id="room-key"
+                inputMode="text"
+                maxLength={64}
+                onChange={(event) => setKeyInput(event.target.value)}
+                placeholder="64 hexadecimal characters"
+                spellCheck="false"
+                type="text"
+                value={keyInput}
               />
               {joinError && (
                 <p
@@ -1526,17 +1574,17 @@ export default function Home() {
                 type="submit"
               >
                 <Icon name="key" className="h-4 w-4" />
-                Establish secure session
+                Join secure room
               </button>
             </form>
           </section>
         </div>
       )}
-      {showInviteModal && (
+      {showKeyModal && (
         <InviteModal
-          inviteLink={inviteLink}
-          onClose={() => setShowInviteModal(false)}
-          open={showInviteModal}
+          roomCode={roomCode}
+          onClose={() => setShowKeyModal(false)}
+          open={showKeyModal}
         />
       )}
       {showNukeConfirm && (
@@ -1558,10 +1606,10 @@ export default function Home() {
               </span>
               <div>
                 <h2 className="font-semibold text-zinc-100" id="nuke-title">
-                  Clear this session?
+                  Nuke all active sessions?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  This disconnects the relay, clears the in-memory room and messages, and reloads a clean conversation.
+                  This disconnects all active rooms and removes their keys and messages from this device. You will need each key to reconnect.
                 </p>
               </div>
             </div>
@@ -1578,7 +1626,7 @@ export default function Home() {
                 onClick={handleNuke}
                 type="button"
               >
-                Clear and reload
+                Nuke all sessions
               </button>
             </div>
           </section>

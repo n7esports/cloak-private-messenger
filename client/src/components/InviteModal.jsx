@@ -37,14 +37,13 @@ function CloseIcon() {
 
 export default function InviteModal({
   open,
-  inviteLink,
   roomCode,
   onClose,
 }) {
   const [qrCode, setQrCode] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const qrValue = inviteLink || roomCode;
+  const qrValue = roomCode;
 
   useEffect(() => {
     if (!open || !qrValue) return undefined;
@@ -93,7 +92,7 @@ export default function InviteModal({
 
   async function copyAccessCode() {
     try {
-      await navigator.clipboard.writeText(roomCode || inviteLink);
+      await navigator.clipboard.writeText(roomCode);
       setCopied(true);
     } catch (copyError) {
       console.error('Unable to copy the room access code:', copyError);
@@ -134,9 +133,7 @@ export default function InviteModal({
         </div>
 
         <p className="mt-2 text-sm leading-5 text-zinc-400">
-          {inviteLink
-            ? 'Share this one-time invitation link with your peer.'
-            : 'This local 256-bit workbench key is a design preview, not a relay invitation.'}
+          This 256-bit key is the only room credential. Share it through a trusted, private channel.
         </p>
 
         <div className="mx-auto my-5 grid aspect-square w-full max-w-[256px] place-items-center rounded-2xl bg-white p-3">
@@ -162,20 +159,15 @@ export default function InviteModal({
           className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500"
           htmlFor="access-code"
         >
-          {roomCode ? '256-bit room code' : 'One-time invitation link'}
+          256-bit room key
         </label>
         <textarea
           className="max-h-28 min-h-16 w-full resize-y break-all rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 font-mono text-[11px] leading-5 text-zinc-300 outline-none focus:border-emerald-700"
           id="access-code"
           onFocus={(event) => event.currentTarget.select()}
           readOnly
-          value={roomCode || inviteLink}
+          value={roomCode}
         />
-        {roomCode && inviteLink && (
-          <p className="mt-2 break-all font-mono text-[10px] leading-4 text-zinc-500">
-            Relay invitation: {inviteLink}
-          </p>
-        )}
 
         <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row">
           <button
