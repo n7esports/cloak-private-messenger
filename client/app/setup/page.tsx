@@ -11,6 +11,7 @@ import {
   initCrypto,
   type IdentityKeys,
 } from "../../lib/crypto";
+import { cascade, fadeUp, fadeUpFast } from "../../lib/motion";
 import { database, saveEncryptedIdentity } from "../../lib/vault";
 import { useVaultStore } from "../../store/useVaultStore";
 
@@ -184,17 +185,11 @@ export default function SetupPage() {
         <motion.div
           initial="hidden"
           animate="show"
-          variants={{
-            hidden: {},
-            show: { transition: { staggerChildren: 0.15 } },
-          }}
+          variants={cascade(0, 0.15)}
           className="mb-6 space-y-3"
         >
           <motion.p
-            variants={{
-              hidden: { opacity: 0, y: 8 },
-              show: { opacity: 1, y: 0 },
-            }}
+            variants={fadeUp}
             className="max-w-xl rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted"
           >
             Welcome to Cloak. There are no accounts, phone numbers, or
@@ -203,10 +198,7 @@ export default function SetupPage() {
           </motion.p>
           {step !== "welcome" && (
             <motion.p
-              variants={{
-                hidden: { opacity: 0, y: 8 },
-                show: { opacity: 1, y: 0 },
-              }}
+              variants={fadeUp}
               className="ml-auto max-w-xl rounded-2xl rounded-tr-sm bg-cloak-accent/10 px-4 py-3 text-sm leading-6 text-cloak-text"
             >
               {step === "credentials"
@@ -226,10 +218,10 @@ export default function SetupPage() {
           {step === "welcome" ? (
             <motion.div
               key="welcome"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
+              variants={fadeUpFast}
+              initial="hidden"
+              animate="show"
+              exit="exit"
               className="space-y-5"
             >
               {error && (
@@ -249,10 +241,10 @@ export default function SetupPage() {
           ) : step === "credentials" ? (
             <motion.form
               key="credentials"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
+              variants={fadeUpFast}
+              initial="hidden"
+              animate="show"
+              exit="exit"
               onSubmit={continueToRecovery}
               className="space-y-6"
             >
@@ -339,10 +331,10 @@ export default function SetupPage() {
           ) : (
             <motion.form
               key="recovery"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
+              variants={fadeUpFast}
+              initial="hidden"
+              animate="show"
+              exit="exit"
               onSubmit={completeSetup}
               className="space-y-6"
             >

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { fadeUpFast } from "../../lib/motion";
 import { database, wipeVaultDatabase } from "../../lib/vault";
 import { useVaultStore } from "../../store/useVaultStore";
 
@@ -127,10 +128,10 @@ export default function UnlockPage() {
           <AnimatePresence mode="wait">
             <motion.form
               key={mode}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
+              variants={fadeUpFast}
+              initial="hidden"
+              animate="show"
+              exit="exit"
               onSubmit={submitUnlock}
               className="space-y-5"
             >
