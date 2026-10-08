@@ -388,6 +388,7 @@ export class TransportManager {
             );
           }
           resolve(socket);
+          void this.drainQueue();
         } catch (error) {
           this.callbacks?.onConnectionChange("disconnected");
           socket.close();

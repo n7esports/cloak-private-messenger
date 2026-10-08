@@ -7,6 +7,7 @@ import KeyExchangeModal from "../../components/modals/KeyExchangeModal";
 import NewChatModal from "../../components/modals/NewChatModal";
 import { TourOverlay } from "../../components/TourOverlay";
 import { getFlag } from "../../lib/flags";
+import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import {
   EPHEMERAL_TIMERS,
   type InnerPayload,
@@ -33,6 +34,7 @@ export default function ChatsPage() {
   const activeChatId = useChatStore((state) => state.activeChatId);
   const messagesMap = useChatStore((state) => state.messagesMap);
   const relayStatus = useChatStore((state) => state.relayStatus);
+  const networkStatus = useNetworkStatus();
   const transportError = useChatStore((state) => state.transportError);
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const addContact = useChatStore((state) => state.addContact);
@@ -162,20 +164,26 @@ export default function ChatsPage() {
         <div className="flex items-center justify-between border-b border-cloak-border px-4 py-3">
           <p
             className={`text-xs ${
-              relayStatus === "connected"
+              networkStatus === "online" && relayStatus === "connected"
                 ? "text-cloak-accent"
                 : "text-cloak-muted"
             }`}
             role="status"
           >
             <span aria-hidden="true">
-              {relayStatus === "connected" ? "●" : "○"}
+              {networkStatus === "online" && relayStatus === "connected"
+                ? "●"
+                : "○"}
             </span>{" "}
-            {relayStatus === "connected"
+            {networkStatus === "checking"
+              ? "Checking backend connection…"
+              : networkStatus === "offline"
+                ? "Backend unavailable — messages are queued locally"
+                : relayStatus === "connected"
               ? "Online"
               : relayStatus === "connecting"
-                ? "Connecting to relay…"
-                : "Offline — messages are queued locally"}
+                  ? "Backend reachable · connecting to relay…"
+                  : "Backend reachable · relay offline — messages are queued locally"}
           </p>
           <button
             type="button"

@@ -1,3 +1,22 @@
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  const isWebSocket =
+    url.protocol === 'ws:' ||
+    url.protocol === 'wss:' ||
+    request.mode === 'websocket' ||
+    request.headers.get('upgrade')?.toLowerCase() === 'websocket';
+
+  if (isWebSocket) return;
+
+  const bypassCache =
+    url.pathname.startsWith('/api/') ||
+    request.headers.get('accept')?.includes('text/event-stream');
+  if (!bypassCache) return;
+
+  event.respondWith(fetch(request, { cache: 'no-store' }));
+});
+
 self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification('Cloak', {
