@@ -139,6 +139,7 @@ export default function ChatsPage() {
           </div>
           <button
             type="button"
+            data-tour="vault-lock"
             onClick={() => {
               lockVault();
               router.replace("/unlock");

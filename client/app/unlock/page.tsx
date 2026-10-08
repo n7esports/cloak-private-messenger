@@ -14,6 +14,9 @@ export default function UnlockPage() {
     (state) => state.unlockWithRecoveryPhrase,
   );
   const clearMemoryKeys = useVaultStore((state) => state.clearMemoryKeys);
+  const sessionRestoreError = useVaultStore(
+    (state) => state.sessionRestoreError,
+  );
   const [mode, setMode] = useState<"passphrase" | "recovery">("passphrase");
   const [credential, setCredential] = useState("");
   const [hasVault, setHasVault] = useState<boolean | null>(null);
@@ -181,6 +184,11 @@ export default function UnlockPage() {
               </button>
             </motion.form>
           </AnimatePresence>
+        )}
+        {sessionRestoreError && (
+          <p role="status" className="mt-4 text-sm text-cloak-muted">
+            {sessionRestoreError} Enter your passphrase to unlock.
+          </p>
         )}
 
         <div className="mt-6 flex flex-col items-center gap-4">

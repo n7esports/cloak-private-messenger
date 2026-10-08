@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import HowItWorksLink from "../components/HowItWorksLink";
+import { getFlag } from "../lib/flags";
+import { useVaultStore } from "../store/useVaultStore";
 
 const principles = [
   {
@@ -20,6 +26,38 @@ const principles = [
 ];
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [routingError, setRoutingError] = useState("");
+  const isUnlocked = useVaultStore((state) => state.isUnlocked);
+  const sessionRestored = useVaultStore((state) => state.sessionRestored);
+  const restoreSession = useVaultStore((state) => state.restoreSession);
+
+  useEffect(() => {
+    let active = true;
+    const routeReturningUser = async () => {
+      try {
+        if (!(await getFlag("cloak_onboarded"))) return;
+        if (!sessionRestored) await restoreSession();
+        if (!active) return;
+        router.replace(
+          useVaultStore.getState().isUnlocked ? "/chats" : "/unlock",
+        );
+      } catch (cause) {
+        if (active) {
+          setRoutingError(
+            cause instanceof Error
+              ? cause.message
+              : "Could not check the saved vault session.",
+          );
+        }
+      }
+    };
+    void routeReturningUser();
+    return () => {
+      active = false;
+    };
+  }, [router, restoreSession, sessionRestored, isUnlocked]);
+
   return (
     <main className="min-h-dvh overflow-y-auto bg-cloak-bg text-zinc-100">
       <section className="relative isolate flex min-h-[82dvh] flex-col items-center justify-center overflow-hidden px-6 py-24 text-center">
@@ -53,6 +91,15 @@ export default function LandingPage() {
           <HowItWorksLink />
         </div>
       </section>
+
+      {routingError && (
+        <p
+          role="alert"
+          className="mx-auto max-w-2xl px-6 pb-6 text-sm text-red-400"
+        >
+          {routingError}
+        </p>
+      )}
 
       <section
         id="how-it-works"

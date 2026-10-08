@@ -12,6 +12,7 @@ import {
   type IdentityKeys,
 } from "../../lib/crypto";
 import { cascade, fadeUp, fadeUpFast, wordCascade } from "../../lib/motion";
+import { setFlag } from "../../lib/flags";
 import { database, saveEncryptedIdentity } from "../../lib/vault";
 import { useVaultStore } from "../../store/useVaultStore";
 
@@ -60,7 +61,11 @@ export default function SetupPage() {
       const existingVault = await database.vault.get("primary");
       if (!active) return;
       if (existingVault) {
-        router.replace("/unlock");
+        await setFlag("cloak_onboarded", true);
+        await useVaultStore.getState().restoreSession();
+        router.replace(
+          useVaultStore.getState().isUnlocked ? "/chats" : "/unlock",
+        );
         return;
       }
       const crypto = await initCrypto();
@@ -177,6 +182,7 @@ export default function SetupPage() {
     setIsSaving(true);
     try {
       await saveEncryptedIdentity(passphrase, recoveryPhrase, identity);
+      await setFlag("cloak_onboarded", true);
       await unlockVault(passphrase);
       identity.signingPrivateKey.fill(0);
       identity.encryptionPrivateKey.fill(0);
