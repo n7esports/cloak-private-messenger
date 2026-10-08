@@ -164,26 +164,25 @@ export default function ChatsPage() {
         <div className="flex items-center justify-between border-b border-cloak-border px-4 py-3">
           <p
             className={`text-xs ${
-              networkStatus === "online" && relayStatus === "connected"
+              relayStatus === "connected"
                 ? "text-cloak-accent"
                 : "text-cloak-muted"
             }`}
             role="status"
+            aria-live="polite"
           >
             <span aria-hidden="true">
-              {networkStatus === "online" && relayStatus === "connected"
-                ? "●"
-                : "○"}
+              {relayStatus === "connected" ? "●" : "○"}
             </span>{" "}
-            {networkStatus === "checking"
-              ? "Checking backend connection…"
-              : networkStatus === "offline"
-                ? "Backend unavailable — messages are queued locally"
-                : relayStatus === "connected"
-              ? "Online"
+            {relayStatus === "connected"
+              ? "Relay connected"
               : relayStatus === "connecting"
-                  ? "Backend reachable · connecting to relay…"
-                  : "Backend reachable · relay offline — messages are queued locally"}
+                ? "Connecting to relay…"
+                : networkStatus === "offline"
+                  ? "Relay offline · backend unreachable — messages are queued locally"
+                  : networkStatus === "checking"
+                    ? "Relay offline · checking backend — messages are queued locally"
+                    : "Relay offline — messages are queued locally"}
           </p>
           <button
             type="button"

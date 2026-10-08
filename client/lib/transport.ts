@@ -23,6 +23,8 @@ export interface RelayEndpoints {
   httpUrl: string | null;
 }
 
+type RelayConnectionStatus = "connecting" | "connected" | "disconnected";
+
 interface RelayAcknowledgement {
   status: "ok";
   id: string;
@@ -47,6 +49,24 @@ function parseEndpoint(value: string, allowedProtocols: string[]): URL | null {
   }
 }
 
+function parseWebSocketEndpoint(value: string, base?: string): URL | null {
+  try {
+    const url = new URL(value, base);
+    if (
+      !["wss:", "ws:", "https:", "http:"].includes(url.protocol) ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
+    url.protocol =
+      url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 function isSafeForCurrentPage(url: URL): boolean {
   return !(
     typeof window !== "undefined" &&
@@ -60,14 +80,25 @@ function isSafeForCurrentPage(url: URL): boolean {
 
 export function resolveRelayEndpoints(): RelayEndpoints {
   const configuredWebSocket = process.env.NEXT_PUBLIC_CLOAK_RELAY_URL?.trim();
+  const configuredWsUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
   const configuredHttp = process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL?.trim();
   const configuredBackend = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
 
   let websocketUrl: URL | null = null;
   let httpUrl: URL | null = null;
 
-  if (configuredWebSocket) {
-    websocketUrl = parseEndpoint(configuredWebSocket, ["wss:", "ws:"]);
+  const configuredWebSocketUrl = configuredWebSocket || configuredWsUrl;
+  if (configuredWebSocketUrl) {
+    const backendBase = configuredBackend
+      ? parseEndpoint(configuredBackend, ["https:", "http:", "wss:", "ws:"])
+      : null;
+    const relativeBase =
+      backendBase?.toString() ??
+      (typeof window !== "undefined" ? window.location.origin : undefined);
+    websocketUrl = parseWebSocketEndpoint(
+      configuredWebSocketUrl,
+      relativeBase,
+    );
   } else if (configuredBackend) {
     const backendUrl = parseEndpoint(configuredBackend, [
       "https:",
@@ -76,11 +107,7 @@ export function resolveRelayEndpoints(): RelayEndpoints {
       "ws:",
     ]);
     if (backendUrl) {
-      websocketUrl = new URL(backendUrl);
-      websocketUrl.protocol =
-        backendUrl.protocol === "https:" || backendUrl.protocol === "wss:"
-          ? "wss:"
-          : "ws:";
+      websocketUrl = parseWebSocketEndpoint(backendUrl.toString());
     }
   } else if (
     process.env.NODE_ENV !== "production" &&
@@ -97,7 +124,9 @@ export function resolveRelayEndpoints(): RelayEndpoints {
   } else if (websocketUrl) {
     httpUrl = new URL(websocketUrl);
     httpUrl.protocol = websocketUrl.protocol === "wss:" ? "https:" : "http:";
-    httpUrl.pathname = `${httpUrl.pathname.replace(/\/+$/, "")}/relay`;
+    if (!httpUrl.pathname.replace(/\/+$/, "").endsWith("/relay")) {
+      httpUrl.pathname = `${httpUrl.pathname.replace(/\/+$/, "")}/relay`;
+    }
     httpUrl.search = "";
   }
 
@@ -193,7 +222,9 @@ export class TransportManager {
     { resolve: () => void; reject: (error: Error) => void; timeout: number }
   >();
   private readonly onOffline = (): void => {
-    this.socket?.close();
+    const socket = this.socket;
+    this.socket = null;
+    socket?.close();
     this.callbacks?.onConnectionChange("disconnected");
   };
 
@@ -361,6 +392,16 @@ export class TransportManager {
     this.callbacks?.onConnectionChange("connecting");
     this.connectPromise = new Promise<WebSocket>((resolve, reject) => {
       let socket: WebSocket;
+      let settled = false;
+      let connectionTimeout: ReturnType<typeof setTimeout> | undefined;
+      const fail = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        if (connectionTimeout !== undefined) {
+          clearTimeout(connectionTimeout);
+        }
+        reject(error);
+      };
       try {
         socket = new WebSocket(relayUrl);
       } catch (error) {
@@ -368,31 +409,69 @@ export class TransportManager {
         return;
       }
       this.socket = socket;
-      const timeout = setTimeout(() => {
+      connectionTimeout = setTimeout(() => {
+        if (this.socket === socket) this.socket = null;
         socket.close();
-        reject(new Error("Relay connection timed out."));
+        fail(new Error("Relay WebSocket handshake timed out."));
       }, ACK_TIMEOUT_MS);
       socket.onopen = () => {
-        clearTimeout(timeout);
-        this.socket = socket;
-        this.reconnectAttempt = 0;
-        this.callbacks?.onConnectionChange("connected");
         try {
           if (this.recipientPubKey) {
+            const subscriptionId = crypto.randomUUID();
+            const subscriptionAcknowledgement = new Promise<void>(
+              (ackResolve, ackReject) => {
+                const timeout = window.setTimeout(() => {
+                  this.acknowledgements.delete(subscriptionId);
+                  ackReject(
+                    new Error("Relay subscription acknowledgement timed out."),
+                  );
+                }, ACK_TIMEOUT_MS);
+                this.acknowledgements.set(subscriptionId, {
+                  resolve: ackResolve,
+                  reject: ackReject,
+                  timeout,
+                });
+              },
+            );
             socket.send(
               JSON.stringify({
                 type: "subscribe",
-                id: crypto.randomUUID(),
+                id: subscriptionId,
                 recipientPubKey: this.recipientPubKey,
               }),
             );
+            void subscriptionAcknowledgement.then(
+              () => {
+                if (settled || this.socket !== socket || socket.readyState !== WebSocket.OPEN) {
+                  return;
+                }
+                settled = true;
+                clearTimeout(connectionTimeout);
+                this.reconnectAttempt = 0;
+                this.callbacks?.onConnectionChange("connected");
+                resolve(socket);
+                void this.drainQueue();
+              },
+              (error: unknown) => {
+                socket.close();
+                fail(
+                  error instanceof Error
+                    ? error
+                    : new Error("Relay subscription handshake failed."),
+                );
+              },
+            );
+            return;
           }
+          settled = true;
+          clearTimeout(connectionTimeout);
+          this.reconnectAttempt = 0;
+          this.callbacks?.onConnectionChange("connected");
           resolve(socket);
           void this.drainQueue();
         } catch (error) {
-          this.callbacks?.onConnectionChange("disconnected");
           socket.close();
-          reject(
+          fail(
             error instanceof Error
               ? error
               : new Error("Could not subscribe to the relay."),
@@ -411,17 +490,24 @@ export class TransportManager {
           });
       };
       socket.onerror = () => {
-        clearTimeout(timeout);
-        this.callbacks?.onError(new Error("Relay WebSocket connection failed."));
+        const error = new Error("Relay WebSocket connection failed.");
+        this.callbacks?.onError(error);
         socket.close();
-        reject(new Error("Relay WebSocket connection failed."));
+        fail(error);
       };
-      socket.onclose = () => {
-        clearTimeout(timeout);
+      socket.onclose = (event: CloseEvent) => {
+        clearTimeout(connectionTimeout);
         if (this.socket === socket) {
           this.socket = null;
           this.callbacks?.onConnectionChange("disconnected");
           this.scheduleReconnect();
+        }
+        if (!settled) {
+          fail(
+            new Error(
+              `Relay WebSocket closed before connection was established (code ${event.code}${event.reason ? `: ${event.reason}` : ""}).`,
+            ),
+          );
         }
       };
     }).finally(() => {
@@ -459,7 +545,6 @@ export class TransportManager {
     if (typeof parsed !== "object" || parsed === null) return;
     if (
       "status" in parsed &&
-      parsed.status === "ok" &&
       "id" in parsed &&
       typeof parsed.id === "string"
     ) {
@@ -467,8 +552,17 @@ export class TransportManager {
       if (pending) {
         clearTimeout(pending.timeout);
         this.acknowledgements.delete(parsed.id);
-        if (isRelayAcknowledgement(parsed, parsed.id)) pending.resolve();
-        else pending.reject(new Error("Relay rejected the message."));
+        if (isRelayAcknowledgement(parsed, parsed.id)) {
+          pending.resolve();
+        } else if (
+          parsed.status === "error" &&
+          "message" in parsed &&
+          typeof parsed.message === "string"
+        ) {
+          pending.reject(new Error(`Relay rejected the request: ${parsed.message}`));
+        } else {
+          pending.reject(new Error("Relay returned an invalid acknowledgement."));
+        }
       }
       return;
     }
