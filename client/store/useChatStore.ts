@@ -22,7 +22,10 @@ import {
   type RatchetSession,
   type SignedEnvelope,
 } from "../lib/protocol";
-import { transportManager } from "../lib/transport";
+import {
+  transportManager,
+  type RelayStatus,
+} from "../lib/transport";
 import {
   database,
   type EncryptedChatRecord,
@@ -66,9 +69,10 @@ export interface ChatState {
   chats: ChatSummary[];
   messagesMap: Record<string, ChatMessage[]>;
   isRelayConnected: boolean;
-  relayStatus: "connecting" | "connected" | "disconnected";
+  relayStatus: RelayStatus;
   transportError: string | null;
   typingByChat: Record<string, boolean>;
+  setRelayStatus: (status: RelayStatus) => void;
   setActiveChat: (chatId: string | null) => void;
   addContact: (alias: string, recipientPubKey: string) => Promise<ChatSummary>;
   sendMessage: (
@@ -533,6 +537,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   transportError: null,
   typingByChat: {},
 
+  setRelayStatus: (relayStatus) =>
+    set({
+      relayStatus,
+      isRelayConnected: relayStatus === "connected",
+      ...(relayStatus === "connected" ? { transportError: null } : {}),
+    }),
+
   setActiveChat: (chatId) => {
     if (get().activeChatId === chatId) return;
     set({ activeChatId: chatId });
@@ -904,11 +915,7 @@ export function startChatServices(): () => void {
     onSent: (messageId) =>
       void useChatStore.getState().updateDeliveryStatus(messageId, "sent"),
     onConnectionChange: (relayStatus) =>
-      useChatStore.setState({
-        relayStatus,
-        isRelayConnected: relayStatus === "connected",
-        ...(relayStatus === "connected" ? { transportError: null } : {}),
-      }),
+      useChatStore.getState().setRelayStatus(relayStatus),
     onError: (error) =>
       useChatStore.setState({ transportError: error.message }),
   });

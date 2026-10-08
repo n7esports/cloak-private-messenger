@@ -1,100 +1,247 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveRelayEndpoints, TransportManager } from "./transport";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const originalRelayUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-const originalWsUrl = process.env.NEXT_PUBLIC_WS_URL;
-const originalHttpRelayUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-const originalBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const { supabaseMock, vaultMock } = vi.hoisted(() => ({
+  supabaseMock: {
+    channel: vi.fn(),
+    removeChannel: vi.fn(),
+  },
+  vaultMock: {
+    outboxRecords: [] as Array<Record<string, unknown>>,
+    outbox: {
+      orderBy: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(async (id: string) => {
+        vaultMock.outboxRecords = vaultMock.outboxRecords.filter(
+          (record) => record.id !== id,
+        );
+      }),
+      update: vi.fn(),
+    },
+  },
+}));
 
-afterEach(() => {
-  if (originalRelayUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-  } else {
-    process.env.NEXT_PUBLIC_CLOAK_RELAY_URL = originalRelayUrl;
-  }
-  if (originalWsUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_WS_URL;
-  } else {
-    process.env.NEXT_PUBLIC_WS_URL = originalWsUrl;
-  }
-  if (originalHttpRelayUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-  } else {
-    process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL = originalHttpRelayUrl;
-  }
-  if (originalBackendUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_BACKEND_URL;
-  } else {
-    process.env.NEXT_PUBLIC_BACKEND_URL = originalBackendUrl;
-  }
+vi.mock("../src/lib/supabaseClient.js", () => ({
+  supabase: supabaseMock,
+}));
+
+vi.mock("./vault", () => ({
+  database: { outbox: vaultMock.outbox },
+}));
+
+vi.mock("./crypto", () => ({
+  decryptVaultPayload: vi.fn(async () => {
+    const packet = vaultMock.outboxRecords[0]?.packet;
+    return new TextEncoder().encode(JSON.stringify(packet));
+  }),
+  encryptVaultPayload: vi.fn(),
+}));
+
+import {
+  getInboxChannelName,
+  TransportManager,
+} from "./transport";
+import { encodeBytes, type SignedEnvelope } from "./protocol";
+
+interface MockChannel {
+  handlers: Map<string, (event: { payload?: unknown }) => void>;
+  subscribeCallback?: (status: string, error?: Error) => void;
+  on: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  send: ReturnType<typeof vi.fn>;
+}
+
+const channels = new Map<string, MockChannel>();
+const ownPublicKey = encodeBytes(new Uint8Array(32).fill(7));
+const peerPublicKey = encodeBytes(new Uint8Array(32).fill(9));
+
+function createMockChannel(): MockChannel {
+  const channel: MockChannel = {
+    handlers: new Map(),
+    on: vi.fn(function (
+      this: MockChannel,
+      _type: string,
+      filter: { event: string },
+      handler: (event: { payload?: unknown }) => void,
+    ) {
+      this.handlers.set(filter.event, handler);
+      return this;
+    }),
+    subscribe: vi.fn(function (
+      this: MockChannel,
+      callback: (status: string, error?: Error) => void,
+    ) {
+      this.subscribeCallback = callback;
+      queueMicrotask(() => callback("SUBSCRIBED"));
+      return this;
+    }),
+    send: vi.fn().mockResolvedValue("ok"),
+  };
+  return channel;
+}
+
+function makePacket(recipientPubKey: string): SignedEnvelope {
+  return {
+    type: "message",
+    id: "message-id",
+    senderPubKey: ownPublicKey,
+    senderEncryptionPubKey: ownPublicKey,
+    signature: "signature",
+    envelope: {
+      recipientPubKey,
+      ephemeralPubKey: ownPublicKey,
+      nonce: encodeBytes(new Uint8Array(24)),
+      ciphertext: encodeBytes(new Uint8Array([1, 2, 3])),
+      timestamp: Date.now(),
+    },
+  };
+}
+
+async function waitForSubscribe(topic = getInboxChannelName(ownPublicKey)): Promise<void> {
+  await vi.waitFor(() => {
+    expect(channels.get(topic)?.subscribeCallback).toBeDefined();
+  });
+}
+
+beforeEach(() => {
+  channels.clear();
+  vaultMock.outboxRecords = [];
+  vaultMock.outbox.orderBy.mockClear();
+  vaultMock.outbox.put.mockClear();
+  vaultMock.outbox.delete.mockClear();
+  vaultMock.outbox.update.mockClear();
+  vaultMock.outbox.orderBy.mockImplementation(() => ({
+    toArray: vi.fn(async () => vaultMock.outboxRecords),
+  }));
+  supabaseMock.channel.mockImplementation(
+    (name: string, _config: unknown): MockChannel => {
+      const channel = createMockChannel();
+      channels.set(name, channel);
+      return channel;
+    },
+  );
+  supabaseMock.removeChannel.mockResolvedValue("ok");
 });
 
-describe("relay configuration", () => {
-  it("silently retains local-queue fallback when no relay is configured", () => {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-    delete process.env.NEXT_PUBLIC_WS_URL;
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-    delete process.env.NEXT_PUBLIC_BACKEND_URL;
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("Supabase ephemeral relay transport", () => {
+  it("subscribes to the recipient inbox with broadcast self disabled", async () => {
     const manager = new TransportManager();
-    const onError = vi.fn();
-    const callbacks = {
+    const onConnectionChange = vi.fn();
+    manager.start(new Uint8Array(32), ownPublicKey, {
+      onMessage: vi.fn(),
+      onReceipt: vi.fn(),
+      onSent: vi.fn(),
+      onConnectionChange,
+      onError: vi.fn(),
+    });
+
+    await waitForSubscribe();
+
+    const topic = getInboxChannelName(ownPublicKey);
+    expect(supabaseMock.channel).toHaveBeenCalledWith(topic, {
+      config: { broadcast: { self: false } },
+    });
+    expect(channels.get(topic)?.on).toHaveBeenCalledWith(
+      "broadcast",
+      { event: "envelope" },
+      expect.any(Function),
+    );
+    expect(onConnectionChange).toHaveBeenCalledWith("connected");
+    expect(vaultMock.outbox.orderBy).toHaveBeenCalledWith("createdAt");
+
+    manager.stop();
+  });
+
+  it("sends signed envelopes through Supabase broadcast channels", async () => {
+    const manager = new TransportManager();
+    manager.start(new Uint8Array(32), ownPublicKey, {
       onMessage: vi.fn(),
       onReceipt: vi.fn(),
       onSent: vi.fn(),
       onConnectionChange: vi.fn(),
-      onError,
-    };
+      onError: vi.fn(),
+    });
+    await waitForSubscribe();
 
-    manager.start(new Uint8Array(32), "recipient-key", callbacks);
+    const packet = makePacket(peerPublicKey);
+    await manager.sendEnvelope(packet);
 
-    expect(onError).not.toHaveBeenCalled();
+    const outgoingChannel = channels.get(getInboxChannelName(peerPublicKey));
+    expect(outgoingChannel?.send).toHaveBeenCalledWith({
+      type: "broadcast",
+      event: "envelope",
+      payload: { packet },
+    });
+
     manager.stop();
   });
 
-  it("derives WebSocket and HTTP relay endpoints from the backend URL", () => {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-    delete process.env.NEXT_PUBLIC_WS_URL;
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-    process.env.NEXT_PUBLIC_BACKEND_URL = "http://localhost:5000";
-
-    expect(resolveRelayEndpoints()).toEqual({
-      websocketUrl: "ws://localhost:5000/",
-      httpUrl: "http://localhost:5000/relay",
+  it("decrypts and flushes the encrypted outbox after the inbox is subscribed", async () => {
+    const packet = makePacket(peerPublicKey);
+    vaultMock.outboxRecords = [
+      {
+        id: packet.id,
+        ciphertext: "encrypted",
+        nonce: "nonce",
+        attempts: 0,
+        nextAttemptAt: Date.now(),
+        createdAt: Date.now(),
+        packet,
+      },
+    ];
+    const manager = new TransportManager();
+    const onSent = vi.fn();
+    manager.start(new Uint8Array(32), ownPublicKey, {
+      onMessage: vi.fn(),
+      onReceipt: vi.fn(),
+      onSent,
+      onConnectionChange: vi.fn(),
+      onError: vi.fn(),
     });
+
+    await vi.waitFor(() => {
+      expect(channels.get(getInboxChannelName(peerPublicKey))?.send).toHaveBeenCalledWith({
+        type: "broadcast",
+        event: "envelope",
+        payload: { packet },
+      });
+    });
+    expect(vaultMock.outbox.delete).toHaveBeenCalledWith(packet.id);
+    expect(onSent).toHaveBeenCalledWith(packet.id);
+
+    manager.stop();
   });
 
-  it("prefers an explicitly configured relay endpoint", () => {
-    process.env.NEXT_PUBLIC_CLOAK_RELAY_URL = "wss://relay.example.test/relay";
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-    process.env.NEXT_PUBLIC_BACKEND_URL = "http://localhost:5000";
+  it.each(["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"])(
+    "marks a failed inbox subscription (%s) disconnected",
+    async (status) => {
+      const manager = new TransportManager();
+      const onConnectionChange = vi.fn();
+      manager.start(new Uint8Array(32), ownPublicKey, {
+        onMessage: vi.fn(),
+        onReceipt: vi.fn(),
+        onSent: vi.fn(),
+        onConnectionChange,
+        onError: vi.fn(),
+      });
+      await waitForSubscribe();
+      const channel = channels.get(getInboxChannelName(ownPublicKey));
+      channel?.subscribeCallback?.(status, new Error("subscription failed"));
 
-    expect(resolveRelayEndpoints()).toEqual({
-      websocketUrl: "wss://relay.example.test/relay",
-      httpUrl: "https://relay.example.test/relay",
-    });
-  });
+      expect(onConnectionChange).toHaveBeenCalledWith("disconnected");
+      manager.stop();
+    },
+  );
 
-  it("uses NEXT_PUBLIC_WS_URL and resolves relative URLs against the backend origin", () => {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-    process.env.NEXT_PUBLIC_WS_URL = "/relay";
-    process.env.NEXT_PUBLIC_BACKEND_URL = "https://backend.example.test/api";
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-
-    expect(resolveRelayEndpoints()).toEqual({
-      websocketUrl: "wss://backend.example.test/relay",
-      httpUrl: "https://backend.example.test/relay",
-    });
-  });
-
-  it("derives a secure WebSocket URL from an HTTPS backend", () => {
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
-    delete process.env.NEXT_PUBLIC_WS_URL;
-    delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
-    process.env.NEXT_PUBLIC_BACKEND_URL = "https://backend.example.test";
-
-    expect(resolveRelayEndpoints()).toEqual({
-      websocketUrl: "wss://backend.example.test/",
-      httpUrl: "https://backend.example.test/relay",
-    });
+  it("creates stable URL-safe inbox channel names from public keys", () => {
+    const name = getInboxChannelName(ownPublicKey);
+    expect(name).toMatch(/^cloak-inbox-[A-Za-z0-9_-]+$/);
+    expect(getInboxChannelName(ownPublicKey)).toBe(name);
+    expect(() => getInboxChannelName("not-a-key")).toThrow(
+      "Invalid base64-encoded cryptographic data.",
+    );
   });
 });
