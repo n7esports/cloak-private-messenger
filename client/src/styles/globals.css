@@ -19,7 +19,7 @@ body,
 
 body {
   margin: 0;
-  background: #09090b;
+  @apply bg-cloak-bg;
 }
 
 .cloak-hero-pulse {
@@ -73,6 +73,6 @@ button {
 }
 
 ::selection {
-  color: #09090b;
+  @apply text-cloak-bg;
   background: #6ee7b7;
 }
