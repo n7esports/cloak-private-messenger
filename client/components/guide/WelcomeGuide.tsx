@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -58,49 +59,44 @@ export default function WelcomeGuide() {
               {message.content}
             </p>
             {message.id === "welcome-e2ee" && (
-              <button
-                type="button"
-                onClick={() => router.push("/chats?compose=1")}
+              <Link
+                href="/chats?compose=1"
                 className="mt-4 min-h-11 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Start Chat
-              </button>
+              </Link>
             )}
             {message.id === "welcome-notes" && (
-              <button
-                type="button"
-                onClick={() => router.push("/chats/notes")}
+              <Link
+                href="/chats/notes"
                 className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Open Notes
-              </button>
+              </Link>
             )}
             {message.id === "welcome-channels" && (
-              <button
-                type="button"
-                onClick={() => router.push("/chats/channels")}
+              <Link
+                href="/chats/channels"
                 className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Explore Channels
-              </button>
+              </Link>
             )}
             {message.id === "welcome-timers" && (
-              <button
-                type="button"
-                onClick={() => router.push("/chats?compose=1&timer=60000")}
+              <Link
+                href="/chats?compose=1&timer=60000"
                 className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Configure Timers
-              </button>
+              </Link>
             )}
             {message.id === "welcome-wipe" && (
-              <button
-                type="button"
-                onClick={() => router.push("/unlock")}
+              <Link
+                href="/unlock"
                 className="mt-4 min-h-11 rounded-lg border border-cloak-danger/50 px-4 py-2 text-sm font-medium text-cloak-danger transition hover:bg-cloak-danger/10 focus:outline-none focus:ring-2 focus:ring-cloak-danger"
               >
                 Setup Panic Wipe
-              </button>
+              </Link>
             )}
           </article>
         ))}
