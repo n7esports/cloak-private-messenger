@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { entropyToMnemonic } from "@scure/bip39";
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
-import zxcvbn from "zxcvbn";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import TypingDots from "../../components/TypingDots";
@@ -42,6 +41,7 @@ export default function SetupPage() {
   const [challengePositions, setChallengePositions] = useState<number[]>([]);
   const [passphrase, setPassphrase] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [strength, setStrength] = useState(0);
   const [answers, setAnswers] = useState(["", "", ""]);
   const [step, setStep] = useState<
     "welcome" | "credentials" | "recovery"
@@ -113,7 +113,31 @@ export default function SetupPage() {
     return () => window.clearTimeout(timeout);
   }, [step]);
 
-  const strength = zxcvbn(passphrase).score;
+  useEffect(() => {
+    if (step !== "credentials") return;
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      import("zxcvbn")
+        .then(({ default: estimateStrength }) => {
+          if (active) setStrength(estimateStrength(passphrase).score);
+        })
+        .catch((cause: unknown) => {
+          if (active) {
+            setError(
+              cause instanceof Error
+                ? `Passphrase strength could not be checked: ${cause.message}`
+                : "Passphrase strength could not be checked.",
+            );
+          }
+        });
+    }, 150);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [passphrase, step]);
+
   const phraseWords = recoveryPhrase.split(" ");
   const challengeMatches = challengePositions.every(
     (position, index) =>

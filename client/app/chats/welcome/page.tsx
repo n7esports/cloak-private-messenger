@@ -24,7 +24,7 @@ export default function WelcomePage() {
             Pinned
           </span>
         </div>
-        <span className="text-xs text-cloak-muted">Locked</span>
+        <span className="text-xs text-cloak-muted">Unlocked</span>
       </header>
 
       <div

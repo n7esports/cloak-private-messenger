@@ -223,32 +223,8 @@ export async function decryptStoredIdentity(
 }
 
 export async function wipeVaultDatabase(): Promise<void> {
-  await database.delete();
   if (typeof indexedDB === "undefined") {
     throw new Error("IndexedDB is unavailable; stored databases could not be erased.");
   }
-  if (typeof indexedDB.databases !== "function") {
-    throw new Error("This browser cannot enumerate IndexedDB databases for Panic Wipe.");
-  }
-
-  const databases = await indexedDB.databases();
-  for (const entry of databases) {
-    const name = entry.name;
-    if (!name) continue;
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(name);
-      request.onsuccess = () => resolve();
-      request.onerror = () =>
-        reject(
-          request.error ??
-            new Error(`Could not delete IndexedDB database "${name}".`),
-        );
-      request.onblocked = () =>
-        reject(
-          new Error(
-            `Deletion of IndexedDB database "${name}" was blocked by another open tab.`,
-          ),
-        );
-    });
-  }
+  await database.delete();
 }

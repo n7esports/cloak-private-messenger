@@ -6,6 +6,9 @@ import "../src/styles/globals.css";
 export const metadata: Metadata = {
   title: "Cloak Private Messenger",
   description: "A private, encrypted messaging vault.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

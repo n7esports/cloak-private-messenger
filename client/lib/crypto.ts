@@ -1,5 +1,3 @@
-import sodium from "libsodium-wrappers-sumo";
-
 export interface IdentityKeys {
   signingPublicKey: Uint8Array;
   signingPrivateKey: Uint8Array;
@@ -12,10 +10,17 @@ export interface EncryptedPayload {
   nonce: Uint8Array;
 }
 
-let initialization: Promise<typeof sodium> | undefined;
+type Sodium = typeof import("libsodium-wrappers-sumo").default;
 
-export function initCrypto(): Promise<typeof sodium> {
-  initialization ??= sodium.ready.then(() => sodium);
+let initialization: Promise<Sodium> | undefined;
+
+export function initCrypto(): Promise<Sodium> {
+  initialization ??= import("libsodium-wrappers-sumo").then(
+    async ({ default: sodium }) => {
+      await sodium.ready;
+      return sodium;
+    },
+  );
   return initialization;
 }
 

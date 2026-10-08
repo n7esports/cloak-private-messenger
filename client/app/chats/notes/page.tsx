@@ -4,14 +4,18 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import {
   PRIVATE_NOTES_CHAT_ID,
+  type ChatMessage,
   useChatStore,
 } from "../../../store/useChatStore";
+
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 export default function PrivateNotesPage() {
   const chats = useChatStore((state) => state.chats);
   const messages = useChatStore(
-    (state) => state.messagesMap[PRIVATE_NOTES_CHAT_ID] ?? [],
+    (state) => state.messagesMap[PRIVATE_NOTES_CHAT_ID] ?? EMPTY_MESSAGES,
   );
+  const hasNotesChat = chats.some((chat) => chat.id === PRIVATE_NOTES_CHAT_ID);
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
   const [content, setContent] = useState("");
@@ -19,11 +23,11 @@ export default function PrivateNotesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (chats.some((chat) => chat.id === PRIVATE_NOTES_CHAT_ID)) {
+    if (hasNotesChat) {
       setActiveChat(PRIVATE_NOTES_CHAT_ID);
     }
     return () => setActiveChat(null);
-  }, [chats, setActiveChat]);
+  }, [hasNotesChat, setActiveChat]);
 
   async function saveNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

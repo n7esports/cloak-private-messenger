@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { GuideItem } from "../lib/guideContent";
 import GuideIconBadge from "./GuideIconBadge";
 
 export default function GuideBubble({ item }: { item: GuideItem }) {
+  const [comingSoonMessage, setComingSoonMessage] = useState(false);
   const Icon = item.icon;
   const actionClassName =
     "mt-3.5 inline-flex h-8 items-center justify-center rounded-[12px] border border-cloak-accent px-3 py-1.5 text-xs font-medium text-cloak-accent transition-colors hover:bg-cloak-accent hover:text-cloak-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cloak-accent/60";
@@ -48,6 +50,7 @@ export default function GuideBubble({ item }: { item: GuideItem }) {
           <button
             type="button"
             data-coming-soon={item.action.href}
+            onClick={() => setComingSoonMessage(true)}
             className={actionClassName}
           >
             {item.action.label}
@@ -57,6 +60,11 @@ export default function GuideBubble({ item }: { item: GuideItem }) {
             {item.action.label}
           </Link>
         ))}
+      {comingSoonMessage && (
+        <p role="status" className="mt-2 text-xs text-cloak-muted">
+          This feature isn&apos;t available yet.
+        </p>
+      )}
     </motion.div>
   );
 }

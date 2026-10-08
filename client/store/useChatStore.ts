@@ -532,6 +532,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   typingByChat: {},
 
   setActiveChat: (chatId) => {
+    if (get().activeChatId === chatId) return;
     set({ activeChatId: chatId });
     if (chatId && useVaultStore.getState().isUnlocked) {
       void get()
@@ -758,12 +759,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { vaultKey } = getVaultMaterial();
     const chat = get().chats.find((entry) => entry.id === chatId);
     if (!chat) return;
-    const updated =
-      chat.unreadCount === 0 ? chat : { ...chat, unreadCount: 0 };
-    if (chat.unreadCount > 0) await saveEncryptedChat(updated, vaultKey);
     const incoming = (get().messagesMap[chatId] ?? []).filter(
       (message) => !message.outgoing && message.status === "delivered",
     );
+    if (chat.unreadCount === 0 && incoming.length === 0) return;
+    const updated =
+      chat.unreadCount === 0 ? chat : { ...chat, unreadCount: 0 };
+    if (chat.unreadCount > 0) await saveEncryptedChat(updated, vaultKey);
     const readIds = new Set(incoming.map((message) => message.id));
     const updatedMessages = (get().messagesMap[chatId] ?? []).map((message) =>
       readIds.has(message.id) ? { ...message, status: "read" as const } : message,
@@ -795,9 +797,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setTyping: (chatId, isTyping) =>
-    set((state) => ({
-      typingByChat: { ...state.typingByChat, [chatId]: isTyping },
-    })),
+    set((state) =>
+      state.typingByChat[chatId] === isTyping
+        ? state
+        : { typingByChat: { ...state.typingByChat, [chatId]: isTyping } },
+    ),
 
   loadChats: async () => {
     const { vaultKey } = getVaultMaterial();

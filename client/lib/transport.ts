@@ -26,22 +26,20 @@ interface RelayAcknowledgement {
 const ACK_TIMEOUT_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
 
-function websocketRelayUrl(): string {
+function websocketRelayUrl(): string | null {
   if (process.env.NEXT_PUBLIC_CLOAK_RELAY_URL) {
     return process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
   }
-  return process.env.NODE_ENV === "development"
-    ? "ws://localhost:8080"
-    : "wss://relay.cloak.messenger";
+  return null;
 }
 
-function httpRelayUrl(): string {
+function httpRelayUrl(): string | null {
   if (process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL) {
     return process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
   }
-  const base = websocketRelayUrl()
-    .replace(/^wss:/, "https:")
-    .replace(/^ws:/, "http:");
+  const websocketUrl = websocketRelayUrl();
+  if (!websocketUrl) return null;
+  const base = websocketUrl.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
   return `${base.replace(/\/+$/, "")}/relay`;
 }
 
@@ -140,7 +138,15 @@ export class TransportManager {
       if (typeof window !== "undefined") {
         window.addEventListener("online", this.onOnline);
       }
-      this.connect();
+      if (websocketRelayUrl()) {
+        this.connect();
+      } else if (!httpRelayUrl()) {
+        callbacks.onError(
+          new Error(
+            "No relay is configured. Messages remain encrypted in the local outbox.",
+          ),
+        );
+      }
       this.drainQueue();
       return;
     }
@@ -201,7 +207,9 @@ export class TransportManager {
       return;
     }
 
-    const response = await fetch(httpRelayUrl(), {
+    const relayUrl = httpRelayUrl();
+    if (!relayUrl) throw new Error("No HTTP relay is configured.");
+    const response = await fetch(relayUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(receipt),
@@ -214,7 +222,7 @@ export class TransportManager {
 
   private readonly onOnline = (): void => {
     if (!this.stopped) {
-      this.connect();
+      if (websocketRelayUrl()) this.connect();
       this.drainQueue();
     }
   };
@@ -263,8 +271,10 @@ export class TransportManager {
   }
 
   private async connect(): Promise<WebSocket | null> {
+    const relayUrl = websocketRelayUrl();
     if (
       this.stopped ||
+      !relayUrl ||
       typeof WebSocket === "undefined" ||
       (this.socket?.readyState === WebSocket.OPEN)
     ) {
@@ -275,7 +285,7 @@ export class TransportManager {
     this.connectPromise = new Promise<WebSocket>((resolve, reject) => {
       let socket: WebSocket;
       try {
-        socket = new WebSocket(websocketRelayUrl());
+        socket = new WebSocket(relayUrl);
       } catch (error) {
         reject(error instanceof Error ? error : new Error("Relay connection failed."));
         return;
@@ -329,7 +339,7 @@ export class TransportManager {
   }
 
   private scheduleReconnect(): void {
-    if (this.stopped || this.reconnectTimer) return;
+    if (this.stopped || !websocketRelayUrl() || this.reconnectTimer) return;
     const delay = Math.min(1_000 * 2 ** this.reconnectAttempt, MAX_BACKOFF_MS);
     this.reconnectAttempt += 1;
     this.reconnectTimer = setTimeout(() => {
@@ -427,7 +437,9 @@ export class TransportManager {
   }
 
   private async sendOverHttp(packet: SignedEnvelope): Promise<void> {
-    const response = await fetch(httpRelayUrl(), {
+    const relayUrl = httpRelayUrl();
+    if (!relayUrl) throw new Error("No HTTP relay is configured.");
+    const response = await fetch(relayUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ type: "publish", id: packet.id, packet }),
@@ -443,25 +455,41 @@ export class TransportManager {
   }
 
   private async deliver(packet: SignedEnvelope): Promise<void> {
-    try {
-      await this.sendOverWebSocket(packet);
-    } catch (websocketError) {
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        throw websocketError;
-      }
+    let websocketError: unknown;
+    if (websocketRelayUrl()) {
       try {
-        await this.sendOverHttp(packet);
-      } catch (httpError) {
-        throw new Error(
-          `Relay delivery failed over WebSocket and HTTP: ${
-            httpError instanceof Error ? httpError.message : "HTTP relay error"
-          }; ${
-            websocketError instanceof Error
-              ? websocketError.message
-              : "WebSocket relay error"
-          }`,
-        );
+        await this.sendOverWebSocket(packet);
+        return;
+      } catch (error) {
+        websocketError = error;
       }
+    }
+
+    const httpUrl = httpRelayUrl();
+    if (!httpUrl) {
+      throw new Error(
+        "No relay is configured. The message remains encrypted in the local outbox.",
+      );
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      throw websocketError instanceof Error
+        ? websocketError
+        : new Error("The device is offline.");
+    }
+
+    try {
+      await this.sendOverHttp(packet);
+    } catch (httpError) {
+      if (!websocketError) throw httpError;
+      throw new Error(
+        `Relay delivery failed over WebSocket and HTTP: ${
+          httpError instanceof Error ? httpError.message : "HTTP relay error"
+        }; ${
+          websocketError instanceof Error
+            ? websocketError.message
+            : "WebSocket relay error"
+        }`,
+      );
     }
   }
 
@@ -470,6 +498,7 @@ export class TransportManager {
       this.draining ||
       this.stopped ||
       !this.vaultKey ||
+      (!websocketRelayUrl() && !httpRelayUrl()) ||
       (typeof navigator !== "undefined" && !navigator.onLine)
     ) {
       return;
