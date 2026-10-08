@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useScrolled } from "../../lib/useScrolled";
 import {
@@ -11,7 +11,8 @@ import {
 
 export default function WelcomeGuide() {
   const router = useRouter();
-  const scrolled = useScrolled();
+  const scrollerRef = useRef<HTMLElement>(null);
+  const scrolled = useScrolled(scrollerRef);
   const messages = useChatStore(
     (state) => state.messagesMap[WELCOME_CHAT_ID] ?? [],
   );
@@ -29,8 +30,10 @@ export default function WelcomeGuide() {
   return (
     <main className="cloak-app-screen flex flex-col bg-cloak-base font-sans text-cloak-text">
       <header
-        className={`sticky top-0 z-10 flex items-center justify-between border-b border-cloak-border bg-cloak-surface-1 px-4 py-4 transition-all duration-300 ease-cloak sm:px-8 ${
-          scrolled ? "backdrop-blur-md" : ""
+        className={`sticky top-0 z-10 flex items-center justify-between border-b border-cloak-border px-4 py-4 transition-all duration-300 ease-cloak motion-reduce:transition-none motion-reduce:duration-0 sm:px-8 ${
+          scrolled
+            ? "backdrop-blur-md bg-cloak-bg/80"
+            : "bg-cloak-surface-1"
         }`}
       >
         <div>
@@ -49,6 +52,7 @@ export default function WelcomeGuide() {
       </header>
 
       <section
+        ref={scrollerRef}
         aria-label="Welcome guide messages"
         className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-4 py-6 sm:px-8"
       >
