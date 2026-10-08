@@ -6,12 +6,13 @@ import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import zxcvbn from "zxcvbn";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import TypingDots from "../../components/TypingDots";
 import {
   generateIdentity,
   initCrypto,
   type IdentityKeys,
 } from "../../lib/crypto";
-import { cascade, fadeUp, fadeUpFast } from "../../lib/motion";
+import { cascade, fadeUp, fadeUpFast, wordCascade } from "../../lib/motion";
 import { database, saveEncryptedIdentity } from "../../lib/vault";
 import { useVaultStore } from "../../store/useVaultStore";
 
@@ -49,6 +50,7 @@ export default function SetupPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [acknowledgedPhrase, setAcknowledgedPhrase] = useState(false);
   const [error, setError] = useState("");
+  const [showWelcomeBubble, setShowWelcomeBubble] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -99,6 +101,11 @@ export default function SetupPage() {
       }
     };
   }, [router]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setShowWelcomeBubble(true), 800);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const strength = zxcvbn(passphrase).score;
   const phraseWords = recoveryPhrase.split(" ");
@@ -188,14 +195,18 @@ export default function SetupPage() {
           variants={cascade(0, 0.15)}
           className="mb-6 space-y-3"
         >
-          <motion.p
-            variants={fadeUp}
-            className="max-w-xl rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted"
-          >
-            Welcome to Cloak. There are no accounts, phone numbers, or
-            plaintext message servers. Your identity and messages belong to
-            this device.
-          </motion.p>
+          {showWelcomeBubble ? (
+            <motion.p
+              variants={fadeUp}
+              className="max-w-xl rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted"
+            >
+              Welcome to Cloak. There are no accounts, phone numbers, or
+              plaintext message servers. Your identity and messages belong to
+              this device.
+            </motion.p>
+          ) : (
+            <TypingDots />
+          )}
           {step !== "welcome" && (
             <motion.p
               variants={fadeUp}
@@ -351,14 +362,18 @@ export default function SetupPage() {
                 className="grid grid-cols-2 gap-2 sm:grid-cols-3"
               >
                 {phraseWords.map((word, index) => (
-                  <li
-                    key={`${index}-${word}`}
-                    className="flex min-h-11 items-center gap-2 rounded-md border border-cloak-border bg-cloak-base px-3 py-2 font-mono text-sm"
-                  >
-                    <span className="w-5 text-right text-xs text-cloak-muted">
-                      {index + 1}
-                    </span>
-                    <span>{word}</span>
+                  <li key={`${index}-${word}`}>
+                    <motion.div
+                      variants={wordCascade(index)}
+                      initial="hidden"
+                      animate="show"
+                      className="flex min-h-11 items-center gap-2 rounded-md border border-cloak-border bg-cloak-base px-3 py-2 font-mono text-sm"
+                    >
+                      <span className="w-5 text-right text-xs text-cloak-muted">
+                        {index + 1}
+                      </span>
+                      <span>{word}</span>
+                    </motion.div>
                   </li>
                 ))}
               </ol>

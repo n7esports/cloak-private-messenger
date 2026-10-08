@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useScrolled } from "../../lib/useScrolled";
 import {
   WELCOME_CHAT_ID,
   useChatStore,
@@ -10,6 +11,7 @@ import {
 
 export default function WelcomeGuide() {
   const router = useRouter();
+  const scrolled = useScrolled();
   const messages = useChatStore(
     (state) => state.messagesMap[WELCOME_CHAT_ID] ?? [],
   );
@@ -26,7 +28,11 @@ export default function WelcomeGuide() {
 
   return (
     <main className="cloak-app-screen flex flex-col bg-cloak-base font-sans text-cloak-text">
-      <header className="flex items-center justify-between border-b border-cloak-border bg-cloak-surface-1 px-4 py-4 sm:px-8">
+      <header
+        className={`sticky top-0 z-10 flex items-center justify-between border-b border-cloak-border bg-cloak-surface-1 px-4 py-4 transition-all duration-300 ease-cloak sm:px-8 ${
+          scrolled ? "backdrop-blur-md" : ""
+        }`}
+      >
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cloak-accent">
             Pinned system conversation
