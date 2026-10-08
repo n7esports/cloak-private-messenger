@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useScrolled } from "../../lib/useScrolled";
 import {
   WELCOME_CHAT_ID,
@@ -12,8 +13,10 @@ import {
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
 export default function WelcomeGuide() {
+  const router = useRouter();
   const scrollerRef = useRef<HTMLElement>(null);
   const scrolled = useScrolled(scrollerRef);
+  const [showPanicWipeInfo, setShowPanicWipeInfo] = useState(false);
   const messages = useChatStore(
     (state) => state.messagesMap[WELCOME_CHAT_ID] ?? EMPTY_MESSAGES,
   );
@@ -69,27 +72,29 @@ export default function WelcomeGuide() {
               {message.content}
             </p>
             {message.id === "welcome-e2ee" && (
-              <Link
-                href="/chats?compose=1"
+              <button
+                type="button"
+                onClick={() => router.push("/chats/new")}
                 className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Start Chat
-              </Link>
+              </button>
             )}
             {message.id === "welcome-notes" && (
-              <Link
-                href="/chats/notes"
+              <button
+                type="button"
+                onClick={() => router.push("/chats/notes")}
                 className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Open Notes
-              </Link>
+              </button>
             )}
             {message.id === "welcome-channels" && (
               <Link
-                href="/chats/channels"
+                href="/channels/create"
                 className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
-                Explore Channels
+                Create a channel
               </Link>
             )}
             {message.id === "welcome-timers" && (
@@ -101,17 +106,52 @@ export default function WelcomeGuide() {
               </Link>
             )}
             {message.id === "welcome-wipe" && (
-              <Link
-                href="/unlock"
+              <button
+                type="button"
+                onClick={() => setShowPanicWipeInfo(true)}
                 className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-danger/50 px-4 py-2 text-sm font-medium text-cloak-danger transition hover:bg-cloak-danger/10 focus:outline-none focus:ring-2 focus:ring-cloak-danger"
               >
                 Setup Panic Wipe
-              </Link>
+              </button>
             )}
           </article>
         ))}
       </section>
-
+      {showPanicWipeInfo && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 px-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guide-panic-wipe-title"
+            className="w-full max-w-md rounded-xl border border-cloak-border bg-cloak-surface-1 p-6 shadow-2xl"
+          >
+            <h2 id="guide-panic-wipe-title" className="text-lg font-semibold">
+              Panic Wipe
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-cloak-muted">
+              Panic Wipe erases this device&apos;s local vault. A separate
+              duress-passphrase configuration is not available yet. The wipe
+              control is on the unlock screen.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPanicWipeInfo(false)}
+                className="min-h-11 rounded-lg border border-cloak-border px-4 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/unlock")}
+                className="min-h-11 rounded-lg bg-cloak-danger px-4 text-sm font-semibold text-white"
+              >
+                Open unlock screen
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import KeyExchangeModal from "../../components/modals/KeyExchangeModal";
 import { TourOverlay } from "../../components/TourOverlay";
 import { getFlag } from "../../lib/flags";
 import {
@@ -40,9 +41,8 @@ export default function ChatsPage() {
       activeChatId !== null && state.typingByChat[activeChatId] === true,
   );
   const lockVault = useVaultStore((state) => state.lockVault);
+  const identity = useVaultStore((state) => state.identity);
   const [showContactForm, setShowContactForm] = useState(false);
-  const [alias, setAlias] = useState("");
-  const [recipientPubKey, setRecipientPubKey] = useState("");
   const [content, setContent] = useState("");
   const [messageType, setMessageType] =
     useState<InnerPayload["type"]>("text");
@@ -100,25 +100,6 @@ export default function ChatsPage() {
       if (activeChatId) setTyping(activeChatId, false);
     };
   }, [activeChatId, setTyping]);
-
-  async function saveContact(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setWorking(true);
-    try {
-      const chat = await addContact(alias, recipientPubKey.trim());
-      setAlias("");
-      setRecipientPubKey("");
-      setShowContactForm(false);
-      setActiveChat(chat.id);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not add this contact.",
-      );
-    } finally {
-      setWorking(false);
-    }
-  }
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -445,69 +426,16 @@ export default function ChatsPage() {
         )}
       </section>
 
-      {showContactForm && (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/80 px-4">
-          <form
-            onSubmit={saveContact}
-            className="w-full max-w-md rounded-xl border border-cloak-border bg-cloak-surface-1 p-6 shadow-2xl"
-          >
-            <h2 className="text-lg font-semibold">Add encrypted contact</h2>
-            <p className="mt-2 text-sm leading-6 text-cloak-muted">
-              Enter a contact’s X25519 encryption public key. Share identity
-              keys only over a trusted channel.
-            </p>
-            <label htmlFor="contact-alias" className="mb-2 mt-5 block text-sm">
-              Contact name
-            </label>
-            <input
-              id="contact-alias"
-              value={alias}
-              onChange={(event) => setAlias(event.target.value)}
-              autoComplete="off"
-              className="w-full rounded-lg border border-cloak-border bg-cloak-base px-3 py-3 text-sm outline-none focus:border-cloak-accent focus:ring-2 focus:ring-cloak-accent/30"
-            />
-            <label
-              htmlFor="contact-public-key"
-              className="mb-2 mt-4 block text-sm"
-            >
-              Encryption public key (Base64)
-            </label>
-            <textarea
-              id="contact-public-key"
-              required
-              rows={3}
-              value={recipientPubKey}
-              onChange={(event) => setRecipientPubKey(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              className="w-full resize-y rounded-lg border border-cloak-border bg-cloak-base px-3 py-3 font-mono text-xs outline-none focus:border-cloak-accent focus:ring-2 focus:ring-cloak-accent/30"
-            />
-            {error && (
-              <p role="alert" className="mt-3 text-sm text-cloak-danger">
-                {error}
-              </p>
-            )}
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowContactForm(false);
-                  setError("");
-                }}
-                className="min-h-11 rounded-lg border border-cloak-border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={working}
-                className="min-h-11 rounded-lg bg-cloak-accent px-4 text-sm font-semibold text-cloak-base focus:outline-none focus:ring-2 focus:ring-cloak-accent disabled:opacity-50"
-              >
-                Add contact
-              </button>
-            </div>
-          </form>
-        </div>
+      {showContactForm && identity && (
+        <KeyExchangeModal
+          identity={identity}
+          onClose={() => setShowContactForm(false)}
+          onContactAdded={async (contactAlias, publicKey) => {
+            const chat = await addContact(contactAlias, publicKey);
+            setActiveChat(chat.id);
+            return chat;
+          }}
+        />
       )}
       {tourError && (
         <p

@@ -118,6 +118,10 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
     }
   }
 
+  function goBack() {
+    setStepIndex((current) => Math.max(0, current - 1));
+  }
+
   return (
     <div className="fixed inset-0 z-[100] font-sans text-cloak-text">
       {targetRect ? (
@@ -150,6 +154,7 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="tour-step-title"
+          aria-describedby="tour-step-description"
           variants={tooltipVariants}
           initial="hidden"
           animate="show"
@@ -186,6 +191,9 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
           <h2 id="tour-step-title" className="mt-4 text-base font-semibold">
             {steps[stepIndex].title}
           </h2>
+          <p id="tour-step-description" className="sr-only">
+            Tour step {stepIndex + 1} of {steps.length}
+          </p>
           {error && (
             <p role="alert" className="mt-3 text-sm text-cloak-danger">
               {error}
@@ -200,14 +208,26 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
             >
               Skip
             </button>
-            <button
-              type="button"
-              onClick={advance}
-              disabled={saving}
-              className="min-h-10 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-bg transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent disabled:opacity-50"
-            >
-              {stepIndex === steps.length - 1 ? "Done" : "Next"}
-            </button>
+            <div className="flex items-center gap-2">
+              {stepIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  disabled={saving}
+                  className="min-h-10 rounded-lg border border-cloak-border px-3 py-2 text-sm transition hover:bg-cloak-surface2 focus:outline-none focus:ring-2 focus:ring-cloak-accent disabled:opacity-50"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={advance}
+                disabled={saving}
+                className="min-h-10 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-bg transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent disabled:opacity-50"
+              >
+                {stepIndex === steps.length - 1 ? "Done" : "Next"}
+              </button>
+            </div>
           </div>
         </motion.section>
       </AnimatePresence>

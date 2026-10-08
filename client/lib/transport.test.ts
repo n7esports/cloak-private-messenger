@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("relay configuration", () => {
-  it("does not attempt a placeholder relay when no endpoint is configured", () => {
+  it("silently retains local-queue fallback when no relay is configured", () => {
     delete process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
     delete process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
     const manager = new TransportManager();
@@ -33,10 +33,7 @@ describe("relay configuration", () => {
 
     manager.start(new Uint8Array(32), "recipient-key", callbacks);
 
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError.mock.calls[0][0].message).toContain(
-      "No relay is configured",
-    );
+    expect(onError).not.toHaveBeenCalled();
     manager.stop();
   });
 });

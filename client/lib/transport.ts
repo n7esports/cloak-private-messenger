@@ -27,15 +27,49 @@ const ACK_TIMEOUT_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
 
 function websocketRelayUrl(): string | null {
-  if (process.env.NEXT_PUBLIC_CLOAK_RELAY_URL) {
-    return process.env.NEXT_PUBLIC_CLOAK_RELAY_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_URL?.trim();
+  if (!configuredUrl) return null;
+  try {
+    const url = new URL(configuredUrl);
+    if (
+      (url.protocol !== "wss:" && url.protocol !== "ws:") ||
+      url.username ||
+      url.password ||
+      (typeof window !== "undefined" &&
+        window.location.protocol === "https:" &&
+        url.protocol === "ws:" &&
+        url.hostname !== "localhost" &&
+        url.hostname !== "127.0.0.1")
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
   }
-  return null;
 }
 
 function httpRelayUrl(): string | null {
-  if (process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL) {
-    return process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL?.trim();
+  if (configuredUrl) {
+    try {
+      const url = new URL(configuredUrl);
+      if (
+        (url.protocol !== "https:" && url.protocol !== "http:") ||
+        url.username ||
+        url.password ||
+        (typeof window !== "undefined" &&
+          window.location.protocol === "https:" &&
+          url.protocol === "http:" &&
+          url.hostname !== "localhost" &&
+          url.hostname !== "127.0.0.1")
+      ) {
+        return null;
+      }
+      return url.toString();
+    } catch {
+      return null;
+    }
   }
   const websocketUrl = websocketRelayUrl();
   if (!websocketUrl) return null;
@@ -140,12 +174,6 @@ export class TransportManager {
       }
       if (websocketRelayUrl()) {
         this.connect();
-      } else if (!httpRelayUrl()) {
-        callbacks.onError(
-          new Error(
-            "No relay is configured. Messages remain encrypted in the local outbox.",
-          ),
-        );
       }
       this.drainQueue();
       return;
@@ -299,16 +327,26 @@ export class TransportManager {
         this.socket = socket;
         this.reconnectAttempt = 0;
         this.callbacks?.onConnectionChange(true);
-        if (this.recipientPubKey) {
-          socket.send(
-            JSON.stringify({
-              type: "subscribe",
-              id: crypto.randomUUID(),
-              recipientPubKey: this.recipientPubKey,
-            }),
+        try {
+          if (this.recipientPubKey) {
+            socket.send(
+              JSON.stringify({
+                type: "subscribe",
+                id: crypto.randomUUID(),
+                recipientPubKey: this.recipientPubKey,
+              }),
+            );
+          }
+          resolve(socket);
+        } catch (error) {
+          this.callbacks?.onConnectionChange(false);
+          socket.close();
+          reject(
+            error instanceof Error
+              ? error
+              : new Error("Could not subscribe to the relay."),
           );
         }
-        resolve(socket);
       };
       socket.onmessage = (event: MessageEvent<string>) => {
         this.messageProcessing = this.messageProcessing
@@ -335,7 +373,11 @@ export class TransportManager {
     }).finally(() => {
       this.connectPromise = null;
     });
-    return this.connectPromise.catch(() => null);
+    return this.connectPromise.catch(() => {
+      this.callbacks?.onConnectionChange(false);
+      this.scheduleReconnect();
+      return null;
+    });
   }
 
   private scheduleReconnect(): void {

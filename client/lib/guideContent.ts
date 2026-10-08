@@ -38,7 +38,7 @@ export const guideContent: GuideItem[] = [
     icon: IconNote,
     title: "Private Notes",
     body: "A personal space for drafts and links. Stays on your device.",
-    action: { label: "Open Notes", href: "/notes", comingSoon: true },
+    action: { label: "Open Notes", href: "/chats/notes", comingSoon: true },
   },
   {
     icon: IconBroadcast,
@@ -46,7 +46,7 @@ export const guideContent: GuideItem[] = [
     body: "Broadcast to many people. Public or invite-only.",
     action: {
       label: "Create a channel",
-      href: "/channels/new",
+      href: "/channels/create",
       comingSoon: true,
     },
   },

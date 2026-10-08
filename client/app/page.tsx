@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HowItWorksLink from "../components/HowItWorksLink";
 
 const principles = [
   {
@@ -49,12 +50,7 @@ export default function LandingPage() {
           >
             Get Started
           </Link>
-          <a
-            href="#how-it-works"
-            className="flex min-h-12 items-center justify-center rounded-lg border border-zinc-700 px-6 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-          >
-            How it works
-          </a>
+          <HowItWorksLink />
         </div>
       </section>
 
