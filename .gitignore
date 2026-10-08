@@ -5,8 +5,10 @@ node_modules/
 # Build & Packaging Outputs
 .next/
 **/.next/
+**/.next-dev/
 dist/
 **/dist/
+client/uploads/
 build/
 **/build/
 *.tsbuildinfo

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import KeyExchangeModal from "../../components/modals/KeyExchangeModal";
+import NewChatModal from "../../components/modals/NewChatModal";
 import { TourOverlay } from "../../components/TourOverlay";
 import { getFlag } from "../../lib/flags";
 import {
@@ -13,6 +14,7 @@ import {
 import {
   PRIVATE_NOTES_CHAT_ID,
   WELCOME_CHAT_ID,
+  type ChatSummary,
   useChatStore,
 } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
@@ -30,7 +32,7 @@ export default function ChatsPage() {
   const chats = useChatStore((state) => state.chats);
   const activeChatId = useChatStore((state) => state.activeChatId);
   const messagesMap = useChatStore((state) => state.messagesMap);
-  const isRelayConnected = useChatStore((state) => state.isRelayConnected);
+  const relayStatus = useChatStore((state) => state.relayStatus);
   const transportError = useChatStore((state) => state.transportError);
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const addContact = useChatStore((state) => state.addContact);
@@ -42,7 +44,8 @@ export default function ChatsPage() {
   );
   const lockVault = useVaultStore((state) => state.lockVault);
   const identity = useVaultStore((state) => state.identity);
-  const [showContactForm, setShowContactForm] = useState(false);
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isKeyExchangeOpen, setIsKeyExchangeOpen] = useState(false);
   const [content, setContent] = useState("");
   const [messageType, setMessageType] =
     useState<InnerPayload["type"]>("text");
@@ -66,7 +69,7 @@ export default function ChatsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("compose") === "1") setShowContactForm(true);
+    if (params.get("compose") === "1") setIsNewChatOpen(true);
     const timer = Number(params.get("timer"));
     if (EPHEMERAL_TIMERS.some((supported) => supported === timer)) {
       setEphemeralTimer(timer);
@@ -122,6 +125,13 @@ export default function ChatsPage() {
     setActiveChat(chatId);
   }
 
+  function chooseContact(chat: ChatSummary) {
+    setActiveChat(chat.id);
+    setIsNewChatOpen(false);
+    setIsKeyExchangeOpen(false);
+    router.replace("/chats");
+  }
+
   return (
     <main className="cloak-app-screen flex bg-cloak-base font-sans text-cloak-text">
       <aside
@@ -152,16 +162,24 @@ export default function ChatsPage() {
         <div className="flex items-center justify-between border-b border-cloak-border px-4 py-3">
           <p
             className={`text-xs ${
-              isRelayConnected ? "text-cloak-accent" : "text-cloak-muted"
+              relayStatus === "connected"
+                ? "text-cloak-accent"
+                : "text-cloak-muted"
             }`}
             role="status"
           >
-            <span aria-hidden="true">{isRelayConnected ? "●" : "○"}</span>{" "}
-            {isRelayConnected ? "Relay connected" : "Offline / connecting"}
+            <span aria-hidden="true">
+              {relayStatus === "connected" ? "●" : "○"}
+            </span>{" "}
+            {relayStatus === "connected"
+              ? "Online"
+              : relayStatus === "connecting"
+                ? "Connecting to relay…"
+                : "Offline — messages are queued locally"}
           </p>
           <button
             type="button"
-            onClick={() => setShowContactForm(true)}
+            onClick={() => setIsNewChatOpen(true)}
             className="min-h-11 rounded-lg bg-cloak-accent px-3 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
           >
             New chat
@@ -427,13 +445,25 @@ export default function ChatsPage() {
         )}
       </section>
 
-      {showContactForm && identity && (
+      {isNewChatOpen && (
+        <NewChatModal
+          contacts={chats}
+          onClose={() => setIsNewChatOpen(false)}
+          onContactAdded={addContact}
+          onContactSelected={chooseContact}
+          onOpenKeyExchange={() => {
+            setIsNewChatOpen(false);
+            setIsKeyExchangeOpen(true);
+          }}
+        />
+      )}
+      {isKeyExchangeOpen && identity && (
         <KeyExchangeModal
           identity={identity}
-          onClose={() => setShowContactForm(false)}
+          onClose={() => setIsKeyExchangeOpen(false)}
           onContactAdded={async (contactAlias, publicKey) => {
             const chat = await addContact(contactAlias, publicKey);
-            setActiveChat(chat.id);
+            chooseContact(chat);
             return chat;
           }}
         />

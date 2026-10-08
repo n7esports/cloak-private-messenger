@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"components/InviteModal.jsx -> qrcode":{"id":2592,"files":["static/chunks/592.05e603d4a1fc6b34.js"]}}';

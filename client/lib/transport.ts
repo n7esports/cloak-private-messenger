@@ -12,11 +12,16 @@ export interface TransportCallbacks {
   onMessage: (packet: SignedEnvelope) => void | Promise<void>;
   onReceipt: (messageId: string, status: "delivered" | "read") => void;
   onSent: (messageId: string) => void;
-  onConnectionChange: (connected: boolean) => void;
+  onConnectionChange: (status: "connecting" | "connected" | "disconnected") => void;
   onError: (error: Error) => void;
 }
 
 export type DeliveryResult = "sent" | "queued";
+
+export interface RelayEndpoints {
+  websocketUrl: string | null;
+  httpUrl: string | null;
+}
 
 interface RelayAcknowledgement {
   status: "ok";
@@ -26,55 +31,85 @@ interface RelayAcknowledgement {
 const ACK_TIMEOUT_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
 
-function websocketRelayUrl(): string | null {
-  const configuredUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_URL?.trim();
-  if (!configuredUrl) return null;
+function parseEndpoint(value: string, allowedProtocols: string[]): URL | null {
   try {
-    const url = new URL(configuredUrl);
+    const url = new URL(value);
     if (
-      (url.protocol !== "wss:" && url.protocol !== "ws:") ||
+      !allowedProtocols.includes(url.protocol) ||
       url.username ||
-      url.password ||
-      (typeof window !== "undefined" &&
-        window.location.protocol === "https:" &&
-        url.protocol === "ws:" &&
-        url.hostname !== "localhost" &&
-        url.hostname !== "127.0.0.1")
+      url.password
     ) {
       return null;
     }
-    return url.toString();
+    return url;
   } catch {
     return null;
   }
 }
 
-function httpRelayUrl(): string | null {
-  const configuredUrl = process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL?.trim();
-  if (configuredUrl) {
-    try {
-      const url = new URL(configuredUrl);
-      if (
-        (url.protocol !== "https:" && url.protocol !== "http:") ||
-        url.username ||
-        url.password ||
-        (typeof window !== "undefined" &&
-          window.location.protocol === "https:" &&
-          url.protocol === "http:" &&
-          url.hostname !== "localhost" &&
-          url.hostname !== "127.0.0.1")
-      ) {
-        return null;
-      }
-      return url.toString();
-    } catch {
-      return null;
+function isSafeForCurrentPage(url: URL): boolean {
+  return !(
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    url.protocol === "http:" &&
+    url.hostname !== "localhost" &&
+    url.hostname !== "127.0.0.1" &&
+    url.hostname !== "[::1]"
+  );
+}
+
+export function resolveRelayEndpoints(): RelayEndpoints {
+  const configuredWebSocket = process.env.NEXT_PUBLIC_CLOAK_RELAY_URL?.trim();
+  const configuredHttp = process.env.NEXT_PUBLIC_CLOAK_RELAY_HTTP_URL?.trim();
+  const configuredBackend = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+
+  let websocketUrl: URL | null = null;
+  let httpUrl: URL | null = null;
+
+  if (configuredWebSocket) {
+    websocketUrl = parseEndpoint(configuredWebSocket, ["wss:", "ws:"]);
+  } else if (configuredBackend) {
+    const backendUrl = parseEndpoint(configuredBackend, [
+      "https:",
+      "http:",
+      "wss:",
+      "ws:",
+    ]);
+    if (backendUrl) {
+      websocketUrl = new URL(backendUrl);
+      websocketUrl.protocol =
+        backendUrl.protocol === "https:" || backendUrl.protocol === "wss:"
+          ? "wss:"
+          : "ws:";
     }
+  } else if (
+    process.env.NODE_ENV !== "production" &&
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "[::1]")
+  ) {
+    websocketUrl = new URL("ws://localhost:8080");
   }
-  const websocketUrl = websocketRelayUrl();
-  if (!websocketUrl) return null;
-  const base = websocketUrl.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
-  return `${base.replace(/\/+$/, "")}/relay`;
+
+  if (configuredHttp) {
+    httpUrl = parseEndpoint(configuredHttp, ["https:", "http:"]);
+  } else if (websocketUrl) {
+    httpUrl = new URL(websocketUrl);
+    httpUrl.protocol = websocketUrl.protocol === "wss:" ? "https:" : "http:";
+    httpUrl.pathname = `${httpUrl.pathname.replace(/\/+$/, "")}/relay`;
+    httpUrl.search = "";
+  }
+
+  if (websocketUrl && !isSafeForCurrentPage(websocketUrl)) {
+    websocketUrl = null;
+  }
+  if (httpUrl && !isSafeForCurrentPage(httpUrl)) httpUrl = null;
+
+  return {
+    websocketUrl: websocketUrl?.toString() ?? null,
+    httpUrl: httpUrl?.toString() ?? null,
+  };
 }
 
 function parseSignedEnvelope(value: unknown): SignedEnvelope | null {
@@ -157,6 +192,10 @@ export class TransportManager {
     string,
     { resolve: () => void; reject: (error: Error) => void; timeout: number }
   >();
+  private readonly onOffline = (): void => {
+    this.socket?.close();
+    this.callbacks?.onConnectionChange("disconnected");
+  };
 
   start(
     vaultKey: Uint8Array,
@@ -171,9 +210,13 @@ export class TransportManager {
       this.stopped = false;
       if (typeof window !== "undefined") {
         window.addEventListener("online", this.onOnline);
+        window.addEventListener("offline", this.onOffline);
       }
-      if (websocketRelayUrl()) {
+      const endpoints = resolveRelayEndpoints();
+      if (endpoints.websocketUrl) {
         this.connect();
+      } else {
+        callbacks.onConnectionChange("disconnected");
       }
       this.drainQueue();
       return;
@@ -187,10 +230,11 @@ export class TransportManager {
     this.vaultKey?.fill(0);
     this.vaultKey = null;
     this.recipientPubKey = null;
-    this.callbacks?.onConnectionChange(false);
+    this.callbacks?.onConnectionChange("disconnected");
     this.callbacks = null;
     if (typeof window !== "undefined") {
       window.removeEventListener("online", this.onOnline);
+      window.removeEventListener("offline", this.onOffline);
     }
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.retryTimer) clearTimeout(this.retryTimer);
@@ -235,7 +279,7 @@ export class TransportManager {
       return;
     }
 
-    const relayUrl = httpRelayUrl();
+    const relayUrl = resolveRelayEndpoints().httpUrl;
     if (!relayUrl) throw new Error("No HTTP relay is configured.");
     const response = await fetch(relayUrl, {
       method: "POST",
@@ -250,7 +294,7 @@ export class TransportManager {
 
   private readonly onOnline = (): void => {
     if (!this.stopped) {
-      if (websocketRelayUrl()) this.connect();
+      if (resolveRelayEndpoints().websocketUrl) this.connect();
       this.drainQueue();
     }
   };
@@ -299,7 +343,7 @@ export class TransportManager {
   }
 
   private async connect(): Promise<WebSocket | null> {
-    const relayUrl = websocketRelayUrl();
+    const relayUrl = resolveRelayEndpoints().websocketUrl;
     if (
       this.stopped ||
       !relayUrl ||
@@ -308,8 +352,13 @@ export class TransportManager {
     ) {
       return this.socket;
     }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      this.callbacks?.onConnectionChange("disconnected");
+      return null;
+    }
     if (this.connectPromise) return this.connectPromise;
 
+    this.callbacks?.onConnectionChange("connecting");
     this.connectPromise = new Promise<WebSocket>((resolve, reject) => {
       let socket: WebSocket;
       try {
@@ -318,6 +367,7 @@ export class TransportManager {
         reject(error instanceof Error ? error : new Error("Relay connection failed."));
         return;
       }
+      this.socket = socket;
       const timeout = setTimeout(() => {
         socket.close();
         reject(new Error("Relay connection timed out."));
@@ -326,7 +376,7 @@ export class TransportManager {
         clearTimeout(timeout);
         this.socket = socket;
         this.reconnectAttempt = 0;
-        this.callbacks?.onConnectionChange(true);
+        this.callbacks?.onConnectionChange("connected");
         try {
           if (this.recipientPubKey) {
             socket.send(
@@ -339,7 +389,7 @@ export class TransportManager {
           }
           resolve(socket);
         } catch (error) {
-          this.callbacks?.onConnectionChange(false);
+          this.callbacks?.onConnectionChange("disconnected");
           socket.close();
           reject(
             error instanceof Error
@@ -361,27 +411,35 @@ export class TransportManager {
       };
       socket.onerror = () => {
         clearTimeout(timeout);
+        this.callbacks?.onError(new Error("Relay WebSocket connection failed."));
         socket.close();
         reject(new Error("Relay WebSocket connection failed."));
       };
       socket.onclose = () => {
         clearTimeout(timeout);
-        if (this.socket === socket) this.socket = null;
-        this.callbacks?.onConnectionChange(false);
-        this.scheduleReconnect();
+        if (this.socket === socket) {
+          this.socket = null;
+          this.callbacks?.onConnectionChange("disconnected");
+          this.scheduleReconnect();
+        }
       };
     }).finally(() => {
       this.connectPromise = null;
     });
     return this.connectPromise.catch(() => {
-      this.callbacks?.onConnectionChange(false);
+      this.callbacks?.onConnectionChange("disconnected");
       this.scheduleReconnect();
       return null;
     });
   }
 
   private scheduleReconnect(): void {
-    if (this.stopped || !websocketRelayUrl() || this.reconnectTimer) return;
+    if (
+      this.stopped ||
+      !resolveRelayEndpoints().websocketUrl ||
+      (typeof navigator !== "undefined" && !navigator.onLine) ||
+      this.reconnectTimer
+    ) return;
     const delay = Math.min(1_000 * 2 ** this.reconnectAttempt, MAX_BACKOFF_MS);
     this.reconnectAttempt += 1;
     this.reconnectTimer = setTimeout(() => {
@@ -479,7 +537,7 @@ export class TransportManager {
   }
 
   private async sendOverHttp(packet: SignedEnvelope): Promise<void> {
-    const relayUrl = httpRelayUrl();
+    const relayUrl = resolveRelayEndpoints().httpUrl;
     if (!relayUrl) throw new Error("No HTTP relay is configured.");
     const response = await fetch(relayUrl, {
       method: "POST",
@@ -498,7 +556,7 @@ export class TransportManager {
 
   private async deliver(packet: SignedEnvelope): Promise<void> {
     let websocketError: unknown;
-    if (websocketRelayUrl()) {
+    if (resolveRelayEndpoints().websocketUrl) {
       try {
         await this.sendOverWebSocket(packet);
         return;
@@ -507,7 +565,7 @@ export class TransportManager {
       }
     }
 
-    const httpUrl = httpRelayUrl();
+    const httpUrl = resolveRelayEndpoints().httpUrl;
     if (!httpUrl) {
       throw new Error(
         "No relay is configured. The message remains encrypted in the local outbox.",
@@ -540,7 +598,8 @@ export class TransportManager {
       this.draining ||
       this.stopped ||
       !this.vaultKey ||
-      (!websocketRelayUrl() && !httpRelayUrl()) ||
+      (!resolveRelayEndpoints().websocketUrl &&
+        !resolveRelayEndpoints().httpUrl) ||
       (typeof navigator !== "undefined" && !navigator.onLine)
     ) {
       return;

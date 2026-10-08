@@ -66,6 +66,7 @@ export interface ChatState {
   chats: ChatSummary[];
   messagesMap: Record<string, ChatMessage[]>;
   isRelayConnected: boolean;
+  relayStatus: "connecting" | "connected" | "disconnected";
   transportError: string | null;
   typingByChat: Record<string, boolean>;
   setActiveChat: (chatId: string | null) => void;
@@ -528,6 +529,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   messagesMap: {},
   isRelayConnected: false,
+  relayStatus: "disconnected",
   transportError: null,
   typingByChat: {},
 
@@ -884,6 +886,7 @@ registerMemoryKeyCleanup(() => {
     chats: [],
     messagesMap: {},
     isRelayConnected: false,
+    relayStatus: "disconnected",
     transportError: null,
     typingByChat: {},
   });
@@ -900,8 +903,12 @@ export function startChatServices(): () => void {
       void useChatStore.getState().updateDeliveryStatus(messageId, status),
     onSent: (messageId) =>
       void useChatStore.getState().updateDeliveryStatus(messageId, "sent"),
-    onConnectionChange: (isRelayConnected) =>
-      useChatStore.setState({ isRelayConnected }),
+    onConnectionChange: (relayStatus) =>
+      useChatStore.setState({
+        relayStatus,
+        isRelayConnected: relayStatus === "connected",
+        ...(relayStatus === "connected" ? { transportError: null } : {}),
+      }),
     onError: (error) =>
       useChatStore.setState({ transportError: error.message }),
   });

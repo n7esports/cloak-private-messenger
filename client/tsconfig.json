@@ -24,7 +24,8 @@
     "lib/**/*.ts",
     "store/**/*.ts",
     "tailwind.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    ".next-dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", "src"]
 }

@@ -54,6 +54,21 @@ export default function SetupPage() {
   const [visibleBotPrompt, setVisibleBotPrompt] = useState<
     "welcome" | "credentials" | "recovery" | null
   >(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setFilePreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setFilePreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedFile]);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +77,11 @@ export default function SetupPage() {
       if (!active) return;
       if (existingVault) {
         await setFlag("cloak_onboarded", true);
+        try {
+          window.localStorage.setItem("has_completed_onboarding", "true");
+        } catch {
+          // The encrypted vault flag remains the durable fallback.
+        }
         await useVaultStore.getState().restoreSession();
         router.replace(
           useVaultStore.getState().isUnlocked ? "/chats" : "/unlock",
@@ -183,6 +203,11 @@ export default function SetupPage() {
     try {
       await saveEncryptedIdentity(passphrase, recoveryPhrase, identity);
       await setFlag("cloak_onboarded", true);
+      try {
+        window.localStorage.setItem("has_completed_onboarding", "true");
+      } catch {
+        // The encrypted vault flag remains the durable fallback.
+      }
       await unlockVault(passphrase);
       identity.signingPrivateKey.fill(0);
       identity.encryptionPrivateKey.fill(0);
@@ -199,6 +224,58 @@ export default function SetupPage() {
         cause instanceof Error ? cause.message : "Vault setup could not be saved.",
       );
       setIsSaving(false);
+    }
+  }
+
+  async function uploadSelectedFile() {
+    if (!selectedFile) {
+      setUploadError("Choose a file before uploading.");
+      return;
+    }
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setUploadError("Choose a file smaller than 5 MB.");
+      return;
+    }
+
+    setUploadingFile(true);
+    setUploadError("");
+    setUploadedFileUrl(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const result: unknown = await response.json();
+      if (
+        typeof result !== "object" ||
+        result === null ||
+        !("url" in result) ||
+        typeof result.url !== "string" ||
+        !result.url.startsWith("/") ||
+        result.url.startsWith("//") ||
+        result.url.startsWith("/\\")
+      ) {
+        const message =
+          typeof result === "object" &&
+          result !== null &&
+          "error" in result &&
+          typeof result.error === "string"
+            ? result.error
+            : "The upload service returned an invalid response.";
+        throw new Error(message);
+      }
+      if (!response.ok) {
+        throw new Error("The file could not be uploaded.");
+      }
+      setUploadedFileUrl(result.url);
+    } catch (cause: unknown) {
+      setUploadError(
+        cause instanceof Error ? cause.message : "The file could not be uploaded.",
+      );
+    } finally {
+      setUploadingFile(false);
     }
   }
 
@@ -224,6 +301,78 @@ export default function SetupPage() {
             </h1>
           </div>
         </div>
+
+        <section
+          aria-labelledby="setup-upload-heading"
+          className="mb-6 rounded-xl border border-cloak-border bg-cloak-base p-4"
+        >
+          <h2 id="setup-upload-heading" className="text-sm font-semibold">
+            Optional file upload
+          </h2>
+          <p className="mt-1 text-xs text-cloak-muted">
+            Choose a file up to 5 MB. A local preview is shown before upload.
+          </p>
+          <input
+            type="file"
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (file && file.size > 5 * 1024 * 1024) {
+                setSelectedFile(null);
+                setUploadError("Choose a file smaller than 5 MB.");
+                event.currentTarget.value = "";
+                return;
+              }
+              setSelectedFile(file);
+              setUploadedFileUrl(null);
+              setUploadError("");
+            }}
+            className="mt-3 block w-full text-sm text-cloak-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cloak-surface-2 file:px-3 file:py-2 file:text-cloak-text"
+          />
+          {selectedFile && filePreviewUrl && (
+            <div className="mt-3">
+              {selectedFile.type.startsWith("image/") ? (
+                <img
+                  src={filePreviewUrl}
+                  alt={`Preview of ${selectedFile.name}`}
+                  className="max-h-48 max-w-full rounded-lg object-contain"
+                />
+              ) : (
+                <a
+                  href={filePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-sm text-cloak-accent underline"
+                >
+                  Preview {selectedFile.name}
+                </a>
+              )}
+              <p className="mt-2 text-xs text-cloak-muted">
+                {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+              </p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void uploadSelectedFile()}
+            disabled={!selectedFile || uploadingFile}
+            className="mt-3 min-h-10 rounded-lg border border-cloak-accent px-4 text-sm font-medium text-cloak-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {uploadingFile ? "Uploading…" : "Upload file"}
+          </button>
+          {uploadError && (
+            <p role="alert" className="mt-2 text-sm text-cloak-danger">
+              {uploadError}
+            </p>
+          )}
+          {uploadedFileUrl && (
+            <p role="status" className="mt-2 break-all text-sm text-cloak-accent">
+              Uploaded:{" "}
+              <a href={uploadedFileUrl} target="_blank" rel="noreferrer">
+                {uploadedFileUrl}
+              </a>
+            </p>
+          )}
+        </section>
 
         <motion.div
           initial="hidden"

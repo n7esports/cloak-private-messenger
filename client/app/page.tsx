@@ -36,7 +36,20 @@ export default function LandingPage() {
     let active = true;
     const routeReturningUser = async () => {
       try {
-        if (!(await getFlag("cloak_onboarded"))) return;
+        let completed = false;
+        try {
+          completed =
+            window.localStorage.getItem("has_completed_onboarding") === "true";
+        } catch {
+          // Continue with the IndexedDB flag when browser storage is unavailable.
+        }
+        if (!completed) completed = await getFlag("cloak_onboarded");
+        if (!completed) return;
+        try {
+          window.localStorage.setItem("has_completed_onboarding", "true");
+        } catch {
+          // The IndexedDB flag remains the durable source of truth.
+        }
         if (!sessionRestored) await restoreSession();
         if (!active) return;
         router.replace(

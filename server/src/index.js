@@ -8,6 +8,19 @@ const MAX_MESSAGES_PER_ROUTE = 500;
 const MAX_QUEUES = 100_000;
 const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const MAX_FRAME_BYTES = MAX_REQUEST_BYTES + 64 * 1024;
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3002",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3002",
+];
+const allowedOrigins = new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...(process.env.CLOAK_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
 const QUEUE_ID_RE = /^[A-Za-z0-9_-]{22}$/;
 const PUBLIC_KEY_RE = /^[A-Za-z0-9+/]{43}=$/;
 const queues = new Map();
@@ -20,6 +33,10 @@ function send(socket, value) {
 
 function acknowledgement(id) {
   return { status: "ok", id };
+}
+
+function isAllowedOrigin(origin) {
+  return !origin || allowedOrigins.has(origin);
 }
 
 function validPublicKey(value) {
@@ -222,7 +239,15 @@ function pruneExpiredMessages() {
 }
 
 const httpServer = createServer(async (request, response) => {
-  response.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = request.headers.origin;
+  if (!isAllowedOrigin(origin)) {
+    response.writeHead(403).end();
+    return;
+  }
+  if (origin) {
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Vary", "Origin");
+  }
   response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   if (request.method === "OPTIONS") {
@@ -262,7 +287,13 @@ const httpServer = createServer(async (request, response) => {
   response.end(JSON.stringify(result));
 });
 
-const wss = new WebSocketServer({ server: httpServer, maxPayload: MAX_FRAME_BYTES });
+const wss = new WebSocketServer({
+  server: httpServer,
+  maxPayload: MAX_FRAME_BYTES,
+  verifyClient: ({ origin }, done) => {
+    done(isAllowedOrigin(origin), isAllowedOrigin(origin) ? 200 : 403);
+  },
+});
 wss.on("connection", (socket) => {
   const connectedRoutes = new Set();
   socket.on("message", (message) => {

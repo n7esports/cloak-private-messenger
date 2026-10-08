@@ -14,6 +14,7 @@ export default function UnlockPage() {
     (state) => state.unlockWithRecoveryPhrase,
   );
   const clearMemoryKeys = useVaultStore((state) => state.clearMemoryKeys);
+  const restoreSession = useVaultStore((state) => state.restoreSession);
   const sessionRestoreError = useVaultStore(
     (state) => state.sessionRestoreError,
   );
@@ -25,17 +26,22 @@ export default function UnlockPage() {
 
   useEffect(() => {
     let active = true;
-    database.vault
-      .get("primary")
-      .then((record) => {
+    const prepareUnlock = async () => {
+      try {
+        await restoreSession();
+        if (!active) return;
+        if (useVaultStore.getState().isUnlocked) {
+          router.replace("/chats");
+          return;
+        }
+        const record = await database.vault.get("primary");
         if (!active) return;
         if (!record) {
           router.replace("/setup");
           return;
         }
         setHasVault(true);
-      })
-      .catch((cause: unknown) => {
+      } catch (cause: unknown) {
         if (active) {
           setHasVault(false);
           setError(
@@ -44,11 +50,13 @@ export default function UnlockPage() {
               : "Could not access the encrypted vault.",
           );
         }
-      });
+      }
+    };
+    void prepareUnlock();
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [restoreSession, router]);
 
   async function submitUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,6 +94,11 @@ export default function UnlockPage() {
     try {
       clearMemoryKeys();
       await wipeVaultDatabase();
+      try {
+        window.localStorage.removeItem("has_completed_onboarding");
+      } catch {
+        // The IndexedDB onboarding flag is removed with the vault database.
+      }
       router.replace("/setup");
     } catch (cause: unknown) {
       setError(
