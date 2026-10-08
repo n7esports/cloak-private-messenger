@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useScrolled } from "../../lib/useScrolled";
 import {
   WELCOME_CHAT_ID,
+  type ChatMessage,
   useChatStore,
 } from "../../store/useChatStore";
 
+const EMPTY_MESSAGES: ChatMessage[] = [];
+
 export default function WelcomeGuide() {
-  const router = useRouter();
   const scrollerRef = useRef<HTMLElement>(null);
   const scrolled = useScrolled(scrollerRef);
   const messages = useChatStore(
-    (state) => state.messagesMap[WELCOME_CHAT_ID] ?? [],
+    (state) => state.messagesMap[WELCOME_CHAT_ID] ?? EMPTY_MESSAGES,
   );
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const orderedMessages = useMemo(
@@ -42,13 +43,12 @@ export default function WelcomeGuide() {
           </p>
           <h1 className="mt-1 text-lg font-semibold">Welcome Guide</h1>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push("/chats")}
-          className="min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+        <Link
+          href="/chats"
+          className="inline-flex items-center justify-center [-webkit-appearance:button] min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
         >
           All chats
-        </button>
+        </Link>
       </header>
 
       <section
@@ -71,7 +71,7 @@ export default function WelcomeGuide() {
             {message.id === "welcome-e2ee" && (
               <Link
                 href="/chats?compose=1"
-                className="mt-4 min-h-11 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg bg-cloak-accent px-4 py-2 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Start Chat
               </Link>
@@ -79,7 +79,7 @@ export default function WelcomeGuide() {
             {message.id === "welcome-notes" && (
               <Link
                 href="/chats/notes"
-                className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Open Notes
               </Link>
@@ -87,7 +87,7 @@ export default function WelcomeGuide() {
             {message.id === "welcome-channels" && (
               <Link
                 href="/chats/channels"
-                className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Explore Channels
               </Link>
@@ -95,7 +95,7 @@ export default function WelcomeGuide() {
             {message.id === "welcome-timers" && (
               <Link
                 href="/chats?compose=1&timer=60000"
-                className="mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-border px-4 py-2 text-sm font-medium transition hover:bg-cloak-surface-2 focus:outline-none focus:ring-2 focus:ring-cloak-accent"
               >
                 Configure Timers
               </Link>
@@ -103,7 +103,7 @@ export default function WelcomeGuide() {
             {message.id === "welcome-wipe" && (
               <Link
                 href="/unlock"
-                className="mt-4 min-h-11 rounded-lg border border-cloak-danger/50 px-4 py-2 text-sm font-medium text-cloak-danger transition hover:bg-cloak-danger/10 focus:outline-none focus:ring-2 focus:ring-cloak-danger"
+                className="inline-flex items-center justify-center [-webkit-appearance:button] mt-4 min-h-11 rounded-lg border border-cloak-danger/50 px-4 py-2 text-sm font-medium text-cloak-danger transition hover:bg-cloak-danger/10 focus:outline-none focus:ring-2 focus:ring-cloak-danger"
               >
                 Setup Panic Wipe
               </Link>

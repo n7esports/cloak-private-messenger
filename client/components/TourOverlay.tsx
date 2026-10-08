@@ -44,8 +44,9 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
         document.querySelectorAll<HTMLElement>("button, a"),
       ).find(
         (element) =>
-          element.textContent?.trim().toLowerCase() ===
+          element.textContent?.trim().toLowerCase().includes(
           currentStep.target.toLowerCase(),
+          ),
       );
       setViewport({ width: window.innerWidth, height: window.innerHeight });
       if (!target) {

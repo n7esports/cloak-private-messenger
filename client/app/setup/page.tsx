@@ -50,7 +50,9 @@ export default function SetupPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [acknowledgedPhrase, setAcknowledgedPhrase] = useState(false);
   const [error, setError] = useState("");
-  const [showWelcomeBubble, setShowWelcomeBubble] = useState(false);
+  const [visibleBotPrompt, setVisibleBotPrompt] = useState<
+    "welcome" | "credentials" | "recovery" | null
+  >(null);
 
   useEffect(() => {
     let active = true;
@@ -103,9 +105,13 @@ export default function SetupPage() {
   }, [router]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setShowWelcomeBubble(true), 800);
+    setVisibleBotPrompt(null);
+    const timeout = window.setTimeout(
+      () => setVisibleBotPrompt(step),
+      800,
+    );
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [step]);
 
   const strength = zxcvbn(passphrase).score;
   const phraseWords = recoveryPhrase.split(" ");
@@ -195,7 +201,7 @@ export default function SetupPage() {
           variants={cascade(0, 0.15)}
           className="mb-6 space-y-3"
         >
-          {showWelcomeBubble ? (
+          {visibleBotPrompt === "welcome" || step !== "welcome" ? (
             <motion.p
               variants={fadeUp}
               className="max-w-xl rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted"
@@ -259,10 +265,15 @@ export default function SetupPage() {
               onSubmit={continueToRecovery}
               className="space-y-6"
             >
-              <p className="rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted">
-                First, choose a strong passphrase. Your keys are generated here
-                and protected with Argon2id before being saved to the vault.
-              </p>
+              {visibleBotPrompt === "credentials" ? (
+                <p className="rounded-2xl rounded-tl-sm border border-cloak-border bg-cloak-base px-4 py-3 text-sm leading-6 text-cloak-muted">
+                  First, choose a strong passphrase. Your keys are generated
+                  here and protected with Argon2id before being saved to the
+                  vault.
+                </p>
+              ) : (
+                <TypingDots />
+              )}
               <div>
                 <label
                   htmlFor="vault-passphrase"
@@ -349,14 +360,20 @@ export default function SetupPage() {
               onSubmit={completeSetup}
               className="space-y-6"
             >
-              <div>
-                <h2 className="text-lg font-semibold">Save your recovery phrase</h2>
-                <p className="mt-2 text-sm leading-6 text-cloak-muted">
-                  Write these 24 words down and keep them somewhere safe and
-                  offline. They can unlock your encrypted identity if you
-                  forget your passphrase.
-                </p>
-              </div>
+              {visibleBotPrompt === "recovery" ? (
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Save your recovery phrase
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-cloak-muted">
+                    Write these 24 words down and keep them somewhere safe and
+                    offline. They can unlock your encrypted identity if you
+                    forget your passphrase.
+                  </p>
+                </div>
+              ) : (
+                <TypingDots />
+              )}
               <ol
                 aria-label="24-word recovery phrase"
                 className="grid grid-cols-2 gap-2 sm:grid-cols-3"
