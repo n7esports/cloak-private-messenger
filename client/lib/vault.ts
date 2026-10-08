@@ -56,6 +56,11 @@ export interface EncryptedNoteRecord {
   updatedAt: number;
 }
 
+export interface FlagRecord {
+  key: string;
+  value: boolean;
+}
+
 class CloakDatabase extends Dexie {
   vault!: Table<VaultRecord, VaultRecord["id"]>;
   chats!: Table<EncryptedChatRecord, string>;
@@ -63,6 +68,7 @@ class CloakDatabase extends Dexie {
   notes!: Table<EncryptedNoteRecord, string>;
   sessions!: Table<EncryptedSessionRecord, string>;
   outbox!: Table<QueuedEnvelopeRecord, string>;
+  flags!: Table<FlagRecord, string>;
 
   constructor() {
     super("CloakDatabase");
@@ -80,10 +86,24 @@ class CloakDatabase extends Dexie {
       sessions: "id, updatedAt",
       outbox: "id, nextAttemptAt, createdAt",
     });
+    this.version(3).stores({
+      vault: "id",
+      chats: "id, updatedAt",
+      messages: "id, chatId, createdAt",
+      notes: "id, updatedAt",
+      sessions: "id, updatedAt",
+      outbox: "id, nextAttemptAt, createdAt",
+      flags: "key",
+    });
   }
 }
 
 export const database = new CloakDatabase();
+
+export async function getDB(): Promise<typeof database> {
+  await database.open();
+  return database;
+}
 
 function serializeIdentity(
   identity: IdentityKeys,

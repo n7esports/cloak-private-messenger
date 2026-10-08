@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { TourOverlay } from "../../components/TourOverlay";
+import { getFlag } from "../../lib/flags";
 import {
   EPHEMERAL_TIMERS,
   type InnerPayload,
@@ -47,6 +49,8 @@ export default function ChatsPage() {
   const [ephemeralTimer, setEphemeralTimer] = useState<number | undefined>();
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [tourError, setTourError] = useState("");
 
   const activeChat = chats.find((chat) => chat.id === activeChatId);
   const visibleMessages = useMemo(
@@ -68,6 +72,26 @@ export default function ChatsPage() {
       setEphemeralTimer(timer);
     }
     if (params.size > 0) window.history.replaceState({}, "", "/chats");
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getFlag("tour-completed")
+      .then((done) => {
+        if (active) setShowTour(!done);
+      })
+      .catch((cause: unknown) => {
+        if (active) {
+          setTourError(
+            cause instanceof Error
+              ? cause.message
+              : "Could not check tour completion.",
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -485,6 +509,15 @@ export default function ChatsPage() {
           </form>
         </div>
       )}
+      {tourError && (
+        <p
+          role="alert"
+          className="fixed bottom-4 left-4 z-50 rounded-lg border border-cloak-danger/50 bg-cloak-surface-1 px-4 py-3 text-sm text-cloak-danger"
+        >
+          Could not load the guide tour: {tourError}
+        </p>
+      )}
+      {showTour && <TourOverlay onDone={() => setShowTour(false)} />}
     </main>
   );
 }

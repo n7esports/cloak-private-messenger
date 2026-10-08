@@ -82,3 +82,26 @@ export function dotCycle(index: number): Variants {
     },
   };
 }
+
+export function spotlightRing(
+  rect: { left: number; top: number; width: number; height: number },
+  reduceMotion: boolean,
+) {
+  return {
+    left: rect.left - 8,
+    top: rect.top - 8,
+    width: rect.width + 16,
+    height: rect.height + 16,
+    transition: { duration: reduceMotion ? 0 : 0.4, ease },
+  };
+}
+
+export function tourTooltip(reduceMotion: boolean): Variants {
+  const offset = reduceMotion ? 0 : 12;
+  const duration = reduceMotion ? 0 : 0.3;
+  return {
+    hidden: { opacity: 0, y: offset },
+    show: { opacity: 1, y: 0, transition: { duration, ease } },
+    exit: { opacity: 0, y: offset, transition: { duration, ease } },
+  };
+}
