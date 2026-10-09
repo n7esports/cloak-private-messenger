@@ -1,6 +1,7 @@
 "use client";
 
-import { IconCheckDouble, IconClose, IconShield } from "../icons/UiIcons";
+import { IconCheckDouble, IconShield } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 import type { ChatMessage } from "../../store/useChatStore";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -25,26 +26,10 @@ export function MessageInfoModal({
   const receiptAt = new Date(message.timestamp).toLocaleString();
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-5">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Message info"
-        className="cloak-glass-strong w-full max-w-md overflow-hidden rounded-2xl p-5"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Message info</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close message info"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
-
-        <dl className="mt-4 space-y-3 text-sm">
+    <Sheet open onClose={onClose} variant="center" label="Message info">
+      <SheetHeader title="Message info" onClose={onClose} />
+      <SheetBody className="px-5 pb-5">
+        <dl className="mt-2 space-y-3 text-sm">
           <div className="flex items-center justify-between gap-4">
             <dt className="text-cloak-muted">Direction</dt>
             <dd className="truncate">{message.outgoing ? "Sent" : "Received"}</dd>
@@ -88,7 +73,7 @@ export function MessageInfoModal({
         <p className="mt-4 break-all rounded-lg border border-white/10 bg-black/20 p-2 font-mono text-[11px] text-cloak-muted">
           id: {message.id}
         </p>
-      </section>
-    </div>
+      </SheetBody>
+    </Sheet>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   IconCopy,
   IconDownload,
@@ -65,6 +66,11 @@ export function MessageContextMenu({
   const [showReactions, setShowReactions] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [size, setSize] = useState({ width: 240, height: 340 });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const position = useContextMenuPosition(anchor, size);
 
@@ -229,11 +235,13 @@ export function MessageContextMenu({
     </div>
   );
 
+  if (!mounted) return null;
+
   // Desktop: floating popover with smart bounds detection.
   if (isDesktop && position) {
-    return (
+    return createPortal(
       <div
-        className="fixed inset-0 z-[95]"
+        className="fixed inset-0 z-[110]"
         style={{ backdropFilter: "blur(2px)" }}
         role="presentation"
       >
@@ -249,23 +257,26 @@ export function MessageContextMenu({
         >
           {panel}
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
-  // Mobile: bottom sheet, blurred backdrop.
-  return (
-    <div className="fixed inset-0 z-[95] flex items-end" role="presentation">
+  // Mobile: bottom sheet, blurred backdrop, centred so it lines up with the
+  // message rather than hugging the left edge.
+  return createPortal(
+    <div className="fixed inset-0 z-[110] flex items-end justify-center" role="presentation">
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-black/50"
         style={{ backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
         onClick={onClose}
       />
-      <div className="relative w-full rounded-t-3xl p-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+      <div className="relative w-full max-w-sm rounded-t-3xl p-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20" />
         {panel}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

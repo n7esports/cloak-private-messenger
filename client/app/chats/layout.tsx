@@ -117,12 +117,14 @@ export default function ChatsLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2 px-4 pb-3">
           <Link
             href="/chats?compose=1"
+            data-tour="new-chat"
             className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-cloak-accent px-3 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
           >
             New chat
           </Link>
           <Link
             href="/chats?guide=1"
+            data-tour="guide"
             className="cloak-glass-soft grid h-10 w-10 place-items-center rounded-xl text-cloak-muted transition hover:text-cloak-text"
             aria-label="Open guide"
             title="Guide"

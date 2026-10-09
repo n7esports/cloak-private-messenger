@@ -6,9 +6,9 @@ import { pulse, spotlightRing, tourTooltip } from "../lib/motion";
 import { setFlag } from "../lib/flags";
 
 const steps = [
-  { target: "New chat", title: "New Chat" },
-  { target: "Lock", title: "Vault Lock" },
-  { target: "Welcome Guide", title: "Cloak Guide" },
+  { target: "New chat", title: "New Chat", selector: '[data-tour="new-chat"]' },
+  { target: "Lock", title: "Vault Lock", selector: '[data-tour="vault-lock"]' },
+  { target: "Guide", title: "Cloak Guide", selector: '[data-tour="guide"]' },
 ] as const;
 
 interface TargetRect {
@@ -40,14 +40,15 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
   useEffect(() => {
     const updateTarget = () => {
       const currentStep = steps[stepIndex];
-      const target = Array.from(
-        document.querySelectorAll<HTMLElement>("button, a"),
-      ).find(
-        (element) =>
-          element.textContent?.trim().toLowerCase().includes(
-          currentStep.target.toLowerCase(),
-          ),
-      );
+      // Prefer the stable data-tour hook; fall back to matching visible text.
+      const target =
+        document.querySelector<HTMLElement>(currentStep.selector) ??
+        Array.from(document.querySelectorAll<HTMLElement>("button, a")).find(
+          (element) =>
+            element.textContent?.trim().toLowerCase().includes(
+              currentStep.target.toLowerCase(),
+            ),
+        );
       setViewport({ width: window.innerWidth, height: window.innerHeight });
       if (!target) {
         setError(`Could not find the "${currentStep.target}" tour target.`);
@@ -123,7 +124,7 @@ export function TourOverlay({ onDone }: TourOverlayProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] font-sans text-cloak-text">
+    <div className="fixed inset-0 z-[120] font-sans text-cloak-text">
       {targetRect ? (
         <>
           <svg

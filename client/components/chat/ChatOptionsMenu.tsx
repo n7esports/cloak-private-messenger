@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   IconBlock,
   IconBroadcast,
@@ -94,8 +95,13 @@ export function ChatOptionsMenu({
 }: ChatOptionsMenuProps) {
   const [submenu, setSubmenu] = useState<Submenu>(null);
   const [confirming, setConfirming] = useState<ItemDef | null>(null);
+  const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const firstFocusRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isMuted = chat.mutedUntil !== undefined && chat.mutedUntil > Date.now();
 
@@ -129,8 +135,6 @@ export function ChatOptionsMenu({
       document.removeEventListener("mousedown", onPointer);
     };
   }, [open, confirming, submenu, onClose]);
-
-  if (!open) return null;
 
   const items: ItemDef[] = [
     { id: "contact-info", label: "Contact info", icon: IconInfo },
@@ -225,9 +229,13 @@ export function ChatOptionsMenu({
             ? "Add to list"
             : null;
 
-  return (
+  if (!open || !mounted) return null;
+
+  // Portal to <body>: the header that hosts this trigger has a backdrop-filter,
+  // which creates a containing block that would otherwise clip the fixed menu.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center md:items-start md:justify-end md:p-4"
+      className="fixed inset-0 z-[80] flex items-end justify-center pt-[env(safe-area-inset-top)] md:items-start md:justify-end md:p-4"
       role="presentation"
     >
       <div
@@ -239,9 +247,10 @@ export function ChatOptionsMenu({
         ref={panelRef}
         role="menu"
         aria-label="Chat options"
-        className="cloak-glass-strong relative max-h-[85dvh] w-full overflow-y-auto rounded-t-3xl p-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-2xl md:mt-16 md:max-h-[70dvh] md:w-72 md:rounded-2xl md:pb-2"
+        className="cloak-glass-strong relative flex max-h-full min-h-0 w-full flex-col overflow-hidden rounded-t-3xl pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-2xl md:mt-16 md:w-72 md:rounded-2xl md:pb-2"
       >
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/20 md:hidden" />
+        <div className="mx-auto mb-2 mt-2 h-1 w-10 shrink-0 rounded-full bg-white/20 md:hidden" />
+        <div className="cloak-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-2">
         {title && (
           <div className="mb-1 flex items-center gap-2 px-2 py-1">
             <button
@@ -328,9 +337,10 @@ export function ChatOptionsMenu({
 
         {!submenu &&
           items.map((item, index) => renderRow(item, index === 0))}
+        </div>
 
         {confirming && (
-          <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 px-5">
+          <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-5">
             <section
               role="alertdialog"
               aria-modal="true"
@@ -366,7 +376,8 @@ export function ChatOptionsMenu({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

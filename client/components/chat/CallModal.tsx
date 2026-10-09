@@ -44,7 +44,7 @@ export function CallModal({
   const secs = String(seconds % 60).padStart(2, "0");
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/80 px-5">
+    <div className="fixed inset-0 z-[120] grid place-items-center bg-black/80 px-5">
       <section
         role="dialog"
         aria-modal="true"

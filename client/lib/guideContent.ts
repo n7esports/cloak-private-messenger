@@ -41,12 +41,12 @@ export type GuideSection = {
 };
 
 export const guideIntro =
-  "Hi, I'm your Cloak guide. Everything below is grouped so you can find a feature fast — each card explains what it does and gives you a button to try it right now.";
+  "Hi, I'm your Cloak guide. There is no sign-up, no passphrase and no account — the app opens straight into your encrypted chats. Everything below is grouped so you can find a feature fast.";
 
 export const guideSections: GuideSection[] = [
   {
     heading: "Getting started",
-    caption: "The two things you'll do most",
+    caption: "The three things you'll do most",
     items: [
       {
         icon: IconChat,
@@ -69,52 +69,63 @@ export const guideSections: GuideSection[] = [
     ],
   },
   {
-    heading: "Privacy controls",
-    caption: "Lock down and wipe on your terms",
+    heading: "Your vault",
+    caption: "No passphrase, encrypted on this device",
     items: [
       {
-        icon: IconTimer,
-        title: "Self-destructing messages",
-        body: "Attach a timer when you send. The message deletes itself from both sides once the countdown ends.",
-        action: { label: "Compose with a timer", href: "/chats?compose=1&timer=60000" },
-      },
-      {
         icon: IconLock,
-        title: "Lock & passcode",
-        body: "Tap Lock in the sidebar to lock Cloak. The first time you lock, set a passcode; after that the passcode re-opens your vault on this device.",
+        title: "Opens without a passphrase",
+        body: "There is no login screen. Cloak creates a random device key the first time you open it and unlocks your vault silently, so your chats stay encrypted at rest.",
         action: { label: "Lock now", href: "/lock" },
       },
       {
-        icon: IconTrash,
-        title: "Panic Wipe",
-        body: "Instantly erase this device's entire vault — identity, chats, and notes. Use it if you're ever forced to hand over your device.",
-        action: { label: "Go to wipe control", intent: "panic-wipe" },
-      },
-    ],
-  },
-  {
-    heading: "How Cloak protects you",
-    caption: "The design behind the app",
-    items: [
-      {
         icon: IconKey,
         title: "Your keys never leave",
-        body: "Your identity is generated here and never uploaded. A device key in this browser encrypts your identity, chats, and notes at rest.",
+        body: "Your identity is generated here and never uploaded. The device key in this browser encrypts your identity, chats, notes and attachments.",
       },
       {
         icon: IconDevice,
         title: "One device, one vault",
         body: "Conversations live on this device only. Opening Cloak elsewhere starts a fresh vault — there is no account to sign in to.",
       },
+    ],
+  },
+  {
+    heading: "Privacy controls",
+    caption: "Lock down and wipe on your terms",
+    items: [
       {
-        icon: IconOffline,
-        title: "Works offline",
-        body: "No relay? No problem. Messages queue locally and send the moment you're back online. Nothing is lost.",
+        icon: IconTimer,
+        title: "Self-destructing messages",
+        body: "Attach a timer when you send (5s to 7 days). The message deletes itself from both sides once the countdown ends.",
+        action: { label: "Compose with a timer", href: "/chats?compose=1&timer=60000" },
+      },
+      {
+        icon: IconTrash,
+        title: "Panic Wipe",
+        body: "Instantly erase this device's entire vault — identity, chats and notes. Use it if you're ever forced to hand over your device.",
+        action: { label: "Go to wipe control", intent: "panic-wipe" },
       },
       {
         icon: IconCheck,
         title: "Verify before you trust",
         body: "Compare public keys out-of-band before your first message to be sure no one is impersonating your contact.",
+      },
+    ],
+  },
+  {
+    heading: "Using the app",
+    caption: "Day-to-day actions",
+    items: [
+      {
+        icon: IconSend,
+        title: "Attachments & reactions",
+        body: "Tap the paperclip to send photos, files, audio or a location. Long-press a message (or use the arrow) to reply, react, star, pin, forward or delete it.",
+      },
+      {
+        icon: IconOffline,
+        title: "Works offline",
+        body: "No relay? No problem. Messages queue locally and send the moment you're back online. Nothing is lost.",
       },
     ],
   },

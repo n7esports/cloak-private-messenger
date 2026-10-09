@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const EMOJI = [
   "😀", "😂", "🥰", "😎", "🤝", "👍", "🙏", "🔥",
@@ -25,7 +26,12 @@ export function EmojiStickerPicker({
   onPick: (value: string) => void;
 }) {
   const [tab, setTab] = useState<"emoji" | "stickers">("emoji");
+  const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -45,16 +51,16 @@ export function EmojiStickerPicker({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const items = tab === "emoji" ? EMOJI : STICKERS;
 
-  return (
+  return createPortal(
     <div
       ref={panelRef}
       role="dialog"
       aria-label="Emoji and stickers"
-      className="cloak-glass-strong absolute bottom-16 left-2 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-2 shadow-2xl"
+      className="cloak-glass-strong fixed bottom-24 left-3 z-[95] w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl p-2 shadow-2xl"
     >
       <div className="mb-2 flex gap-1 rounded-xl p-0.5">
         {(["emoji", "stickers"] as const).map((value) => (
@@ -86,6 +92,7 @@ export function EmojiStickerPicker({
           </button>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

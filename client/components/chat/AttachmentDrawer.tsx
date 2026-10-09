@@ -3,12 +3,12 @@
 import { useRef } from "react";
 import {
   IconCamera,
-  IconClose,
   IconFile,
   IconImage,
   IconLocation,
   IconMic,
 } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 
 export type AttachmentKind = "photos" | "camera" | "documents" | "audio" | "location";
 
@@ -94,32 +94,11 @@ export function AttachmentDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-end md:items-center md:justify-center">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-black/50"
-        style={{ backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
-        onClick={onClose}
-      />
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Attach"
-        className="cloak-glass-strong relative w-full rounded-t-3xl p-4 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-2xl md:w-[26rem] md:rounded-2xl md:pb-4"
-      >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20 md:hidden" />
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Attach</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close attach menu"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open={open} onClose={onClose} variant="bottom" label="Attach">
+      <div className="mx-auto mb-1 mt-2 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+      <SheetHeader title="Attach" onClose={onClose} />
 
+      <SheetBody className="px-4 pb-4">
         <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-1">
           {OPTIONS.map((option) => {
             const Icon = option.icon;
@@ -152,19 +131,19 @@ export function AttachmentDrawer({
           Attachments are encrypted on this device before sending — the relay
           only ever sees ciphertext.
         </p>
+      </SheetBody>
 
-        <input
-          ref={inputRef}
-          type="file"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onPickFile(file);
-            event.currentTarget.value = "";
-            onClose();
-          }}
-        />
-      </section>
-    </div>
+      <input
+        ref={inputRef}
+        type="file"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onPickFile(file);
+          event.currentTarget.value = "";
+          onClose();
+        }}
+      />
+    </Sheet>
   );
 }

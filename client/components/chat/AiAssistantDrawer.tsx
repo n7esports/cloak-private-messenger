@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconClose, IconSend, IconSpark } from "../icons/UiIcons";
+import { IconSend, IconSpark } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 
 /**
  * Vela AI assistant drawer. It runs fully on-device against the message text
@@ -40,35 +41,20 @@ export function AiAssistantDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end bg-black/60">
-      <div aria-hidden="true" className="flex-1" onClick={onClose} />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label="Vela AI assistant"
-        className="cloak-glass-strong flex h-full w-[min(24rem,100vw)] flex-col p-5"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
-            <IconSpark className="h-4 w-4 text-cloak-accent" />
-            Vela AI
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close AI assistant"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open onClose={onClose} variant="right" label="Vela AI assistant">
+      <SheetHeader
+        title="Vela AI"
+        onClose={onClose}
+        icon={<IconSpark className="h-4 w-4 shrink-0 text-cloak-accent" />}
+      />
 
-        <p className="mt-3 rounded-xl border border-cloak-accent/25 bg-cloak-accent/5 px-3 py-2 text-[11px] leading-5 text-cloak-muted">
-          Runs on-device against the text you share. Nothing is uploaded, so your
-          messages stay end-to-end encrypted.
-        </p>
+      <p className="mx-5 mt-3 shrink-0 rounded-xl border border-cloak-accent/25 bg-cloak-accent/5 px-3 py-2 text-[11px] leading-5 text-cloak-muted">
+        Runs on-device against the text you share. Nothing is uploaded, so your
+        messages stay end-to-end encrypted.
+      </p>
 
-        <div className="cloak-scroll mt-4 flex-1 space-y-3 overflow-y-auto">
+      <SheetBody className="px-5 py-4">
+        <div className="space-y-3">
           {messages.length === 0 && (
             <p className="mt-6 text-center text-xs text-cloak-muted">
               Ask about a message, or paste text to summarise.
@@ -87,8 +73,10 @@ export function AiAssistantDrawer({
             </div>
           ))}
         </div>
+      </SheetBody>
 
-        <div className="cloak-glass mt-3 flex items-end gap-2 rounded-2xl p-2">
+      <div className="shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)]">
+        <div className="cloak-glass flex items-end gap-2 rounded-2xl p-2">
           <label htmlFor="ai-prompt" className="sr-only">
             Ask Vela AI
           </label>
@@ -116,8 +104,8 @@ export function AiAssistantDrawer({
             <IconSend className="h-5 w-5" />
           </button>
         </div>
-      </aside>
-    </div>
+      </div>
+    </Sheet>
   );
 }
 

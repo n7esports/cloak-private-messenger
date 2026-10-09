@@ -95,6 +95,7 @@ export interface ChatState {
   relayStatus: RelayStatus;
   transportError: string | null;
   typingByChat: Record<string, boolean>;
+  peerTypingByChat: Record<string, boolean>;
   typingSentAt: Record<string, number>;
   setRelayStatus: (status: RelayStatus) => void;
   setActiveChat: (chatId: string | null) => void;
@@ -558,6 +559,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   relayStatus: "disconnected",
   transportError: null,
   typingByChat: {},
+  peerTypingByChat: {},
   typingSentAt: {},
 
   setRelayStatus: (relayStatus) =>
@@ -906,9 +908,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!chat) {
       chat = await get().addContact(`Contact ${signal.senderPubKey.slice(0, 8)}`, senderKey);
     }
+    // The remote peer's typing state is kept separate from our own draft state
+    // so the indicator only ever reflects the other person.
     set((state) => ({
-      typingByChat: {
-        ...state.typingByChat,
+      peerTypingByChat: {
+        ...state.peerTypingByChat,
         [chat!.id]: opened.state === "typing",
       },
     }));
@@ -1139,6 +1143,7 @@ registerMemoryKeyCleanup(() => {
     relayStatus: "disconnected",
     transportError: null,
     typingByChat: {},
+    peerTypingByChat: {},
     typingSentAt: {},
   });
 });

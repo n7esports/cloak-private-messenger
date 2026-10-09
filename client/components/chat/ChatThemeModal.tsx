@@ -1,6 +1,7 @@
 "use client";
 
-import { IconClose, IconPaint } from "../icons/UiIcons";
+import { IconPaint } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 
 export const CHAT_THEMES = [
   { id: "default", label: "Cloak Green", accent: "bg-emerald-500", bg: "" },
@@ -22,29 +23,14 @@ export function ChatThemeModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-5">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Chat theme"
-        className="cloak-glass-strong w-full max-w-md overflow-hidden rounded-2xl p-5"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
-            <IconPaint className="h-4 w-4 text-cloak-accent" />
-            Chat theme
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close theme picker"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <Sheet open onClose={onClose} variant="center" label="Chat theme">
+      <SheetHeader
+        title="Chat theme"
+        onClose={onClose}
+        icon={<IconPaint className="h-4 w-4 shrink-0 text-cloak-accent" />}
+      />
+      <SheetBody className="p-5 pt-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {CHAT_THEMES.map((theme) => {
             const active = current === theme.id;
             return (
@@ -70,7 +56,7 @@ export function ChatThemeModal({
           Themes tint the conversation background on this device only. They are
           stored in your encrypted chat record.
         </p>
-      </section>
-    </div>
+      </SheetBody>
+    </Sheet>
   );
 }

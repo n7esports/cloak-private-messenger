@@ -19,6 +19,7 @@ import { MessageInfoModal } from "../../components/chat/MessageInfoModal";
 import { ForwardPicker } from "../../components/chat/ForwardPicker";
 import { AiAssistantDrawer } from "../../components/chat/AiAssistantDrawer";
 import { MessageBubble } from "../../components/chat/MessageBubble";
+import { Sheet, SheetBody, SheetHeader } from "../../components/chat/Sheet";
 import { AttachmentDrawer } from "../../components/chat/AttachmentDrawer";
 import { EmojiStickerPicker } from "../../components/chat/EmojiStickerPicker";
 import { GroupCallModal } from "../../components/chat/GroupCallModal";
@@ -142,7 +143,7 @@ export default function ChatsPage() {
   const deleteChat = useChatStore((state) => state.deleteChat);
   const activeTyping = useChatStore(
     (state) =>
-      activeChatId !== null && state.typingByChat[activeChatId] === true,
+      activeChatId !== null && state.peerTypingByChat[activeChatId] === true,
   );
   const lockVault = useVaultStore((state) => state.lockVault);
   const identity = useVaultStore((state) => state.identity);
@@ -257,11 +258,19 @@ export default function ChatsPage() {
   }, []);
 
   useEffect(() => {
-    if (activeChatId) setTyping(activeChatId, false);
+    if (activeChatId) {
+      setTyping(activeChatId, false);
+      // Clear our draft state and tell the peer we stopped typing so the
+      // indicator never lingers after switching conversations.
+      broadcastTyping(activeChatId, false);
+    }
     return () => {
-      if (activeChatId) setTyping(activeChatId, false);
+      if (activeChatId) {
+        setTyping(activeChatId, false);
+        broadcastTyping(activeChatId, false);
+      }
     };
-  }, [activeChatId, setTyping]);
+  }, [activeChatId, broadcastTyping, setTyping]);
 
   // Reset per-chat UI state whenever the active conversation changes.
   useEffect(() => {
@@ -766,6 +775,7 @@ export default function ChatsPage() {
         <div className="flex items-center gap-2 px-4 py-3">
           <button
             type="button"
+            data-tour="new-chat"
             onClick={() => setIsNewChatOpen(true)}
             className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-cloak-accent px-3 text-sm font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
           >
@@ -774,6 +784,7 @@ export default function ChatsPage() {
           </button>
           <button
             type="button"
+            data-tour="guide"
             onClick={openGuide}
             aria-current={isGuideOpen ? "page" : undefined}
             className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition focus:outline-none focus:ring-2 focus:ring-cloak-accent ${
@@ -1160,30 +1171,18 @@ export default function ChatsPage() {
       </section>
 
       {isContactInfoOpen && activeChat && (
-        <div className="fixed inset-0 z-[95] flex justify-end bg-black/50">
-          <div
-            aria-hidden="true"
-            className="flex-1"
-            onClick={() => setIsContactInfoOpen(false)}
+        <Sheet
+          open
+          onClose={() => setIsContactInfoOpen(false)}
+          variant="right"
+          label="Contact info"
+        >
+          <SheetHeader
+            title="Contact info"
+            onClose={() => setIsContactInfoOpen(false)}
           />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="Contact info"
-            className="cloak-glass-strong h-full w-[min(24rem,100vw)] overflow-y-auto p-5"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Contact info</h2>
-              <button
-                type="button"
-                onClick={() => setIsContactInfoOpen(false)}
-                className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text"
-                aria-label="Close contact info"
-              >
-                <IconClose className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="mt-5 flex flex-col items-center text-center">
+          <SheetBody className="px-5 pb-5">
+            <div className="mt-2 flex flex-col items-center text-center">
               <Avatar alias={activeChat.alias} seed={activeChat.id} />
               <h3 className="mt-3 truncate text-base font-semibold">
                 {activeChat.alias}
@@ -1236,8 +1235,8 @@ export default function ChatsPage() {
                 Verify encryption key
               </button>
             )}
-          </aside>
-        </div>
+          </SheetBody>
+        </Sheet>
       )}
 
       {call && activeChat && (

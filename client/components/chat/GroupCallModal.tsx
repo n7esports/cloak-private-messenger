@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconClose, IconPhone, IconShield, IconUsers } from "../icons/UiIcons";
+import { IconPhone, IconShield, IconUsers } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 import type { ChatSummary } from "../../store/useChatStore";
 
 /**
@@ -31,29 +32,15 @@ export function GroupCallModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-5">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="New group call"
-        className="cloak-glass-strong flex max-h-[80dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl p-5"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
-            <IconUsers className="h-4 w-4 text-cloak-accent" />
-            New group call
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close group call picker"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open onClose={onClose} variant="center" label="New group call">
+      <SheetHeader
+        title="New group call"
+        onClose={onClose}
+        icon={<IconUsers className="h-4 w-4 shrink-0 text-cloak-accent" />}
+      />
 
-        <ul className="cloak-scroll mt-3 flex-1 space-y-1 overflow-y-auto">
+      <SheetBody className="px-5">
+        <ul className="mt-3 space-y-1">
           {candidates.length === 0 && (
             <li className="rounded-xl border border-white/5 px-3 py-4 text-center text-xs text-cloak-muted">
               No contacts available to invite.
@@ -84,8 +71,10 @@ export function GroupCallModal({
             );
           })}
         </ul>
+      </SheetBody>
 
-        <p className="mt-3 flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-5 text-cloak-muted">
+      <div className="shrink-0 px-5 pb-5">
+        <p className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-5 text-cloak-muted">
           <IconShield className="h-3.5 w-3.5 shrink-0 text-cloak-accent" />
           Group media transport is not enabled yet; invites will be acknowledged
           but no call is bridged.
@@ -100,7 +89,7 @@ export function GroupCallModal({
           <IconPhone className="h-4 w-4" />
           Start call with {selected.size || "no"} {selected.size === 1 ? "person" : "people"}
         </button>
-      </section>
-    </div>
+      </div>
+    </Sheet>
   );
 }

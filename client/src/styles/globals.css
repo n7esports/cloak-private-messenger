@@ -15,6 +15,22 @@ body,
   width: 100%;
   height: 100dvh;
   overflow: hidden;
+  /* Stop mobile browsers inflating text and re-flowing the layout. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+/* Mobile Safari auto-zooms when a form control smaller than 16px is focused.
+   Keep every text entry at 16px on small screens so the viewport never
+   rescales; desktop keeps the tighter design size. The !important is needed to
+   beat utility classes like `text-sm` on the same elements. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 body {

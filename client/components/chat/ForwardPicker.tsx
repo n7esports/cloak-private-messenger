@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconClose, IconForward, IconSearch } from "../icons/UiIcons";
+import { IconForward, IconSearch } from "../icons/UiIcons";
+import { Sheet, SheetBody, SheetHeader } from "./Sheet";
 import type { ChatSummary } from "../../store/useChatStore";
 
 /**
@@ -30,29 +31,14 @@ export function ForwardPicker({
   );
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 px-5">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Forward message"
-        className="cloak-glass-strong flex max-h-[80dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl p-5"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
-            <IconForward className="h-4 w-4 text-cloak-accent" />
-            Forward to
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-xl text-cloak-muted transition hover:bg-white/5 hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
-            aria-label="Close forward picker"
-          >
-            <IconClose className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="cloak-glass-soft mt-4 flex items-center gap-2 rounded-xl px-3">
+    <Sheet open onClose={onClose} variant="center" label="Forward message">
+      <SheetHeader
+        title="Forward to"
+        onClose={onClose}
+        icon={<IconForward className="h-4 w-4 shrink-0 text-cloak-accent" />}
+      />
+      <div className="shrink-0 px-5">
+        <div className="cloak-glass-soft mt-3 flex items-center gap-2 rounded-xl px-3">
           <IconSearch className="h-4 w-4 shrink-0 text-cloak-dim" />
           <input
             value={query}
@@ -62,8 +48,9 @@ export function ForwardPicker({
             className="min-h-10 w-full bg-transparent text-sm outline-none placeholder:text-cloak-dim"
           />
         </div>
-
-        <ul className="cloak-scroll mt-3 flex-1 space-y-1 overflow-y-auto">
+      </div>
+      <SheetBody className="px-5 pb-5">
+        <ul className="mt-3 space-y-1">
           {targets.length === 0 && (
             <li className="rounded-xl border border-white/5 px-3 py-4 text-center text-xs text-cloak-muted">
               No other conversations to forward to.
@@ -87,7 +74,7 @@ export function ForwardPicker({
             </li>
           ))}
         </ul>
-      </section>
-    </div>
+      </SheetBody>
+    </Sheet>
   );
 }

@@ -55,7 +55,7 @@ export function MessageBubble({
           ✓
         </button>
       )}
-      <div className="relative min-w-0 max-w-[78%]">
+      <div className="group/bubble relative flex min-w-0 max-w-[78%] items-start gap-1">
         <div
           ref={bubbleRef}
           data-message-id={message.id}
@@ -75,7 +75,7 @@ export function MessageBubble({
           onPointerLeave={onLongPressCancel}
           onPointerMove={onLongPressCancel}
           onPointerCancel={onLongPressCancel}
-          className={`cloak-bubble min-w-[4.5rem] select-none rounded-2xl px-4 py-2.5 ${
+          className={`cloak-bubble min-w-[4.5rem] flex-1 select-none rounded-2xl px-4 py-2.5 ${
             message.outgoing
               ? "rounded-br-md bg-cloak-accent/20"
               : "cloak-glass-soft rounded-bl-md"
@@ -134,7 +134,9 @@ export function MessageBubble({
             }
             aria-label="Message actions"
             title="Message actions"
-            className="cloak-glass-strong absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full text-cloak-muted opacity-0 transition hover:text-cloak-text focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-cloak-accent group-hover:opacity-100 max-md:opacity-100"
+            className={`grid h-7 w-7 shrink-0 place-items-center self-start rounded-full text-cloak-muted opacity-0 transition hover:text-cloak-text focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-cloak-accent group-hover/bubble:opacity-100 max-md:opacity-100 ${
+              message.outgoing ? "order-first" : "order-last"
+            }`}
           >
             <IconChevronDown className="h-4 w-4" />
           </button>

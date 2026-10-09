@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
 import { AttachmentChip } from "../AttachmentView";
 import {
   IconFlame,
@@ -65,7 +65,27 @@ export function MessageInput({
 }: MessageInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shiftHeldRef = useRef(false);
+  const timerMenuRef = useRef<HTMLDivElement>(null);
   const canSend = Boolean(value.trim() || attachment);
+
+  // Dismiss the disappearing-messages menu on an outside tap or Escape.
+  useEffect(() => {
+    if (!isTimerMenuOpen) return undefined;
+    const onPointer = (event: MouseEvent) => {
+      if (timerMenuRef.current && !timerMenuRef.current.contains(event.target as Node)) {
+        onToggleTimerMenu();
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onToggleTimerMenu();
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isTimerMenuOpen, onToggleTimerMenu]);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Shift") {
@@ -93,7 +113,7 @@ export function MessageInput({
         event.preventDefault();
         if (canSend && !isSending && !disabled) onSubmit();
       }}
-      className="cloak-glass overflow-hidden rounded-2xl p-2"
+      className="cloak-glass rounded-2xl p-2"
     >
       {attachment && (
         <div className="px-1 pt-1">
@@ -120,7 +140,7 @@ export function MessageInput({
       />
 
       <div className="flex items-center gap-1 px-1 pt-1">
-        <div className="relative">
+        <div className="relative" ref={timerMenuRef}>
           <button
             type="button"
             onClick={onToggleTimerMenu}
@@ -135,7 +155,7 @@ export function MessageInput({
             <IconTimer className="h-5 w-5" />
           </button>
           {isTimerMenuOpen && (
-            <div className="cloak-glass-strong absolute bottom-12 left-0 z-20 w-44 rounded-xl p-1.5 shadow-2xl">
+            <div className="cloak-glass-strong fixed bottom-24 left-3 z-[95] w-44 rounded-xl p-1.5 shadow-2xl">
               <button
                 type="button"
                 onClick={() => onEphemeralTimerChange(undefined)}
