@@ -7,7 +7,9 @@ import {
   decodeBytes,
   encodeBytes,
   type SignedEnvelope,
+  type TypingSignal,
   verifySignedEnvelope,
+  verifyTypingSignal,
 } from "./protocol";
 import {
   database,
@@ -19,6 +21,7 @@ export interface TransportCallbacks {
   onReceipt: (messageId: string, status: "delivered" | "read") => void;
   onSent: (messageId: string) => void;
   onConnectionChange: (status: "connecting" | "connected" | "disconnected") => void;
+  onTyping?: (signal: TypingSignal) => void;
   onError: (error: Error) => void;
 }
 
@@ -99,6 +102,40 @@ function parseSignedEnvelope(value: unknown): SignedEnvelope | null {
       ciphertext: envelope.ciphertext,
       timestamp: envelope.timestamp,
     },
+  };
+}
+
+function parseTypingSignal(value: unknown): TypingSignal | null {
+  if (typeof value !== "object" || value === null) return null;
+  if (
+    !("type" in value) ||
+    value.type !== "typing" ||
+    !("id" in value) ||
+    typeof value.id !== "string" ||
+    !("senderPubKey" in value) ||
+    typeof value.senderPubKey !== "string" ||
+    !("senderEncryptionPubKey" in value) ||
+    typeof value.senderEncryptionPubKey !== "string" ||
+    !("recipientPubKey" in value) ||
+    typeof value.recipientPubKey !== "string" ||
+    !("sealed" in value) ||
+    typeof value.sealed !== "string" ||
+    !("signature" in value) ||
+    typeof value.signature !== "string" ||
+    !("timestamp" in value) ||
+    typeof value.timestamp !== "number"
+  ) {
+    return null;
+  }
+  return {
+    type: "typing",
+    id: value.id,
+    senderPubKey: value.senderPubKey,
+    senderEncryptionPubKey: value.senderEncryptionPubKey,
+    recipientPubKey: value.recipientPubKey,
+    sealed: value.sealed,
+    signature: value.signature,
+    timestamp: value.timestamp,
   };
 }
 
@@ -223,6 +260,25 @@ export class TransportManager {
     }
   }
 
+  /**
+   * Fire-and-forget E2EE typing signal. It is never queued for offline
+   * delivery (a stale typing indicator is worse than none) and never touches
+   * the message ratchet.
+   */
+  async sendTyping(signal: TypingSignal): Promise<void> {
+    if (this.stopped) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    const channel = await this.getBroadcastChannel(signal.recipientPubKey);
+    const result = await channel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { signal },
+    });
+    if (result !== "ok") {
+      throw new Error(`Supabase typing broadcast failed (${result}).`);
+    }
+  }
+
   private readonly onOnline = (): void => {
     if (this.stopped) return;
     void this.connect();
@@ -305,6 +361,26 @@ export class TransportManager {
         ) {
           this.callbacks?.onReceipt(payload.messageId, payload.status);
         }
+      },
+    );
+    channel.on(
+      "broadcast",
+      { event: "typing" },
+      (event: { payload?: { signal?: unknown } }) => {
+        const signal = parseTypingSignal(event.payload?.signal);
+        if (!signal) return;
+        this.messageProcessing = this.messageProcessing
+          .then(async () => {
+            if (!(await verifyTypingSignal(signal))) return;
+            this.callbacks?.onTyping?.(signal);
+          })
+          .catch((error: unknown) => {
+            this.callbacks?.onError(
+              error instanceof Error
+                ? error
+                : new Error("Could not process a typing signal."),
+            );
+          });
       },
     );
 

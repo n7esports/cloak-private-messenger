@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { copyTextToClipboard } from '../../lib/clipboard';
 
 function CopyIcon() {
   return (
@@ -91,11 +93,13 @@ export default function InviteModal({
   if (!open) return null;
 
   async function copyAccessCode() {
+    setError('');
     try {
-      await navigator.clipboard.writeText(roomCode);
+      await copyTextToClipboard(roomCode);
       setCopied(true);
     } catch (copyError) {
       console.error('Unable to copy the room access code:', copyError);
+      setCopied(false);
       setError('Clipboard access failed. Select and copy the code manually.');
     }
   }
@@ -138,12 +142,12 @@ export default function InviteModal({
 
         <div className="mx-auto my-5 grid aspect-square w-full max-w-[256px] place-items-center rounded-2xl bg-white p-3">
           {qrCode ? (
-            <img
+            <Image
               alt="QR code for Cloak room access"
               className="h-full w-full rounded-lg"
-              height="232"
+              height={232}
               src={qrCode}
-              width="232"
+              width={232}
             />
           ) : (
             <div

@@ -1,133 +1,152 @@
 import type { ComponentType } from "react";
 import {
-  IconAutoLock,
   IconBackup,
   IconBroadcast,
+  IconChat,
   IconCheck,
+  IconDevice,
+  IconKey,
   IconLock,
   IconNote,
   IconOffline,
+  IconQR,
   IconSend,
-  IconShield,
   IconTimer,
   IconTor,
+  IconTrash,
 } from "../components/icons/GuideIcons";
 
-export type GuideItem = {
-  icon?: ComponentType<{ className?: string }>;
-  title?: string;
-  body: string;
-  action?: { label: string; href: string; comingSoon?: boolean };
+/**
+ * A guide action either navigates to a real route (`href`) or asks the guide
+ * page to run an in-app intent (`intent`). `comingSoon` marks features that
+ * are not wired up yet so the UI can disable the button instead of sending
+ * the user to a 404.
+ */
+export type GuideAction = {
+  label: string;
+  href?: string;
+  intent?: "new-chat" | "key-exchange" | "panic-wipe";
+  comingSoon?: boolean;
 };
 
-export const guideContent: GuideItem[] = [
+export type GuideSection = {
+  heading: string;
+  caption: string;
+  items: {
+    icon: ComponentType<{ className?: string }>;
+    title: string;
+    body: string;
+    action?: GuideAction;
+  }[];
+};
+
+export const guideIntro =
+  "Hi, I'm your Cloak guide. Everything below is grouped so you can find a feature fast — each card explains what it does and gives you a button to try it right now.";
+
+export const guideSections: GuideSection[] = [
   {
-    body: "Hi. I'll show you what Cloak can do. Each card has one feature and a button to try it. Come back here anytime.",
+    heading: "Getting started",
+    caption: "The two things you'll do most",
+    items: [
+      {
+        icon: IconChat,
+        title: "Start a private chat",
+        body: "Open a new conversation and add someone by their public key or QR code. Messages are encrypted on this device before they ever leave it.",
+        action: { label: "Start a chat", intent: "new-chat" },
+      },
+      {
+        icon: IconQR,
+        title: "Exchange keys & add contacts",
+        body: "Show your own QR / public key, or scan a contact's code to add them. Cloak has no username directory — the key is the identity.",
+        action: { label: "Open key exchange", intent: "key-exchange" },
+      },
+      {
+        icon: IconNote,
+        title: "Private Notes",
+        body: "A personal, encrypted space for drafts and links. Stored only on this device and never sent through the relay.",
+        action: { label: "Open Notes", href: "/chats/notes" },
+      },
+    ],
   },
   {
-    icon: IconLock,
-    title: "Private Chats",
-    body: "Messages are encrypted on your device. Only you and your contact can read them.",
-    action: {
-      label: "Start a chat",
-      href: "/chats/new",
-      comingSoon: true,
-    },
+    heading: "Privacy controls",
+    caption: "Lock down and wipe on your terms",
+    items: [
+      {
+        icon: IconTimer,
+        title: "Self-destructing messages",
+        body: "Attach a timer when you send. The message deletes itself from both sides once the countdown ends.",
+        action: { label: "Compose with a timer", href: "/chats?compose=1&timer=60000" },
+      },
+      {
+        icon: IconLock,
+        title: "Lock & passcode",
+        body: "Tap Lock in the sidebar to lock Cloak. The first time you lock, set a passcode; after that the passcode re-opens your vault on this device.",
+        action: { label: "Lock now", href: "/lock" },
+      },
+      {
+        icon: IconTrash,
+        title: "Panic Wipe",
+        body: "Instantly erase this device's entire vault — identity, chats, and notes. Use it if you're ever forced to hand over your device.",
+        action: { label: "Go to wipe control", intent: "panic-wipe" },
+      },
+    ],
   },
   {
-    icon: IconNote,
-    title: "Private Notes",
-    body: "A personal space for drafts and links. Stays on your device.",
-    action: { label: "Open Notes", href: "/chats/notes", comingSoon: true },
+    heading: "How Cloak protects you",
+    caption: "The design behind the app",
+    items: [
+      {
+        icon: IconKey,
+        title: "Your keys never leave",
+        body: "Your identity is generated here and never uploaded. A device key in this browser encrypts your identity, chats, and notes at rest.",
+      },
+      {
+        icon: IconDevice,
+        title: "One device, one vault",
+        body: "Conversations live on this device only. Opening Cloak elsewhere starts a fresh vault — there is no account to sign in to.",
+      },
+      {
+        icon: IconOffline,
+        title: "Works offline",
+        body: "No relay? No problem. Messages queue locally and send the moment you're back online. Nothing is lost.",
+      },
+      {
+        icon: IconCheck,
+        title: "Verify before you trust",
+        body: "Compare public keys out-of-band before your first message to be sure no one is impersonating your contact.",
+      },
+    ],
   },
   {
-    icon: IconBroadcast,
-    title: "Channels",
-    body: "Broadcast to many people. Public or invite-only.",
-    action: {
-      label: "Create a channel",
-      href: "/channels/create",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconTimer,
-    title: "Self-Destruct",
-    body: "Set a timer. Messages delete from both sides.",
-    action: {
-      label: "Set a timer",
-      href: "/settings/timer",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconCheck,
-    title: "Verify Contacts",
-    body: "Compare safety numbers to be sure no one is impersonating your contact.",
-    action: {
-      label: "Show my number",
-      href: "/settings/safety",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconShield,
-    title: "Panic Wipe",
-    body: "A second passphrase that wipes the vault instantly if you're forced to unlock.",
-    action: {
-      label: "Set up wipe",
-      href: "/settings/duress",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconBackup,
-    title: "Backup",
-    body: "Export an encrypted copy. Only your passphrase can open it.",
-    action: {
-      label: "Create backup",
-      href: "/settings/backup",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconAutoLock,
-    title: "Auto-Lock",
-    body: "Cloak locks itself when idle or when you switch tabs.",
-    action: {
-      label: "Adjust timing",
-      href: "/settings/autolock",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconOffline,
-    title: "Works Offline",
-    body: "Messages queue locally and send when you're back online.",
-    action: {
-      label: "Learn more",
-      href: "/settings/offline",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconTor,
-    title: "Tor Mode",
-    body: "Route traffic through Tor to hide your IP. Off by default.",
-    action: {
-      label: "Enable Tor",
-      href: "/settings/tor",
-      comingSoon: true,
-    },
-  },
-  {
-    icon: IconSend,
-    title: "You're Ready",
-    body: "That's everything. I'll be here if you need me.",
-    action: {
-      label: "Send a message",
-      href: "/chats/new",
-      comingSoon: true,
-    },
+    heading: "On the roadmap",
+    caption: "Built but not switched on yet",
+    items: [
+      {
+        icon: IconBroadcast,
+        title: "Channels",
+        body: "Broadcast to many people at once, public or invite-only, still end-to-end encrypted.",
+        action: { label: "Coming soon", href: "/chats/channels", comingSoon: true },
+      },
+      {
+        icon: IconBackup,
+        title: "Encrypted backup",
+        body: "Export an encrypted copy of your vault. Only your device key can open it.",
+        action: { label: "Coming soon", comingSoon: true },
+      },
+      {
+        icon: IconTor,
+        title: "Tor mode",
+        body: "Route traffic through Tor to hide your IP address. Off by default.",
+        action: { label: "Coming soon", comingSoon: true },
+      },
+    ],
   },
 ];
+
+export const guideOutro = {
+  icon: IconSend,
+  title: "You're all set",
+  body: "That's the tour. I'll be pinned in your sidebar whenever you need a refresher.",
+  action: { label: "Send a message", intent: "new-chat" } as GuideAction,
+};

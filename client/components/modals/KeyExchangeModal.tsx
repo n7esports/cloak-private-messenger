@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
+import { copyTextToClipboard } from "../../lib/clipboard";
 import type { IdentityKeys } from "../../lib/crypto";
 import type { ChatSummary } from "../../store/useChatStore";
 
@@ -46,6 +48,7 @@ export default function KeyExchangeModal({
   const [cameraActive, setCameraActive] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -195,9 +198,12 @@ export default function KeyExchangeModal({
 
   async function copyKey() {
     setError("");
+    setCopyStatus("idle");
     try {
-      await navigator.clipboard.writeText(publicKey);
+      await copyTextToClipboard(publicKey);
+      setCopyStatus("copied");
     } catch (cause) {
+      setCopyStatus("failed");
       setError(
         cause instanceof Error ? cause.message : "Could not copy the public key.",
       );
@@ -326,10 +332,12 @@ export default function KeyExchangeModal({
               {publicKey}
             </code>
             {qrDataUrl ? (
-              <img
+              <Image
                 src={qrDataUrl}
                 alt="QR code for your public encryption key"
-                className="mx-auto mt-5 h-64 w-64 border-8 border-white bg-white"
+                className="mx-auto mt-5 border-8 border-white bg-white"
+                width={256}
+                height={256}
               />
             ) : (
               <p role="status" className="mt-5 text-center text-sm text-cloak-muted">
@@ -341,9 +349,15 @@ export default function KeyExchangeModal({
                 type="button"
                 onClick={() => void copyKey()}
                 className="min-h-11 rounded-lg border border-cloak-border px-4 text-sm"
+                aria-live="polite"
               >
-                Copy Key
+                {copyStatus === "copied" ? "Key copied to clipboard!" : "Copy Key"}
               </button>
+              {copyStatus === "copied" && (
+                <span className="inline-flex items-center text-xs font-medium text-cloak-accent">
+                  Key copied to clipboard!
+                </span>
+              )}
               <a
                 href={qrDataUrl || undefined}
                 download="cloak-public-key.png"

@@ -1,20 +1,17 @@
 import Dexie, { type Table } from "dexie";
 import {
   decryptVaultPayload,
-  deriveVaultKey,
   encryptVaultPayload,
   initCrypto,
   type IdentityKeys,
 } from "./crypto";
 
+const LOCAL_VAULT_KEY_STORAGE = "cloak.vault-key.v1";
+
 export interface VaultRecord {
   id: "primary";
-  salt: Uint8Array;
   nonce: Uint8Array;
   encryptedIdentity: Uint8Array;
-  recoverySalt: Uint8Array;
-  recoveryNonce: Uint8Array;
-  recoveryCiphertext: Uint8Array;
   createdAt: number;
 }
 
@@ -105,6 +102,50 @@ export async function getDB(): Promise<typeof database> {
   return database;
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+}
+
+/**
+ * Reads the device vault key from local storage. This key encrypts the
+ * identity and every chat/message/note in IndexedDB, so the vault stays
+ * encrypted at rest while still unlocking silently when the app opens.
+ */
+export function readLocalVaultKey(): Uint8Array | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(LOCAL_VAULT_KEY_STORAGE);
+  if (!stored) return null;
+  try {
+    return base64ToBytes(stored);
+  } catch {
+    window.localStorage.removeItem(LOCAL_VAULT_KEY_STORAGE);
+    return null;
+  }
+}
+
+export async function getOrCreateLocalVaultKey(): Promise<Uint8Array> {
+  const existing = readLocalVaultKey();
+  if (existing) return existing;
+  if (typeof window === "undefined") {
+    throw new Error("Vault key storage is unavailable in this environment.");
+  }
+  const sodium = await initCrypto();
+  const key = sodium.randombytes_buf(sodium.crypto_secretbox_KEYBYTES);
+  window.localStorage.setItem(LOCAL_VAULT_KEY_STORAGE, bytesToBase64(key));
+  return key;
+}
+
+export function clearLocalVaultKey(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LOCAL_VAULT_KEY_STORAGE);
+}
+
 function serializeIdentity(
   identity: IdentityKeys,
   crypto: Awaited<ReturnType<typeof initCrypto>>,
@@ -164,61 +205,38 @@ function decodeIdentity(
   };
 }
 
-export async function saveEncryptedIdentity(
-  passphrase: string,
-  recoveryPhrase: string,
+export async function saveIdentityWithVaultKey(
   identity: IdentityKeys,
+  vaultKey: Uint8Array,
 ): Promise<void> {
   const sodium = await initCrypto();
-  const salt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
-  const recoverySalt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
   const plaintext = serializeIdentity(identity, sodium);
-  let passphraseKey: Uint8Array | undefined;
-  let recoveryKey: Uint8Array | undefined;
-
   try {
-    passphraseKey = await deriveVaultKey(passphrase, salt);
-    recoveryKey = await deriveVaultKey(recoveryPhrase, recoverySalt);
-    const encrypted = await encryptVaultPayload(plaintext, passphraseKey);
-    const recoveryEncrypted = await encryptVaultPayload(plaintext, recoveryKey);
+    const encrypted = await encryptVaultPayload(plaintext, vaultKey);
     await database.vault.put({
       id: "primary",
-      salt,
       nonce: encrypted.nonce,
       encryptedIdentity: encrypted.ciphertext,
-      recoverySalt,
-      recoveryNonce: recoveryEncrypted.nonce,
-      recoveryCiphertext: recoveryEncrypted.ciphertext,
       createdAt: Date.now(),
     });
   } finally {
     plaintext.fill(0);
-    passphraseKey?.fill(0);
-    recoveryKey?.fill(0);
   }
 }
 
-export async function decryptStoredIdentity(
+export async function decryptIdentityWithVaultKey(
   record: VaultRecord,
-  passphrase: string,
-  useRecoveryPhrase = false,
-): Promise<{ identity: IdentityKeys; vaultKey: Uint8Array }> {
-  const salt = useRecoveryPhrase ? record.recoverySalt : record.salt;
-  const nonce = useRecoveryPhrase ? record.recoveryNonce : record.nonce;
-  const ciphertext = useRecoveryPhrase
-    ? record.recoveryCiphertext
-    : record.encryptedIdentity;
-  const vaultKey = await deriveVaultKey(passphrase, salt);
-  let plaintext: Uint8Array | undefined;
-
+  vaultKey: Uint8Array,
+): Promise<IdentityKeys> {
+  const plaintext = await decryptVaultPayload(
+    record.encryptedIdentity,
+    record.nonce,
+    vaultKey,
+  );
   try {
-    plaintext = await decryptVaultPayload(ciphertext, nonce, vaultKey);
-    return { identity: decodeIdentity(plaintext, await initCrypto()), vaultKey };
-  } catch (error) {
-    vaultKey.fill(0);
-    throw error;
+    return decodeIdentity(plaintext, await initCrypto());
   } finally {
-    plaintext?.fill(0);
+    plaintext.fill(0);
   }
 }
 
@@ -227,4 +245,5 @@ export async function wipeVaultDatabase(): Promise<void> {
     throw new Error("IndexedDB is unavailable; stored databases could not be erased.");
   }
   await database.delete();
+  clearLocalVaultKey();
 }

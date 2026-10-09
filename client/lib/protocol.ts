@@ -5,10 +5,92 @@ import {
 
 export type PayloadType = "text" | "image" | "file" | "system";
 
+/**
+ * Attachments travel inside the same end-to-end encrypted envelope as the
+ * message body: the bytes are read on-device, base64-encoded and sealed by the
+ * conversation ratchet. The relay only ever sees ciphertext — there is no
+ * plaintext upload server. The size cap keeps the sealed payload inside the
+ * relay's per-message broadcast limit.
+ */
+export interface MessageAttachment {
+  name: string;
+  mime: string;
+  size: number;
+  data: string;
+}
+
 export interface InnerPayload {
   type: PayloadType;
   content: string;
   ephemeralTimer?: number;
+  attachment?: MessageAttachment;
+  replyTo?: { id: string; alias: string; excerpt: string };
+}
+
+const REPLY_REF_MAX_EXCERPT = 200;
+
+export function isValidReplyRef(
+  value: unknown,
+): value is { id: string; alias: string; excerpt: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    value.id.length <= 100 &&
+    "alias" in value &&
+    typeof value.alias === "string" &&
+    value.alias.length <= 200 &&
+    "excerpt" in value &&
+    typeof value.excerpt === "string" &&
+    value.excerpt.length <= REPLY_REF_MAX_EXCERPT
+  );
+}
+
+export const MAX_ATTACHMENT_BYTES = 700 * 1024;
+
+const ATTACHMENT_DATA_URL = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$/i;
+
+export function isValidAttachment(value: unknown): value is MessageAttachment {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    value.name.length > 0 &&
+    value.name.length <= 200 &&
+    "mime" in value &&
+    typeof value.mime === "string" &&
+    value.mime.length > 0 &&
+    value.mime.length <= 120 &&
+    "size" in value &&
+    typeof value.size === "number" &&
+    Number.isSafeInteger(value.size) &&
+    value.size >= 0 &&
+    value.size <= MAX_ATTACHMENT_BYTES &&
+    "data" in value &&
+    typeof value.data === "string" &&
+    ATTACHMENT_DATA_URL.test(value.data)
+  );
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Human-readable body line stored/shown for an attachment message. */
+export function describeAttachment(attachment: MessageAttachment): string {
+  const label = attachment.mime.startsWith("image/")
+    ? "Photo"
+    : attachment.mime.startsWith("video/")
+      ? "Video"
+      : attachment.mime.startsWith("audio/")
+        ? "Audio"
+        : "File";
+  return `${label}: ${attachment.name} (${formatFileSize(attachment.size)})`;
 }
 
 export interface Envelope {
@@ -115,7 +197,9 @@ function isValidPayload(payload: InnerPayload): boolean {
     (payload.ephemeralTimer === undefined ||
       EPHEMERAL_TIMERS.includes(
         payload.ephemeralTimer as (typeof EPHEMERAL_TIMERS)[number],
-      ))
+      )) &&
+    (payload.attachment === undefined || isValidAttachment(payload.attachment)) &&
+    (payload.replyTo === undefined || isValidReplyRef(payload.replyTo))
   );
 }
 
@@ -270,6 +354,18 @@ export async function openEnvelope(
     if ("ephemeralTimer" in parsed && typeof parsed.ephemeralTimer === "number") {
       payload.ephemeralTimer = parsed.ephemeralTimer;
     }
+    if ("attachment" in parsed && parsed.attachment !== undefined) {
+      if (!isValidAttachment(parsed.attachment)) {
+        throw new Error("Envelope contains an invalid attachment.");
+      }
+      payload.attachment = parsed.attachment;
+    }
+    if ("replyTo" in parsed && parsed.replyTo !== undefined) {
+      if (!isValidReplyRef(parsed.replyTo)) {
+        throw new Error("Envelope contains an invalid reply reference.");
+      }
+      payload.replyTo = parsed.replyTo;
+    }
     return payload;
   } finally {
     contentKey.fill(0);
@@ -412,5 +508,147 @@ export async function verifySignedEnvelope(
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * A typing indicator is a fire-and-forget control signal. It is deliberately
+ * kept OUT of the message ratchet so a dropped signal can never desync the
+ * conversation chain. It is still end-to-end protected: the state is sealed to
+ * the recipient with an anonymous `crypto_box_seal` (so the relay only sees
+ * ciphertext) and the whole packet is signed by the sender's Ed25519 identity
+ * (so the recipient can authenticate who is typing).
+ */
+export type TypingState = "typing" | "stop";
+export interface TypingSignal {
+  type: "typing";
+  id: string;
+  senderPubKey: string;
+  senderEncryptionPubKey: string;
+  recipientPubKey: string;
+  sealed: string;
+  timestamp: number;
+  signature: string;
+}
+
+export interface OpenTypingSignal {
+  state: TypingState;
+  senderEncryptionPubKey: string;
+  timestamp: number;
+}
+
+export async function buildTypingSignal(
+  state: TypingState,
+  identity: IdentityKeys,
+  recipientPublicKey: Uint8Array,
+  timestamp = Date.now(),
+): Promise<TypingSignal> {
+  const sodium = await initCrypto();
+  if (recipientPublicKey.length !== sodium.crypto_box_PUBLICKEYBYTES) {
+    throw new Error("Typing recipient key has an invalid length.");
+  }
+  if (state !== "typing" && state !== "stop") {
+    throw new Error("Typing signal state is invalid.");
+  }
+  const id = crypto.randomUUID();
+  const senderEncryptionPubKey = encodeBytes(identity.encryptionPublicKey);
+  const recipientPubKey = encodeBytes(recipientPublicKey);
+  const plaintext = textEncoder.encode(JSON.stringify({ state, timestamp }));
+  let sealed: Uint8Array | undefined;
+  try {
+    sealed = sodium.crypto_box_seal(plaintext, recipientPublicKey);
+    const signature = sodium.crypto_sign_detached(
+      textEncoder.encode(
+        JSON.stringify({
+          id,
+          senderEncryptionPubKey,
+          recipientPubKey,
+          sealed: encodeBytes(sealed),
+          timestamp,
+        }),
+      ),
+      identity.signingPrivateKey,
+    );
+    return {
+      type: "typing",
+      id,
+      senderPubKey: encodeBytes(identity.signingPublicKey),
+      senderEncryptionPubKey,
+      recipientPubKey,
+      sealed: encodeBytes(sealed),
+      timestamp,
+      signature: encodeBytes(signature),
+    };
+  } finally {
+    plaintext.fill(0);
+  }
+}
+
+export async function verifyTypingSignal(signal: TypingSignal): Promise<boolean> {
+  const sodium = await initCrypto();
+  try {
+    const senderPublicKey = decodeBytes(signal.senderPubKey);
+    const signature = decodeBytes(signal.signature);
+    if (
+      signal.type !== "typing" ||
+      senderPublicKey.length !== sodium.crypto_sign_PUBLICKEYBYTES ||
+      signature.length !== sodium.crypto_sign_BYTES ||
+      !signal.id
+    ) {
+      return false;
+    }
+    return sodium.crypto_sign_verify_detached(
+      signature,
+      textEncoder.encode(
+        JSON.stringify({
+          id: signal.id,
+          senderEncryptionPubKey: signal.senderEncryptionPubKey,
+          recipientPubKey: signal.recipientPubKey,
+          sealed: signal.sealed,
+          timestamp: signal.timestamp,
+        }),
+      ),
+      senderPublicKey,
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function openTypingSignal(
+  signal: TypingSignal,
+  identity: Pick<IdentityKeys, "encryptionPublicKey" | "encryptionPrivateKey">,
+): Promise<OpenTypingSignal> {
+  const sodium = await initCrypto();
+  if (!(await verifyTypingSignal(signal))) {
+    throw new Error("Typing signal signature is invalid.");
+  }
+  const recipientPubKey = decodeBytes(signal.recipientPubKey);
+  if (!sodium.memcmp(recipientPubKey, identity.encryptionPublicKey)) {
+    throw new Error("Typing signal is addressed to a different recipient.");
+  }
+  const sealed = decodeBytes(signal.sealed);
+  const plaintext = sodium.crypto_box_seal_open(
+    sealed,
+    identity.encryptionPublicKey,
+    identity.encryptionPrivateKey,
+  );
+  try {
+    const parsed: unknown = JSON.parse(textDecoder.decode(plaintext));
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("state" in parsed) ||
+      (parsed.state !== "typing" && parsed.state !== "stop")
+    ) {
+      throw new Error("Typing signal contains an invalid payload.");
+    }
+    return {
+      state: parsed.state,
+      senderEncryptionPubKey: signal.senderEncryptionPubKey,
+      timestamp: signal.timestamp,
+    };
+  } finally {
+    plaintext.fill(0);
   }
 }

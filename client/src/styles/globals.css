@@ -76,3 +76,92 @@ button {
   @apply text-cloak-bg;
   background: #6ee7b7;
 }
+
+/* ---- Glassmorphism surface system ---------------------------------------- */
+
+.cloak-glass {
+  background: color-mix(in srgb, #18181b 72%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cloak-glass-strong {
+  background: color-mix(in srgb, #18181b 86%, transparent);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cloak-glass-soft {
+  background: color-mix(in srgb, #27272a 55%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Ambient gradient wash used behind the app shell. */
+.cloak-ambient {
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(16, 185, 129, 0.14), transparent 60%),
+    radial-gradient(50% 45% at 88% 4%, rgba(16, 185, 129, 0.1), transparent 55%),
+    radial-gradient(70% 60% at 50% 100%, rgba(16, 185, 129, 0.08), transparent 60%),
+    #09090b;
+}
+
+/* Custom scrollbars that match the glass surfaces. */
+.cloak-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.cloak-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cloak-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+.cloak-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloak-glass,
+  .cloak-glass-strong,
+  .cloak-glass-soft {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Three-dot typing indicator. */
+.cloak-typing-dot {
+  animation: cloak-typing 1.2s ease-in-out infinite;
+}
+
+/* Message bubbles: allow scrolling/panning but suppress the native iOS
+   long-press text callout so our own long-press action menu wins. */
+.cloak-bubble {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@keyframes cloak-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}

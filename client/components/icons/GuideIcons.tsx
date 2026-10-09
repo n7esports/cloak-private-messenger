@@ -133,3 +133,77 @@ export function IconSend(props: GuideIconProps) {
     </GuideIcon>
   );
 }
+
+export function IconBook(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <path d="M4 5a2 2 0 0 1 2-2h11v16H6a2 2 0 0 0-2 2z" />
+      <path d="M4 19a2 2 0 0 0 2 2h11v-3" />
+      <path d="M8 7h6M8 11h6" />
+    </GuideIcon>
+  );
+}
+
+export function IconKey(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <circle cx="8" cy="12" r="4" />
+      <path d="M12 12h9M18 12v3M15.5 12v2.5" />
+    </GuideIcon>
+  );
+}
+
+export function IconDevice(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <rect x="7" y="3" width="10" height="18" rx="2" />
+      <path d="M11 18h2" />
+    </GuideIcon>
+  );
+}
+
+export function IconChat(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <path d="M4 5h16v11H9l-4 4v-4H4z" />
+      <path d="M8 9h8M8 12h5" />
+    </GuideIcon>
+  );
+}
+
+export function IconQR(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h3v3M20 14v6h-6M17 20h3" />
+    </GuideIcon>
+  );
+}
+
+export function IconTrash(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <path d="M5 7h14M10 7V5h4v2M6 7l1 13h10l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </GuideIcon>
+  );
+}
+
+export function IconArrowRight(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </GuideIcon>
+  );
+}
+
+export function IconSpark(props: GuideIconProps) {
+  return (
+    <GuideIcon {...props}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M12 8a4 4 0 0 0 0 8 4 4 0 0 0 0-8z" />
+    </GuideIcon>
+  );
+}

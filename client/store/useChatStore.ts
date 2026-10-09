@@ -10,17 +10,23 @@ import {
 import {
   EPHEMERAL_TIMERS,
   buildEnvelope,
+  buildTypingSignal,
   createRatchetSession,
   decodeBytes,
+  describeAttachment,
   encodeBytes,
   getExpiredMessageIds,
+  isValidAttachment,
   openEnvelope,
+  openTypingSignal,
   rotateSessionKey,
   signEnvelope,
   verifySignedEnvelope,
   type InnerPayload,
+  type MessageAttachment,
   type RatchetSession,
   type SignedEnvelope,
+  type TypingSignal,
 } from "../lib/protocol";
 import {
   transportManager,
@@ -36,8 +42,8 @@ import {
   useVaultStore,
 } from "./useVaultStore";
 
-export const WELCOME_CHAT_ID = "welcome";
 export const PRIVATE_NOTES_CHAT_ID = "private-notes";
+export const WELCOME_CHAT_ID = "welcome-guide";
 
 export type MessageStatus = "queued" | "sent" | "delivered" | "read";
 export type ChatKind = "direct" | "system" | "notes";
@@ -50,6 +56,18 @@ export interface ChatSummary {
   updatedAt: number;
   kind: ChatKind;
   pinned: boolean;
+  favorite?: boolean;
+  mutedUntil?: number;
+  disappearingMs?: number;
+  theme?: string;
+  listId?: string;
+  blocked?: boolean;
+}
+
+export interface MessageReplyRef {
+  id: string;
+  alias: string;
+  excerpt: string;
 }
 
 export interface ChatMessage {
@@ -62,6 +80,11 @@ export interface ChatMessage {
   timestamp: number;
   outgoing: boolean;
   ephemeralTimer?: number;
+  attachment?: MessageAttachment;
+  starred?: boolean;
+  pinned?: boolean;
+  reactions?: string[];
+  replyTo?: MessageReplyRef;
 }
 
 export interface ChatState {
@@ -72,6 +95,7 @@ export interface ChatState {
   relayStatus: RelayStatus;
   transportError: string | null;
   typingByChat: Record<string, boolean>;
+  typingSentAt: Record<string, number>;
   setRelayStatus: (status: RelayStatus) => void;
   setActiveChat: (chatId: string | null) => void;
   addContact: (alias: string, recipientPubKey: string) => Promise<ChatSummary>;
@@ -79,11 +103,24 @@ export interface ChatState {
     content: string,
     type?: InnerPayload["type"],
     ephemeralTimer?: number,
+    attachment?: MessageAttachment,
+    replyTo?: MessageReplyRef,
   ) => Promise<ChatMessage>;
   receiveMessage: (packet: SignedEnvelope) => Promise<void>;
+  receiveTyping: (signal: TypingSignal) => Promise<void>;
+  broadcastTyping: (chatId: string, isTyping: boolean) => void;
   markAsRead: (chatId: string) => Promise<void>;
   setTyping: (chatId: string, isTyping: boolean) => void;
   loadChats: () => Promise<void>;
+  ensurePrivateNotes: () => Promise<ChatSummary>;
+  updateChat: (chatId: string, patch: Partial<ChatSummary>) => Promise<ChatSummary | null>;
+  clearChatMessages: (chatId: string) => Promise<void>;
+  deleteMessages: (messageIds: string[]) => Promise<void>;
+  updateMessage: (
+    messageId: string,
+    patch: Partial<Pick<ChatMessage, "starred" | "pinned" | "reactions">>,
+  ) => Promise<void>;
+  deleteChat: (chatId: string) => Promise<void>;
   updateDeliveryStatus: (
     messageId: string,
     status: Exclude<MessageStatus, "queued">,
@@ -97,6 +134,11 @@ interface StoredMessage {
   status: MessageStatus;
   outgoing: boolean;
   ephemeralTimer?: number;
+  attachment?: MessageAttachment;
+  starred?: boolean;
+  pinned?: boolean;
+  reactions?: string[];
+  replyTo?: MessageReplyRef;
 }
 
 const messageStatusRank: Record<MessageStatus, number> = {
@@ -106,6 +148,27 @@ const messageStatusRank: Record<MessageStatus, number> = {
   read: 3,
 };
 const ephemeralExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const TYPING_THROTTLE_MS = 2_500;
+const TYPING_EXPIRY_MS = 6_000;
+
+/**
+ * Fires a system notification for a new message when the app is backgrounded.
+ * Notification bodies never contain message plaintext — only the sender alias
+ * and a generic line — so no ciphertext-free metadata leaks to the OS tray.
+ */
+function notifyIncoming(chat: { alias: string; mutedUntil?: number }): void {
+  if (chat.mutedUntil !== undefined && chat.mutedUntil > Date.now()) return;
+  void import("../src/lib/notifications.js")
+    .then(({ triggerIncomingMessageNotification }) =>
+      triggerIncomingMessageNotification({
+        sender: chat.alias,
+        includeContent: false,
+      } as { sender?: string; includeContent?: boolean }),
+    )
+    .catch(() => {
+      // Notifications are best-effort; a failure must never break delivery.
+    });
+}
 
 function getVaultMaterial(): {
   identity: IdentityKeys;
@@ -141,7 +204,25 @@ function isChatSummary(value: unknown): value is ChatSummary {
       value.kind === "system" ||
       value.kind === "notes") &&
     "pinned" in value &&
-    typeof value.pinned === "boolean"
+    typeof value.pinned === "boolean" &&
+    (!("favorite" in value) ||
+      value.favorite === undefined ||
+      typeof value.favorite === "boolean") &&
+    (!("blocked" in value) ||
+      value.blocked === undefined ||
+      typeof value.blocked === "boolean") &&
+    (!("mutedUntil" in value) ||
+      value.mutedUntil === undefined ||
+      typeof value.mutedUntil === "number") &&
+    (!("disappearingMs" in value) ||
+      value.disappearingMs === undefined ||
+      typeof value.disappearingMs === "number") &&
+    (!("theme" in value) ||
+      value.theme === undefined ||
+      typeof value.theme === "string") &&
+    (!("listId" in value) ||
+      value.listId === undefined ||
+      typeof value.listId === "string")
   );
 }
 
@@ -165,6 +246,29 @@ function isStoredMessage(value: unknown): value is StoredMessage {
       value.status === "read") &&
     "outgoing" in value &&
     typeof value.outgoing === "boolean" &&
+    (!("attachment" in value) ||
+      value.attachment === undefined ||
+      isValidAttachment(value.attachment)) &&
+    (!("starred" in value) ||
+      value.starred === undefined ||
+      typeof value.starred === "boolean") &&
+    (!("pinned" in value) ||
+      value.pinned === undefined ||
+      typeof value.pinned === "boolean") &&
+    (!("reactions" in value) ||
+      value.reactions === undefined ||
+      (Array.isArray(value.reactions) &&
+        value.reactions.every((entry) => typeof entry === "string"))) &&
+    (!("replyTo" in value) ||
+      value.replyTo === undefined ||
+      (typeof value.replyTo === "object" &&
+        value.replyTo !== null &&
+        "id" in value.replyTo &&
+        typeof value.replyTo.id === "string" &&
+        "alias" in value.replyTo &&
+        typeof value.replyTo.alias === "string" &&
+        "excerpt" in value.replyTo &&
+        typeof value.replyTo.excerpt === "string")) &&
     (!("ephemeralTimer" in value) ||
       value.ephemeralTimer === undefined ||
       (typeof value.ephemeralTimer === "number" &&
@@ -203,6 +307,13 @@ async function saveEncryptedMessage(
     ...(message.ephemeralTimer === undefined
       ? {}
       : { ephemeralTimer: message.ephemeralTimer }),
+    ...(message.attachment === undefined
+      ? {}
+      : { attachment: message.attachment }),
+    ...(message.starred === undefined ? {} : { starred: message.starred }),
+    ...(message.pinned === undefined ? {} : { pinned: message.pinned }),
+    ...(message.reactions === undefined ? {} : { reactions: message.reactions }),
+    ...(message.replyTo === undefined ? {} : { replyTo: message.replyTo }),
   };
   const plaintext = toPlaintext(stored);
   try {
@@ -383,6 +494,13 @@ async function loadMessages(
       ...(payload.ephemeralTimer === undefined
         ? {}
         : { ephemeralTimer: payload.ephemeralTimer }),
+      ...(payload.attachment === undefined
+        ? {}
+        : { attachment: payload.attachment }),
+      ...(payload.starred === undefined ? {} : { starred: payload.starred }),
+      ...(payload.pinned === undefined ? {} : { pinned: payload.pinned }),
+      ...(payload.reactions === undefined ? {} : { reactions: payload.reactions }),
+      ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
     });
   }
   return messages.sort((left, right) => left.timestamp - right.timestamp);
@@ -432,102 +550,6 @@ function scheduleMessageExpiry(message: ChatMessage): void {
   );
 }
 
-const guideMessages: Array<{ id: string; content: string }> = [
-  {
-    id: "welcome-e2ee",
-    content:
-      "End-to-end encryption: messages are sealed for the recipient and encrypted before they leave this device. Only their private key can open them.",
-  },
-  {
-    id: "welcome-notes",
-    content:
-      "Private Notes: keep a device-only note. It is encrypted in your local vault and never sent through a relay.",
-  },
-  {
-    id: "welcome-channels",
-    content:
-      "Channels: public and private channel messages are encrypted for subscribers. Private channel group keys rotate whenever the subscriber list changes.",
-  },
-  {
-    id: "welcome-timers",
-    content:
-      "Ephemeral timers: choose 5 seconds, 1 minute, 1 hour, 1 day, or 7 days. The timer is carried inside the encrypted message.",
-  },
-  {
-    id: "welcome-offline",
-    content:
-      "Offline Mode: messages you send without a connection are encrypted into this device’s outbox and retried when a relay connection is available.",
-  },
-  {
-    id: "welcome-wipe",
-    content:
-      "Panic Wipe: from the vault unlock screen you can erase this device's IndexedDB databases. This action cannot be undone.",
-  },
-  {
-    id: "welcome-tor",
-    content:
-      "Tor routing: configure a privacy-preserving relay endpoint in your deployment. Cloak does not silently claim Tor protection when no Tor proxy is configured.",
-  },
-];
-
-async function seedWelcomeGuide(
-  currentChats: ChatSummary[],
-  currentMessages: Record<string, ChatMessage[]>,
-  vaultKey: Uint8Array,
-): Promise<{ chats: ChatSummary[]; messages: Record<string, ChatMessage[]> }> {
-  const chat: ChatSummary = {
-    id: WELCOME_CHAT_ID,
-    recipientPubKey: "",
-    alias: "Welcome Guide",
-    unreadCount: 0,
-    updatedAt: Date.now(),
-    kind: "system",
-    pinned: true,
-  };
-  const guideAlreadyExists = currentChats.some(
-    (existing) => existing.id === WELCOME_CHAT_ID,
-  );
-  if (!guideAlreadyExists) await saveEncryptedChat(chat, vaultKey);
-  const existingMessages = currentMessages[WELCOME_CHAT_ID] ?? [];
-  const ids = new Set(existingMessages.map((message) => message.id));
-  const seeded = [...existingMessages];
-  for (const entry of guideMessages) {
-    if (ids.has(entry.id)) continue;
-    const message: ChatMessage = {
-      id: entry.id,
-      chatId: WELCOME_CHAT_ID,
-      senderPubKey: "system",
-      content: entry.content,
-      type: "system",
-      status: "delivered",
-      timestamp: chat.updatedAt + seeded.length,
-      outgoing: false,
-    };
-    await saveEncryptedMessage(message, vaultKey);
-    seeded.push(message);
-  }
-  const noteChat: ChatSummary = {
-    id: PRIVATE_NOTES_CHAT_ID,
-    recipientPubKey: "",
-    alias: "Private Notes",
-    unreadCount: 0,
-    updatedAt: Date.now(),
-    kind: "notes",
-    pinned: false,
-  };
-  const nextChats = guideAlreadyExists
-    ? currentChats
-    : replaceChat(currentChats, chat);
-  const allChats = nextChats.some((existing) => existing.id === noteChat.id)
-    ? nextChats
-    : replaceChat(nextChats, noteChat);
-  await saveEncryptedChat(noteChat, vaultKey);
-  return {
-    chats: allChats,
-    messages: { ...currentMessages, [WELCOME_CHAT_ID]: seeded },
-  };
-}
-
 export const useChatStore = create<ChatState>((set, get) => ({
   activeChatId: null,
   chats: [],
@@ -536,6 +558,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   relayStatus: "disconnected",
   transportError: null,
   typingByChat: {},
+  typingSentAt: {},
 
   setRelayStatus: (relayStatus) =>
     set({
@@ -586,13 +609,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return chat;
   },
 
-  sendMessage: async (content, type = "text", ephemeralTimer) => {
+  sendMessage: async (content, type = "text", ephemeralTimer, attachment, replyTo) => {
     const { identity, vaultKey } = getVaultMaterial();
     const chatId = get().activeChatId;
     if (!chatId) throw new Error("Select a conversation before sending a message.");
     const chat = get().chats.find((entry) => entry.id === chatId);
     if (!chat) throw new Error("The active conversation could not be found.");
-    if (!content.trim()) throw new Error("A message cannot be empty.");
+    if (!content.trim() && !attachment) {
+      throw new Error("A message cannot be empty.");
+    }
     if (chat.kind === "system") {
       throw new Error("The Welcome Guide is a read-only system conversation.");
     }
@@ -609,6 +634,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       timestamp,
       outgoing: true,
       ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
+      ...(attachment === undefined ? {} : { attachment }),
+      ...(replyTo === undefined ? {} : { replyTo }),
     };
 
     if (chat.kind === "notes") {
@@ -617,6 +644,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content,
         type,
         ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
+        ...(attachment === undefined ? {} : { attachment }),
+        ...(replyTo === undefined ? {} : { replyTo }),
       });
       try {
         const encrypted = await encryptVaultPayload(notePlaintext, vaultKey);
@@ -643,6 +672,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         type,
         content,
         ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
+        ...(attachment === undefined ? {} : { attachment }),
+        ...(replyTo === undefined ? {} : { replyTo }),
       };
       try {
         const envelope = await buildEnvelope(
@@ -665,6 +696,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }));
         scheduleMessageExpiry(base);
         await transportManager.enqueue(packet);
+        if (chat.kind === "direct") {
+          void buildTypingSignal("stop", identity, recipientPublicKey)
+            .then((signal) => transportManager.sendTyping(signal))
+            .catch(() => {});
+        }
       } finally {
         rotated.messageKey.fill(0);
         session.sendChainKey.fill(0);
@@ -691,6 +727,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
     const senderKey = encodeBytes(senderEncryptionKey);
+    // Silently drop anything from a blocked contact, but still acknowledge it
+    // so the sender's delivery state does not hang.
+    const blockedChat = get().chats.find(
+      (entry) => entry.kind === "direct" && entry.recipientPubKey === senderKey,
+    );
+    if (blockedChat?.blocked) {
+      try {
+        await transportManager.publishReceipt(packet.id, "delivered", senderKey);
+      } catch {
+        // Acknowledgement is best-effort for dropped messages.
+      }
+      return;
+    }
     const existingMessage = await database.messages.get(packet.id);
     if (existingMessage) {
       await transportManager.publishReceipt(packet.id, "delivered", senderKey);
@@ -738,6 +787,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ...(payload.ephemeralTimer === undefined
         ? {}
         : { ephemeralTimer: payload.ephemeralTimer }),
+      ...(payload.attachment === undefined
+        ? {}
+        : { attachment: payload.attachment }),
+      ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
     };
     await saveEncryptedMessage(incoming, vaultKey);
     const isActive = get().activeChatId === chat.id;
@@ -755,6 +808,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       },
     }));
     scheduleMessageExpiry(incoming);
+    if (!isActive) {
+      notifyIncoming(updatedChat);
+    }
     try {
       await transportManager.publishReceipt(packet.id, "delivered", senderKey);
       if (isActive) {
@@ -816,6 +872,174 @@ export const useChatStore = create<ChatState>((set, get) => ({
         : { typingByChat: { ...state.typingByChat, [chatId]: isTyping } },
     ),
 
+  broadcastTyping: (chatId, isTyping) => {
+    const { identity, vaultKey } = useVaultStore.getState();
+    if (!identity || !vaultKey) return;
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    if (!chat || chat.kind !== "direct") return;
+    const now = Date.now();
+    const lastSent = get().typingSentAt[chatId] ?? 0;
+    // Throttle repeat "typing" pings but always deliver an explicit "stop".
+    if (isTyping && now - lastSent < TYPING_THROTTLE_MS) return;
+    set((state) => ({
+      typingSentAt: { ...state.typingSentAt, [chatId]: now },
+    }));
+    void buildTypingSignal(
+      isTyping ? "typing" : "stop",
+      identity,
+      decodeBytes(chat.recipientPubKey),
+    )
+      .then((signal) => transportManager.sendTyping(signal))
+      .catch(() => {
+        // Typing is best-effort and must never surface as a transport error.
+      });
+  },
+
+  receiveTyping: async (signal) => {
+    const { identity, vaultKey } = useVaultStore.getState();
+    if (!identity || !vaultKey) return;
+    const opened = await openTypingSignal(signal, identity);
+    const senderKey = opened.senderEncryptionPubKey;
+    let chat = get().chats.find(
+      (entry) => entry.kind === "direct" && entry.recipientPubKey === senderKey,
+    );
+    if (!chat) {
+      chat = await get().addContact(`Contact ${signal.senderPubKey.slice(0, 8)}`, senderKey);
+    }
+    set((state) => ({
+      typingByChat: {
+        ...state.typingByChat,
+        [chat!.id]: opened.state === "typing",
+      },
+    }));
+  },
+
+  ensurePrivateNotes: async () => {
+    const { vaultKey } = getVaultMaterial();
+    const existing = get().chats.find((chat) => chat.id === PRIVATE_NOTES_CHAT_ID);
+    if (existing) return existing;
+    const chat: ChatSummary = {
+      id: PRIVATE_NOTES_CHAT_ID,
+      recipientPubKey: "",
+      alias: "Private Notes",
+      unreadCount: 0,
+      updatedAt: Date.now(),
+      kind: "notes",
+      pinned: true,
+    };
+    await saveEncryptedChat(chat, vaultKey);
+    set((state) => ({ chats: replaceChat(state.chats, chat) }));
+    return chat;
+  },
+
+  updateChat: async (chatId, patch) => {
+    const { vaultKey } = getVaultMaterial();
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    if (!chat) return null;
+    const updated: ChatSummary = { ...chat, ...patch, id: chat.id };
+    await saveEncryptedChat(updated, vaultKey);
+    set((state) => ({ chats: replaceChat(state.chats, updated) }));
+    return updated;
+  },
+
+  clearChatMessages: async (chatId) => {
+    const { vaultKey } = getVaultMaterial();
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    const records = await database.messages.where("chatId").equals(chatId).toArray();
+    for (const record of records) {
+      await database.messages.delete(record.id);
+      await database.notes.delete(record.id);
+      await database.outbox.delete(record.id);
+      const timer = ephemeralExpiryTimers.get(record.id);
+      if (timer) {
+        clearTimeout(timer);
+        ephemeralExpiryTimers.delete(record.id);
+      }
+    }
+    if (chat) {
+      const updated = { ...chat, unreadCount: 0, updatedAt: Date.now() };
+      await saveEncryptedChat(updated, vaultKey);
+      set((state) => ({
+        chats: replaceChat(state.chats, updated),
+        messagesMap: { ...state.messagesMap, [chatId]: [] },
+      }));
+      return;
+    }
+    set((state) => ({
+      messagesMap: { ...state.messagesMap, [chatId]: [] },
+    }));
+  },
+
+  updateMessage: async (messageId, patch) => {
+    const { vaultKey } = getVaultMaterial();
+    let target: ChatMessage | undefined;
+    let targetChatId: string | undefined;
+    for (const [chatId, list] of Object.entries(get().messagesMap)) {
+      const found = list.find((message) => message.id === messageId);
+      if (found) {
+        target = found;
+        targetChatId = chatId;
+        break;
+      }
+    }
+    if (!target || !targetChatId) return;
+    const updated: ChatMessage = { ...target, ...patch, id: target.id };
+    await saveEncryptedMessage(updated, vaultKey);
+    set((state) => ({
+      messagesMap: {
+        ...state.messagesMap,
+        [targetChatId as string]: state.messagesMap[targetChatId as string].map(
+          (message) => (message.id === messageId ? updated : message),
+        ),
+      },
+    }));
+  },
+
+  deleteMessages: async (messageIds) => {
+    const { vaultKey } = getVaultMaterial();
+    if (messageIds.length === 0) return;
+    const idSet = new Set(messageIds);
+    for (const messageId of idSet) {
+      await database.messages.delete(messageId);
+      await database.notes.delete(messageId);
+      await database.outbox.delete(messageId);
+      const timer = ephemeralExpiryTimers.get(messageId);
+      if (timer) {
+        clearTimeout(timer);
+        ephemeralExpiryTimers.delete(messageId);
+      }
+    }
+    void vaultKey;
+    set((state) => {
+      const messagesMap: Record<string, ChatMessage[]> = {};
+      for (const [chatId, list] of Object.entries(state.messagesMap)) {
+        messagesMap[chatId] = list.filter((message) => !idSet.has(message.id));
+      }
+      return { messagesMap };
+    });
+  },
+
+  deleteChat: async (chatId) => {
+    const records = await database.messages.where("chatId").equals(chatId).toArray();
+    for (const record of records) {
+      await database.messages.delete(record.id);
+      await database.notes.delete(record.id);
+      await database.outbox.delete(record.id);
+      const timer = ephemeralExpiryTimers.get(record.id);
+      if (timer) {
+        clearTimeout(timer);
+        ephemeralExpiryTimers.delete(record.id);
+      }
+    }
+    await database.chats.delete(chatId);
+    await database.sessions.delete(`contact:${chatId}`);
+    set((state) => ({
+      chats: state.chats.filter((entry) => entry.id !== chatId),
+      messagesMap: { ...state.messagesMap, [chatId]: [] },
+      activeChatId: state.activeChatId === chatId ? null : state.activeChatId,
+    }));
+  },
+
   loadChats: async () => {
     const { vaultKey } = getVaultMaterial();
     const records: EncryptedChatRecord[] = await database.chats.toArray();
@@ -838,28 +1062,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
         vaultKey,
       );
     }
-    const seeded = await seedWelcomeGuide(chats, messagesMap, vaultKey);
     const now = Date.now();
     const expiredIds = new Set(
-      getExpiredMessageIds(Object.values(seeded.messages).flat(), now),
+      getExpiredMessageIds(Object.values(messagesMap).flat(), now),
     );
-    for (const chatMessages of Object.values(seeded.messages)) {
+    for (const chatMessages of Object.values(messagesMap)) {
       for (const message of chatMessages) {
         if (expiredIds.has(message.id)) {
           await database.messages.delete(message.id);
           await database.notes.delete(message.id);
           await database.outbox.delete(message.id);
-          seeded.messages[message.chatId] = seeded.messages[
-            message.chatId
-          ].filter((existing) => existing.id !== message.id);
+          messagesMap[message.chatId] = messagesMap[message.chatId].filter(
+            (existing) => existing.id !== message.id,
+          );
         } else {
           scheduleMessageExpiry(message);
         }
       }
     }
+    // The Private Notes thread is a first-class encrypted chat row; make sure
+    // it always exists so the sidebar shows it and notes never fail to save.
+    if (!chats.some((chat) => chat.id === PRIVATE_NOTES_CHAT_ID)) {
+      const notesChat: ChatSummary = {
+        id: PRIVATE_NOTES_CHAT_ID,
+        recipientPubKey: "",
+        alias: "Private Notes",
+        unreadCount: 0,
+        updatedAt: now,
+        kind: "notes",
+        pinned: true,
+      };
+      await saveEncryptedChat(notesChat, vaultKey);
+      chats.push(notesChat);
+      messagesMap[PRIVATE_NOTES_CHAT_ID] = [];
+    }
     set({
-      chats: sortChats(seeded.chats),
-      messagesMap: seeded.messages,
+      chats: sortChats(chats),
+      messagesMap,
     });
   },
 
@@ -900,6 +1139,7 @@ registerMemoryKeyCleanup(() => {
     relayStatus: "disconnected",
     transportError: null,
     typingByChat: {},
+    typingSentAt: {},
   });
 });
 
@@ -910,6 +1150,7 @@ export function startChatServices(): () => void {
   }
   transportManager.start(vaultKey, encodeBytes(identity.encryptionPublicKey), {
     onMessage: (packet) => useChatStore.getState().receiveMessage(packet),
+    onTyping: (signal) => useChatStore.getState().receiveTyping(signal),
     onReceipt: (messageId, status) =>
       void useChatStore.getState().updateDeliveryStatus(messageId, status),
     onSent: (messageId) =>
