@@ -14,7 +14,7 @@ import {
   importPublicKey,
   createSession,
   isCryptoAvailable,
-} from '../src/index.js';
+} from '../index.js';
 
 test('Web Crypto is available in this runtime', () => {
   assert.equal(isCryptoAvailable(), true);

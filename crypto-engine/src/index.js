@@ -47,3 +47,31 @@ export async function decryptPayload(key, jsonEnvelope) {
   
   return dec.decode(decryptedBuffer);
 }
+
+export async function exportPublicKey(publicKey) {
+  const exported = await globalThis.crypto.subtle.exportKey("jwk", publicKey);
+  return JSON.stringify(exported);
+}
+
+export async function importPublicKey(jwkString) {
+  const jwk = typeof jwkString === 'string' ? JSON.parse(jwkString) : jwkString;
+  return await globalThis.crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    []
+  );
+}
+
+export async function createSession(remotePubJwk) {
+  const keyPair = await generateEphemeralKeyPair({ extractable: true });
+  const remotePub = await importPublicKey(remotePubJwk);
+  const sharedKey = await deriveSharedSecret(keyPair.privateKey, remotePub);
+  const publicKey = await exportPublicKey(keyPair.publicKey);
+  return { publicKey, sharedKey };
+}
+
+export function isCryptoAvailable() {
+  return typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.subtle !== 'undefined';
+}

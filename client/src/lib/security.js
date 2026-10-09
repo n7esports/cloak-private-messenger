@@ -294,7 +294,7 @@ export async function restoreSessionState() {
   }
   const key = await getSessionCryptoKey(false);
   if (!key) {
-    throw new Error('The encrypted session key is missing; saved session cannot be restored.');
+    throw new Error('Saved session data is unavailable.');
   }
   const iv = fromBase64Url(envelope.iv);
   const ciphertext = fromBase64Url(envelope.ciphertext);
@@ -343,7 +343,7 @@ export async function verifyPasscode(passcode) {
   try {
     configuration = JSON.parse(savedConfiguration);
   } catch {
-    throw new Error('Stored passcode configuration is invalid.');
+    throw new Error('Invalid security configuration.');
   }
   if (
     configuration?.version !== 1 ||
@@ -353,7 +353,7 @@ export async function verifyPasscode(passcode) {
     !configuration.decoy?.salt ||
     !configuration.decoy?.hash
   ) {
-    throw new Error('Stored passcode configuration is invalid.');
+    throw new Error('Invalid security configuration.');
   }
 
   const suppliedPrimaryHash = await hashPasscode(
@@ -388,12 +388,12 @@ export async function getPasscodeFailureState() {
       state.attempts < 0 ||
       !Number.isFinite(state.lockedUntil)
     ) {
-      throw new Error('Stored passcode lockout state is invalid.');
+      throw new Error('Invalid security configuration.');
     }
     return state;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Stored passcode lockout state is invalid.');
+      throw new Error('Invalid security configuration.');
     }
     throw error;
   }
@@ -554,7 +554,7 @@ export async function triggerDecoyWipe() {
     const cleanupErrors = await runSensitiveStateCleanups();
     let storageError;
     try {
-      await clearSessionData({ preservePasscodes: true });
+      await clearSessionData({ preservePasscodes: false });
     } catch (error) {
       storageError = error;
     }
