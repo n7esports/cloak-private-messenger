@@ -2,13 +2,17 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   decryptVaultPayload,
   encryptVaultPayload,
+  type IdentityKeys,
 } from "./crypto";
 import {
+  buildSignedReceipt,
   decodeBytes,
   encodeBytes,
   type SignedEnvelope,
+  type SignedReceipt,
   type TypingSignal,
   verifySignedEnvelope,
+  verifySignedReceipt,
   verifyTypingSignal,
 } from "./protocol";
 import {
@@ -18,7 +22,11 @@ import {
 
 export interface TransportCallbacks {
   onMessage: (packet: SignedEnvelope) => void | Promise<void>;
-  onReceipt: (messageId: string, status: "delivered" | "read") => void;
+  onReceipt: (
+    messageId: string,
+    status: "delivered" | "read",
+    signerEncryptionPubKey: string,
+  ) => void;
   onSent: (messageId: string) => void;
   onConnectionChange: (status: "connecting" | "connected" | "disconnected") => void;
   onTyping?: (signal: TypingSignal) => void;
@@ -37,6 +45,9 @@ interface BroadcastPayload {
 
 const ACK_TIMEOUT_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
+// Bound on cached Supabase channels (defence in depth against a peer pinning
+// unbounded live channels via attacker-controlled topic keys).
+const MAX_CACHED_CHANNELS = 64;
 // L5: a queued message that never delivers must not be retried forever. After
 // this many failures it is dropped from the outbox so stale envelopes do not
 // accumulate indefinitely; the caller is still notified via onError.
@@ -64,6 +75,10 @@ function parseSignedEnvelope(value: unknown): SignedEnvelope | null {
     value.type !== "message" ||
     !("id" in value) ||
     typeof value.id !== "string" ||
+    // Bound the id: a selector-hostile id (containing ", [, or ]) would
+    // produce a malformed CSS selector downstream, and the id is interpolated
+    // into attribute selectors. Restrict to a safe charset and length.
+    !/^[A-Za-z0-9-]{1,128}$/.test(value.id) ||
     !("senderPubKey" in value) ||
     typeof value.senderPubKey !== "string" ||
     !("senderEncryptionPubKey" in value) ||
@@ -88,7 +103,11 @@ function parseSignedEnvelope(value: unknown): SignedEnvelope | null {
     !("ciphertext" in envelope) ||
     typeof envelope.ciphertext !== "string" ||
     !("timestamp" in envelope) ||
-    typeof envelope.timestamp !== "number"
+    typeof envelope.timestamp !== "number" ||
+    !("counter" in envelope) ||
+    typeof envelope.counter !== "number" ||
+    !Number.isSafeInteger(envelope.counter) ||
+    envelope.counter < 0
   ) {
     return null;
   }
@@ -105,6 +124,7 @@ function parseSignedEnvelope(value: unknown): SignedEnvelope | null {
       nonce: envelope.nonce,
       ciphertext: envelope.ciphertext,
       timestamp: envelope.timestamp,
+      counter: envelope.counter,
     },
   };
 }
@@ -250,12 +270,19 @@ export class TransportManager {
     messageId: string,
     status: "delivered" | "read",
     recipientPubKey: string,
+    signerIdentity: IdentityKeys,
   ): Promise<void> {
+    const receipt = await buildSignedReceipt(
+      messageId,
+      status,
+      signerIdentity,
+      decodeBytes(recipientPubKey),
+    );
     const channel = await this.getBroadcastChannel(recipientPubKey);
     const result = await channel.send({
       type: "broadcast",
       event: "receipt",
-      payload: { messageId, status },
+      payload: { receipt },
     });
     if (result !== "ok") {
       const error = new Error(`Supabase receipt broadcast failed (${result}).`);
@@ -363,14 +390,25 @@ export class TransportManager {
     channel.on(
       "broadcast",
       { event: "receipt" },
-      (event: { payload?: BroadcastPayload }) => {
-        const payload = event.payload;
-        if (
-          typeof payload?.messageId === "string" &&
-          (payload.status === "delivered" || payload.status === "read")
-        ) {
-          this.callbacks?.onReceipt(payload.messageId, payload.status);
-        }
+      (event: { payload?: { receipt?: unknown } }) => {
+        const receipt = event.payload?.receipt;
+        if (!receipt || typeof receipt !== "object") return;
+        this.messageProcessing = this.messageProcessing
+          .then(async () => {
+            if (!(await verifySignedReceipt(receipt as SignedReceipt))) return;
+            this.callbacks?.onReceipt(
+              (receipt as SignedReceipt).messageId,
+              (receipt as SignedReceipt).status,
+              (receipt as SignedReceipt).senderEncryptionPubKey,
+            );
+          })
+          .catch((error: unknown) => {
+            this.callbacks?.onError(
+              error instanceof Error
+                ? error
+                : new Error("Could not process a delivery receipt."),
+            );
+          });
       },
     );
     channel.on(
@@ -472,6 +510,18 @@ export class TransportManager {
     const channel = supabase.channel(channelName, {
       config: { broadcast: { self: false } },
     });
+    // Bound the channel cache (defence in depth): the topic comes from a
+    // peer-supplied key, so without a cap a single peer could pin unbounded
+    // live channels. Evict the oldest non-inbox entry when full.
+    if (this.channels.size >= MAX_CACHED_CHANNELS) {
+      for (const [name, cached] of this.channels) {
+        if (cached !== this.inboxChannel) {
+          this.channels.delete(name);
+          void supabase.removeChannel(cached).catch(() => {});
+          break;
+        }
+      }
+    }
     this.channels.set(channelName, channel);
 
     try {

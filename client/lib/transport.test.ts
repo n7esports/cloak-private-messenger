@@ -92,6 +92,7 @@ function makePacket(recipientPubKey: string): SignedEnvelope {
       nonce: encodeBytes(new Uint8Array(24)),
       ciphertext: encodeBytes(new Uint8Array([1, 2, 3])),
       timestamp: Date.now(),
+      counter: 0,
     },
   };
 }

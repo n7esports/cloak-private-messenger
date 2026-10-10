@@ -13,6 +13,7 @@ import {
   buildTypingSignal,
   createRatchetSession,
   decodeBytes,
+  deriveAndSkipReceiveKey,
   describeAttachment,
   encodeBytes,
   getExpiredMessageIds,
@@ -51,6 +52,7 @@ export type ChatKind = "direct" | "system" | "notes";
 export interface ChatSummary {
   id: string;
   recipientPubKey: string;
+  peerSigningPubKey?: string;
   alias: string;
   unreadCount: number;
   updatedAt: number;
@@ -88,16 +90,31 @@ export interface ChatMessage {
   replyTo?: MessageReplyRef;
 }
 
+/**
+ * A message from a sender who is not yet a contact. Parked (never ingested,
+ * no ratchet session written) until the user explicitly accepts, so a hostile
+ * peer cannot populate the sidebar or force unbounded IndexedDB growth.
+ */
+export interface PendingRequest {
+  senderEncryptionPubKey: string;
+  senderPubKey: string;
+  packet: SignedEnvelope;
+  receivedAt: number;
+}
+
 export interface ChatState {
   activeChatId: string | null;
   chats: ChatSummary[];
   messagesMap: Record<string, ChatMessage[]>;
+  pendingRequests: PendingRequest[];
   isRelayConnected: boolean;
   relayStatus: RelayStatus;
   transportError: string | null;
   typingByChat: Record<string, boolean>;
   peerTypingByChat: Record<string, boolean>;
   typingSentAt: Record<string, number>;
+  acceptPendingRequest: (senderKey: string) => Promise<void>;
+  dismissPendingRequest: (senderKey: string) => void;
   setRelayStatus: (status: RelayStatus) => void;
   setActiveChat: (chatId: string | null) => void;
   addContact: (alias: string, recipientPubKey: string) => Promise<ChatSummary>;
@@ -126,6 +143,7 @@ export interface ChatState {
   updateDeliveryStatus: (
     messageId: string,
     status: Exclude<MessageStatus, "queued">,
+    signerEncryptionPubKey?: string,
   ) => Promise<void>;
 }
 
@@ -214,6 +232,9 @@ function isChatSummary(value: unknown): value is ChatSummary {
     typeof value.id === "string" &&
     "recipientPubKey" in value &&
     typeof value.recipientPubKey === "string" &&
+    (!("peerSigningPubKey" in value) ||
+      value.peerSigningPubKey === undefined ||
+      typeof value.peerSigningPubKey === "string") &&
     "alias" in value &&
     typeof value.alias === "string" &&
     "unreadCount" in value &&
@@ -433,7 +454,28 @@ function sessionFromRecord(value: unknown): RatchetSession | null {
     receiveChainKey: Uint8Array.from(receiveChainKey),
     sendCounter: value.sendCounter,
     receiveCounter: value.receiveCounter,
+    skippedKeys: parseSkippedKeys(
+      "skippedKeys" in value ? value.skippedKeys : undefined,
+    ),
   };
+}
+
+function parseSkippedKeys(value: unknown): Map<number, Uint8Array> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const map = new Map<number, Uint8Array>();
+  for (const entry of value) {
+    if (
+      !Array.isArray(entry) ||
+      entry.length !== 2 ||
+      typeof entry[0] !== "number" ||
+      !Array.isArray(entry[1]) ||
+      entry[1].length !== 32
+    ) {
+      return undefined;
+    }
+    map.set(entry[0], Uint8Array.from(entry[1] as number[]));
+  }
+  return map;
 }
 
 async function getRatchetSession(
@@ -478,6 +520,12 @@ async function saveRatchetSession(
     receiveChainKey: Array.from(session.receiveChainKey),
     sendCounter: session.sendCounter,
     receiveCounter: session.receiveCounter,
+    skippedKeys: session.skippedKeys
+      ? [...session.skippedKeys.entries()].map(([counter, key]) => [
+          counter,
+          Array.from(key),
+        ])
+      : [],
   });
   try {
     const encrypted = await encryptVaultPayload(plaintext, vaultKey);
@@ -574,12 +622,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeChatId: null,
   chats: [],
   messagesMap: {},
+  pendingRequests: [],
   isRelayConnected: false,
   relayStatus: "disconnected",
   transportError: null,
   typingByChat: {},
   peerTypingByChat: {},
   typingSentAt: {},
+
+  acceptPendingRequest: async (senderKey) => {
+    const request = get().pendingRequests.find(
+      (entry) => entry.senderEncryptionPubKey === senderKey,
+    );
+    if (!request) return;
+    set((state) => ({
+      pendingRequests: state.pendingRequests.filter(
+        (entry) => entry.senderEncryptionPubKey !== senderKey,
+      ),
+    }));
+    // Create the contact and ingest the parked message now that the user
+    // has accepted it.
+    await get().addContact(
+      `Contact ${request.senderPubKey.slice(0, 8)}`,
+      senderKey,
+    );
+    await get().receiveMessage(request.packet);
+  },
+
+  dismissPendingRequest: (senderKey) => {
+    set((state) => ({
+      pendingRequests: state.pendingRequests.filter(
+        (entry) => entry.senderEncryptionPubKey !== senderKey,
+      ),
+    }));
+  },
 
   setRelayStatus: (relayStatus) =>
     set({
@@ -615,7 +691,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     const id = sodium.to_hex(sodium.crypto_generichash(16, publicKey, null));
     const existing = get().chats.find((chat) => chat.id === id);
-    if (existing) return existing;
+    if (existing) {
+      // The chat id is derived from the encryption key alone, so a peer who
+      // rotated their key lands on the same id. If the stored key differs,
+      // the old chat points at a dead address — surface it as a new contact
+      // rather than silently reusing a chat whose messages are undeliverable.
+      if (existing.recipientPubKey !== encodeBytes(publicKey)) {
+        throw new Error(
+          "This contact's encryption key has changed. Remove the old conversation and re-add them with the new key.",
+        );
+      }
+      return existing;
+    }
     const chat: ChatSummary = {
       id,
       recipientPubKey: encodeBytes(publicKey),
@@ -702,6 +789,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           recipientPublicKey,
           rotated.messageKey,
           timestamp,
+          rotated.session.sendCounter - 1,
         );
         const packet = await signEnvelope(envelope, identity, id);
         await saveRatchetSession(chatId, session, vaultKey);
@@ -750,7 +838,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!markMessageSeen(packet.id)) {
       const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
       try {
-        await transportManager.publishReceipt(packet.id, "delivered", encodeBytes(senderEncryptionKey));
+        await transportManager.publishReceipt(
+          packet.id,
+          "delivered",
+          encodeBytes(senderEncryptionKey),
+          identity,
+        );
       } catch {
         // Acknowledgement is best-effort for already-seen messages.
       }
@@ -758,6 +851,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
     const senderKey = encodeBytes(senderEncryptionKey);
+    // P7: reject a replayed or clock-skewed envelope. The timestamp is part
+    // of the signed payload, so it is authenticated. A generous 24h window
+    // tolerates a device with a bad clock while bounding replay.
+    const MAX_SKEW_MS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    if (
+      !Number.isSafeInteger(packet.envelope.timestamp) ||
+      packet.envelope.timestamp < now - MAX_SKEW_MS ||
+      packet.envelope.timestamp > now + MAX_SKEW_MS
+    ) {
+      return;
+    }
+    // P7: check the already-persisted store BEFORE mutating any state, so a
+    // replay cannot create a phantom contact or advance a ratchet.
+    const alreadyPersisted = await database.messages.get(packet.id);
+    if (alreadyPersisted) {
+      await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
+      return;
+    }
     // Silently drop anything from a blocked contact, but still acknowledge it
     // so the sender's delivery state does not hang.
     const blockedChat = get().chats.find(
@@ -765,15 +877,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     );
     if (blockedChat?.blocked) {
       try {
-        await transportManager.publishReceipt(packet.id, "delivered", senderKey);
+        await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
       } catch {
         // Acknowledgement is best-effort for dropped messages.
       }
-      return;
-    }
-    const existingMessage = await database.messages.get(packet.id);
-    if (existingMessage) {
-      await transportManager.publishReceipt(packet.id, "delivered", senderKey);
       return;
     }
     let chat = get().chats.find(
@@ -781,10 +888,34 @@ export const useChatStore = create<ChatState>((set, get) => ({
         entry.kind === "direct" && entry.recipientPubKey === senderKey,
     );
     if (!chat) {
-      chat = await get().addContact(
-        `Contact ${packet.senderPubKey.slice(0, 8)}`,
-        senderKey,
-      );
+      // P12: do NOT auto-create a chat or write a ratchet session for an
+      // unsolicited sender. Park the message for explicit user acceptance so
+      // a hostile peer cannot populate the sidebar or grow IndexedDB.
+      if (
+        !get().pendingRequests.some(
+          (request) => request.senderEncryptionPubKey === senderKey,
+        )
+      ) {
+        set((state) => ({
+          pendingRequests: [
+            ...state.pendingRequests,
+            {
+              senderEncryptionPubKey: senderKey,
+              senderPubKey: packet.senderPubKey,
+              packet,
+              receivedAt: Date.now(),
+            },
+          ],
+        }));
+      }
+      return;
+    }
+    // P6: bind the sender's signing identity to this contact. The signature
+    // only proves validity for whatever signing key the packet claims; that
+    // key must be the one we recorded for this contact, or anyone holding the
+    // contact's encryption key could inject messages under an arbitrary key.
+    if (chat.peerSigningPubKey && chat.peerSigningPubKey !== packet.senderPubKey) {
+      return;
     }
     let session = await getRatchetSession(
       chat.id,
@@ -792,20 +923,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
       senderEncryptionKey,
       vaultKey,
     );
-    const rotated = await rotateSessionKey(session, "receive");
-    session = rotated.session;
+    // P8 + P5: only advance and persist the receive ratchet AFTER the
+    // envelope decrypts, and derive-and-skip over a gap so a single dropped
+    // message cannot permanently desync the conversation.
+    const skipped = new Map(session.skippedKeys ?? []);
+    let messageKey: Uint8Array;
+    let advancedSession: RatchetSession;
+    try {
+      const result = await deriveAndSkipReceiveKey(
+        session,
+        packet.envelope.counter,
+        skipped,
+      );
+      messageKey = result.messageKey;
+      advancedSession = result.session;
+    } catch {
+      // Counter out of tolerated range — drop rather than desync.
+      return;
+    }
     let payload: InnerPayload;
     try {
       payload = await openEnvelope(
         packet.envelope,
         identity,
-        rotated.messageKey,
+        messageKey,
       );
-      await saveRatchetSession(chat.id, session, vaultKey);
     } finally {
-      rotated.messageKey.fill(0);
-      session.receiveChainKey.fill(0);
+      messageKey.fill(0);
     }
+    session = advancedSession;
+    await saveRatchetSession(chat.id, session, vaultKey);
+    session.receiveChainKey.fill(0);
     const incoming: ChatMessage = {
       id: packet.id,
       chatId: chat.id,
@@ -829,6 +977,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ...chat,
       updatedAt: incoming.timestamp,
       unreadCount: isActive ? 0 : chat.unreadCount + 1,
+      // P6: record the peer's signing key on first contact so subsequent
+      // messages are bound to this identity.
+      peerSigningPubKey: chat.peerSigningPubKey ?? packet.senderPubKey,
     };
     await saveEncryptedChat(updatedChat, vaultKey);
     set((state) => ({
@@ -843,9 +994,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       notifyIncoming(updatedChat);
     }
     try {
-      await transportManager.publishReceipt(packet.id, "delivered", senderKey);
+      await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
       if (isActive) {
-        await transportManager.publishReceipt(packet.id, "read", senderKey);
+        await transportManager.publishReceipt(packet.id, "read", senderKey, identity);
       }
     } catch (error) {
       set({
@@ -856,7 +1007,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   markAsRead: async (chatId) => {
-    const { vaultKey } = getVaultMaterial();
+    const { identity, vaultKey } = getVaultMaterial();
     const chat = get().chats.find((entry) => entry.id === chatId);
     if (!chat) return;
     const incoming = (get().messagesMap[chatId] ?? []).filter(
@@ -881,6 +1032,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             message.id,
             "read",
             chat.recipientPubKey,
+            identity,
           );
         } catch (error) {
           set({
@@ -933,18 +1085,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!identity || !vaultKey) return;
     const opened = await openTypingSignal(signal, identity);
     const senderKey = opened.senderEncryptionPubKey;
-    let chat = get().chats.find(
+    const chat = get().chats.find(
       (entry) => entry.kind === "direct" && entry.recipientPubKey === senderKey,
     );
-    if (!chat) {
-      chat = await get().addContact(`Contact ${signal.senderPubKey.slice(0, 8)}`, senderKey);
+    // Do not auto-create a contact from a typing signal, and bind the signer
+    // to the recorded identity so a forged signal cannot spoof a peer.
+    if (!chat) return;
+    if (chat.peerSigningPubKey && chat.peerSigningPubKey !== signal.senderPubKey) {
+      return;
     }
     // The remote peer's typing state is kept separate from our own draft state
     // so the indicator only ever reflects the other person.
     set((state) => ({
       peerTypingByChat: {
         ...state.peerTypingByChat,
-        [chat!.id]: opened.state === "typing",
+        [chat.id]: opened.state === "typing",
       },
     }));
   },
@@ -1137,7 +1292,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  updateDeliveryStatus: async (messageId, status) => {
+  updateDeliveryStatus: async (messageId, status, signerEncryptionPubKey) => {
     const { vaultKey } = getVaultMaterial();
     const chatId = Object.keys(get().messagesMap).find((key) =>
       get().messagesMap[key].some((message) => message.id === messageId),
@@ -1148,6 +1303,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // is not lost, and surface it on the next loadChats.
       const record = await database.messages.get(messageId);
       if (!record) return;
+      const chat = get().chats.find((entry) => entry.id === record.chatId);
+      // Bind the receipt signer to the expected peer of this message so a
+      // forged receipt from any other identity cannot move delivery state.
+      if (
+        signerEncryptionPubKey !== undefined &&
+        chat &&
+        chat.kind === "direct" &&
+        chat.recipientPubKey !== signerEncryptionPubKey
+      ) {
+        return;
+      }
       const payload = await decryptRecord<StoredMessage>(
         record.ciphertext,
         record.nonce,
@@ -1182,6 +1348,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       );
       return;
     }
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    // Bind the receipt signer to the expected peer so a forged receipt from
+    // any other identity cannot move delivery state.
+    if (
+      signerEncryptionPubKey !== undefined &&
+      chat &&
+      chat.kind === "direct" &&
+      chat.recipientPubKey !== signerEncryptionPubKey
+    ) {
+      return;
+    }
     const current = get().messagesMap[chatId].find(
       (message) => message.id === messageId,
     );
@@ -1209,6 +1386,7 @@ registerMemoryKeyCleanup(() => {
     activeChatId: null,
     chats: [],
     messagesMap: {},
+    pendingRequests: [],
     isRelayConnected: false,
     relayStatus: "disconnected",
     transportError: null,
@@ -1226,8 +1404,10 @@ export function startChatServices(): () => void {
   transportManager.start(vaultKey, encodeBytes(identity.encryptionPublicKey), {
     onMessage: (packet) => useChatStore.getState().receiveMessage(packet),
     onTyping: (signal) => useChatStore.getState().receiveTyping(signal),
-    onReceipt: (messageId, status) =>
-      void useChatStore.getState().updateDeliveryStatus(messageId, status),
+    onReceipt: (messageId, status, signerEncryptionPubKey) =>
+      void useChatStore
+        .getState()
+        .updateDeliveryStatus(messageId, status, signerEncryptionPubKey),
     onSent: (messageId) =>
       void useChatStore.getState().updateDeliveryStatus(messageId, "sent"),
     onConnectionChange: (relayStatus) =>

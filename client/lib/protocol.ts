@@ -109,6 +109,10 @@ export interface Envelope {
   nonce: string;
   ciphertext: string;
   timestamp: number;
+  // Sender-side ratchet counter for this message. Lets the receiver
+  // derive-and-skip over a gap instead of desyncing permanently when a
+  // message is dropped or arrives out of order.
+  counter: number;
 }
 
 export interface SignedEnvelope {
@@ -128,6 +132,9 @@ export interface RatchetSession {
   receiveChainKey: Uint8Array;
   sendCounter: number;
   receiveCounter: number;
+  // Message keys skipped over during a receive gap, keyed by counter. Bounded
+  // to MAX_SKIPPED_KEYS and persisted so they survive a reload.
+  skippedKeys?: Map<number, Uint8Array>;
 }
 
 export const EPHEMERAL_TIMERS = [
@@ -231,6 +238,7 @@ export async function buildEnvelope(
   recipientPublicKey: Uint8Array,
   sessionKey?: Uint8Array,
   timestamp = Date.now(),
+  counter = 0,
 ): Promise<Envelope> {
   const sodium = await initCrypto();
   if (!isValidPayload(payload)) {
@@ -239,8 +247,13 @@ export async function buildEnvelope(
   if (recipientPublicKey.length !== sodium.crypto_box_PUBLICKEYBYTES) {
     throw new Error("Recipient encryption key has an invalid length.");
   }
-  if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
-    throw new Error("Message timestamp must be a non-negative integer.");
+  if (
+    !Number.isSafeInteger(timestamp) ||
+    timestamp < 0 ||
+    !Number.isSafeInteger(counter) ||
+    counter < 0
+  ) {
+    throw new Error("Message timestamp and counter must be non-negative integers.");
   }
 
   const contentKey =
@@ -274,6 +287,7 @@ export async function buildEnvelope(
       nonce: encodeBytes(nonce),
       ciphertext: encodeBytes(ciphertext),
       timestamp,
+      counter,
     };
   } finally {
     contentKey.fill(0);
@@ -480,6 +494,81 @@ export async function rotateSessionKey(
   };
 }
 
+/**
+ * Receiver-side derive-and-skip over a gap in the receive chain.
+ *
+ * The current ratchet advances receiveCounter on every message, so a single
+ * dropped/out-of-order envelope permanently desyncs the conversation. When an
+ * incoming envelope carries a counter ahead of the current receiveCounter,
+ * step the chain forward to that counter, stashing each skipped message key
+ * keyed by its counter so a late-arriving envelope can still be decrypted
+ * with its own key.
+ *
+ * The skip map is bounded (MAX_SKIPPED_KEYS): an envelope whose counter is
+ * beyond the current counter + the bound is rejected rather than silently
+ * fast-forwarding to the end of the chain.
+ */
+export const MAX_SKIPPED_KEYS = 128;
+
+export interface DeriveAndSkipResult {
+  messageKey: Uint8Array;
+  session: RatchetSession;
+  skippedKeys: Array<[number, number[]]>;
+}
+
+export async function deriveAndSkipReceiveKey(
+  session: RatchetSession,
+  targetCounter: number,
+  existingSkipped: Map<number, Uint8Array> = new Map(),
+): Promise<DeriveAndSkipResult> {
+  const sodium = await initCrypto();
+  if (
+    !Number.isSafeInteger(targetCounter) ||
+    targetCounter < session.receiveCounter ||
+    targetCounter > session.receiveCounter + MAX_SKIPPED_KEYS
+  ) {
+    throw new Error("Envelope counter is out of the tolerated skip range.");
+  }
+
+  let current = session;
+  const skippedKeys: Array<[number, number[]]> = [];
+  // Fast path: the exact key was already stashed from a previous skip.
+  const cached = existingSkipped.get(targetCounter);
+  if (cached) {
+    existingSkipped.delete(targetCounter);
+    return {
+      messageKey: cached,
+      session: { ...current, receiveCounter: targetCounter + 1 },
+      skippedKeys,
+    };
+  }
+
+  while (current.receiveCounter < targetCounter) {
+    const rotated = await rotateSessionKey(current, "receive");
+    skippedKeys.push([current.receiveCounter, Array.from(rotated.messageKey)]);
+    rotated.messageKey.fill(0);
+    current = rotated.session;
+  }
+  const rotated = await rotateSessionKey(current, "receive");
+  current = rotated.session;
+  // Merge the freshly-stashed keys into the returned session so they persist
+  // alongside the chain state (the caller saves this session).
+  const mergedSkipped = new Map(existingSkipped);
+  for (const [counter, key] of skippedKeys) {
+    mergedSkipped.set(counter, Uint8Array.from(key));
+  }
+  while (mergedSkipped.size > MAX_SKIPPED_KEYS) {
+    const oldest = mergedSkipped.keys().next().value;
+    if (oldest === undefined) break;
+    mergedSkipped.delete(oldest);
+  }
+  return {
+    messageKey: rotated.messageKey,
+    session: { ...current, skippedKeys: mergedSkipped },
+    skippedKeys,
+  };
+}
+
 export async function signEnvelope(
   envelope: Envelope,
   identity: IdentityKeys,
@@ -673,5 +762,104 @@ export async function openTypingSignal(
     };
   } finally {
     plaintext.fill(0);
+  }
+}
+
+/**
+ * A delivery/read receipt is an out-of-band control signal, symmetric to
+ * TypingSignal: it never touches the message ratchet, and it is signed by the
+ * receiver's Ed25519 identity so the sender can authenticate that the party
+ * who claims "delivered"/"read" actually holds the recipient's identity key.
+ * Without the signature anyone who can reach the sender's inbox topic (the
+ * topic name is derived from a public key) could forge delivery state.
+ */
+export type ReceiptStatus = "delivered" | "read";
+
+export interface SignedReceipt {
+  type: "receipt";
+  id: string;
+  messageId: string;
+  status: ReceiptStatus;
+  senderPubKey: string;
+  senderEncryptionPubKey: string;
+  recipientPubKey: string;
+  timestamp: number;
+  signature: string;
+}
+
+export async function buildSignedReceipt(
+  messageId: string,
+  status: ReceiptStatus,
+  identity: IdentityKeys,
+  recipientPublicKey: Uint8Array,
+  timestamp = Date.now(),
+): Promise<SignedReceipt> {
+  const sodium = await initCrypto();
+  if (
+    recipientPublicKey.length !== sodium.crypto_box_PUBLICKEYBYTES ||
+    (status !== "delivered" && status !== "read")
+  ) {
+    throw new Error("Invalid receipt parameters.");
+  }
+  const id = crypto.randomUUID();
+  const senderEncryptionPubKey = encodeBytes(identity.encryptionPublicKey);
+  const recipientPubKey = encodeBytes(recipientPublicKey);
+  const signature = sodium.crypto_sign_detached(
+    textEncoder.encode(
+      JSON.stringify({
+        id,
+        messageId,
+        status,
+        senderEncryptionPubKey,
+        recipientPubKey,
+        timestamp,
+      }),
+    ),
+    identity.signingPrivateKey,
+  );
+  return {
+    type: "receipt",
+    id,
+    messageId,
+    status,
+    senderPubKey: encodeBytes(identity.signingPublicKey),
+    senderEncryptionPubKey,
+    recipientPubKey,
+    timestamp,
+    signature: encodeBytes(signature),
+  };
+}
+
+export async function verifySignedReceipt(receipt: SignedReceipt): Promise<boolean> {
+  const sodium = await initCrypto();
+  try {
+    const senderPublicKey = decodeBytes(receipt.senderPubKey);
+    const signature = decodeBytes(receipt.signature);
+    if (
+      receipt.type !== "receipt" ||
+      senderPublicKey.length !== sodium.crypto_sign_PUBLICKEYBYTES ||
+      signature.length !== sodium.crypto_sign_BYTES ||
+      !receipt.id ||
+      !receipt.messageId ||
+      (receipt.status !== "delivered" && receipt.status !== "read")
+    ) {
+      return false;
+    }
+    return sodium.crypto_sign_verify_detached(
+      signature,
+      textEncoder.encode(
+        JSON.stringify({
+          id: receipt.id,
+          messageId: receipt.messageId,
+          status: receipt.status,
+          senderEncryptionPubKey: receipt.senderEncryptionPubKey,
+          recipientPubKey: receipt.recipientPubKey,
+          timestamp: receipt.timestamp,
+        }),
+      ),
+      senderPublicKey,
+    );
+  } catch {
+    return false;
   }
 }

@@ -2,17 +2,22 @@ import { describe, expect, it } from "vitest";
 import { generateIdentity, initCrypto } from "./crypto";
 import {
   buildEnvelope,
+  buildSignedReceipt,
   buildTypingSignal,
   createRatchetSession,
+  deriveAndSkipReceiveKey,
   getExpiredMessageIds,
   isEphemeralExpired,
+  MAX_SKIPPED_KEYS,
   openEnvelope,
   openTypingSignal,
   rotateSessionKey,
   signEnvelope,
   verifySignedEnvelope,
+  verifySignedReceipt,
   verifyTypingSignal,
   type InnerPayload,
+  type RatchetSession,
 } from "./protocol";
 
 describe("anonymous message envelopes", () => {
@@ -277,5 +282,112 @@ describe("E2EE typing signals", () => {
     await expect(openTypingSignal(signal, otherIdentity)).rejects.toThrow(
       "different recipient",
     );
+  });
+});
+
+describe("receiver derive-and-skip over a ratchet gap", () => {
+  it("stashes skipped keys and decrypts a late out-of-order envelope", async () => {
+    const alice = await generateIdentity();
+    const bob = await generateIdentity();
+    const baseSession = await createRatchetSession(
+      bob.encryptionPublicKey,
+      bob.encryptionPrivateKey,
+      alice.encryptionPublicKey,
+    );
+    // rotateSessionKey zeroes the chain key in place, so each walk needs its
+    // own deep copy of the session (the store always hands out a fresh
+    // decrypt, so this aliasing never bites in production).
+    const clone = () => ({
+      ...baseSession,
+      sendChainKey: new Uint8Array(baseSession.sendChainKey),
+      receiveChainKey: new Uint8Array(baseSession.receiveChainKey),
+    });
+    // Model Bob RECEIVING from Alice via a single continuous send-chain walk
+    // (exactly how the sender's store advances), capturing each message key.
+    let walk: RatchetSession = clone();
+    const keys: Uint8Array[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const rotated = await rotateSessionKey(walk, "receive");
+      // Copy: later rotations / derive-and-skip zero chain buffers in place.
+      keys.push(new Uint8Array(rotated.messageKey));
+      walk = rotated.session;
+    }
+    const [s0Key, s1Key, s2Key] = keys;
+
+    const msg0 = await buildEnvelope(
+      { type: "text", content: "first" },
+      bob.encryptionPublicKey,
+      s0Key,
+      Date.now(),
+      0,
+    );
+    const msg1 = await buildEnvelope(
+      { type: "text", content: "second" },
+      bob.encryptionPublicKey,
+      s1Key,
+      Date.now(),
+      1,
+    );
+    const msg2 = await buildEnvelope(
+      { type: "text", content: "third" },
+      bob.encryptionPublicKey,
+      s2Key,
+      Date.now(),
+      2,
+    );
+
+    // Receive msg0 (counter 0), then msg2 (counter 2) — a gap of one.
+    const r0 = await deriveAndSkipReceiveKey(clone(), msg0.counter);
+    expect(await openEnvelope(msg0, bob, r0.messageKey)).toMatchObject({
+      content: "first",
+    });
+
+    const r2 = await deriveAndSkipReceiveKey(r0.session, msg2.counter);
+    // Counter 1 was skipped and stashed.
+    expect(r2.skippedKeys.map(([counter]) => counter)).toEqual([1]);
+    expect(await openEnvelope(msg2, bob, r2.messageKey)).toMatchObject({
+      content: "third",
+    });
+
+    // The stashed key for counter 1 decrypts the late message.
+    const stashed = r2.session.skippedKeys?.get(1);
+    expect(stashed).toBeDefined();
+    expect(await openEnvelope(msg1, bob, stashed!)).toMatchObject({
+      content: "second",
+    });
+  });
+
+  it("rejects a counter beyond the bounded skip range", async () => {
+    const alice = await generateIdentity();
+    const bob = await generateIdentity();
+    const session = await createRatchetSession(
+      bob.encryptionPublicKey,
+      bob.encryptionPrivateKey,
+      alice.encryptionPublicKey,
+    );
+    await expect(
+      deriveAndSkipReceiveKey(session, MAX_SKIPPED_KEYS + 5),
+    ).rejects.toThrow("skip range");
+  });
+});
+
+describe("signed delivery receipts", () => {
+  it("signs and verifies a receipt bound to the signer identity", async () => {
+    const receiver = await generateIdentity();
+    const sender = await generateIdentity();
+    const receipt = await buildSignedReceipt(
+      "message-123",
+      "delivered",
+      receiver,
+      sender.encryptionPublicKey,
+    );
+    expect(await verifySignedReceipt(receipt)).toBe(true);
+    // A tampered status or signer fails verification.
+    expect(
+      await verifySignedReceipt({ ...receipt, status: "read" }),
+    ).toBe(false);
+    expect(
+      await verifySignedReceipt({ ...receipt, messageId: "other" }),
+    ).toBe(false);
   });
 });

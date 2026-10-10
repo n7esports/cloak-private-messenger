@@ -150,6 +150,9 @@ function ChatsPageInner() {
   const deleteMessages = useChatStore((state) => state.deleteMessages);
   const updateMessage = useChatStore((state) => state.updateMessage);
   const deleteChat = useChatStore((state) => state.deleteChat);
+  const pendingRequests = useChatStore((state) => state.pendingRequests);
+  const acceptPendingRequest = useChatStore((state) => state.acceptPendingRequest);
+  const dismissPendingRequest = useChatStore((state) => state.dismissPendingRequest);
   const activeTyping = useChatStore(
     (state) =>
       activeChatId !== null && state.peerTypingByChat[activeChatId] === true,
@@ -909,6 +912,54 @@ function ChatsPageInner() {
           })}
         </nav>
 
+        {pendingRequests.length > 0 && (
+          <section
+            aria-label="Message requests"
+            className="mx-2 mb-2 rounded-2xl border border-cloak-accent/20 bg-cloak-accent/5 p-3"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-cloak-accent">
+              Message requests
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-cloak-muted">
+              Messages from people not in your contacts. Accept to start the
+              conversation.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {pendingRequests.map((request) => (
+                <li
+                  key={request.senderEncryptionPubKey}
+                  className="flex items-center gap-2"
+                >
+                  <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-cloak-muted">
+                    {request.senderEncryptionPubKey.slice(0, 16)}…
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void acceptPendingRequest(
+                        request.senderEncryptionPubKey,
+                      ).catch(() => setToast("Could not accept the request."))
+                    }
+                    className="min-h-9 shrink-0 rounded-lg bg-cloak-accent px-3 text-xs font-semibold text-cloak-base transition hover:bg-cloak-accent-hover focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      dismissPendingRequest(request.senderEncryptionPubKey)
+                    }
+                    aria-label="Dismiss request"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cloak-muted transition hover:text-cloak-text focus:outline-none focus:ring-2 focus:ring-cloak-accent"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <footer className="safe-area-footer border-t border-white/5 p-3">
           <Link
             href="/chats/channels"
@@ -1015,9 +1066,15 @@ function ChatsPageInner() {
                 type="button"
                 onClick={() => {
                   const node = scrollerRef.current;
-                  const target = node?.querySelector<HTMLElement>(
-                    `[data-message-id="${pinnedMessages[pinnedMessages.length - 1].id}"]`,
-                  );
+                  if (!node) return;
+                  // Find the node by comparing dataset values — never build a
+                  // selector from a (peer-supplied) message id, which could be
+                  // selector-hostile.
+                  const targetId =
+                    pinnedMessages[pinnedMessages.length - 1].id;
+                  const target = Array.from(
+                    node.querySelectorAll<HTMLElement>("[data-message-id]"),
+                  ).find((element) => element.dataset.messageId === targetId);
                   target?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
                 className="cloak-glass flex items-center gap-2 px-4 py-2 text-left sm:px-6"
