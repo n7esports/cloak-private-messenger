@@ -6,7 +6,7 @@ import {
   type IdentityKeys,
 } from "./crypto";
 
-const LOCAL_VAULT_KEY_STORAGE = "cloak.vault-key.v1";
+const WRAPPED_VAULT_KEY_STORAGE = "cloak.vault-key.v1";
 
 export interface VaultRecord {
   id: "primary";
@@ -56,6 +56,28 @@ export interface EncryptedNoteRecord {
 export interface FlagRecord {
   key: string;
   value: boolean;
+}
+
+/**
+ * The device vault key is never stored in plaintext next to the data it
+ * protects. It is a random 32-byte key that is itself encrypted ("wrapped")
+ * with an AES-GCM key that lives as a NON-EXTRACTABLE Web Crypto CryptoKey
+ * inside IndexedDB. Only the wrapped (encrypted) copy ever touches
+ * localStorage. An attacker who exfiltrates localStorage via XSS, a browser
+ * extension, or a plaintext readout obtains a blob they cannot unwrap — the
+ * wrapping key cannot leave the crypto boundary of the browser and is never
+ * exposed to page JavaScript. This keeps the app opening straight into chats
+ * (silent unlock, no onboarding gate) while removing the single point of
+ * failure the audit flagged.
+ */
+const WRAPPER_KEY_DATABASE = "cloak-vault-wrapper";
+const WRAPPER_KEY_STORE = "keys";
+const WRAPPER_KEY_ID = "vault-wrapper";
+
+interface WrappedVaultKeyEnvelope {
+  version: 1;
+  iv: string;
+  ciphertext: string;
 }
 
 class CloakDatabase extends Dexie {
@@ -112,38 +134,152 @@ function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
 }
 
+function openWrapperDatabase(): Promise<IDBDatabase> {
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new Error("IndexedDB is required to protect the vault key."));
+  }
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(WRAPPER_KEY_DATABASE, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(WRAPPER_KEY_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () =>
+      reject(request.error || new Error("Could not open the vault key store."));
+    request.onblocked = () =>
+      reject(new Error("Vault key store upgrade was blocked."));
+  });
+}
+
+async function idbGet<T>(database: IDBDatabase, key: string): Promise<T | null> {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(WRAPPER_KEY_STORE, "readonly");
+    const request = transaction.objectStore(WRAPPER_KEY_STORE).get(key);
+    request.onsuccess = () => resolve((request.result as T | undefined) ?? null);
+    request.onerror = () =>
+      reject(request.error || new Error("Could not read the vault key store."));
+  });
+}
+
+async function idbPut(database: IDBDatabase, key: string, value: unknown): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(WRAPPER_KEY_STORE, "readwrite");
+    transaction.objectStore(WRAPPER_KEY_STORE).put(value, key);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () =>
+      reject(transaction.error || new Error("Could not write the vault key store."));
+    transaction.onabort = () =>
+      reject(new Error("Writing the vault key store was aborted."));
+  });
+}
+
+function idbDeleteWrapperDatabase(): Promise<void> {
+  if (typeof indexedDB === "undefined") return Promise.resolve();
+  return new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase(WRAPPER_KEY_DATABASE);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
+}
+
 /**
- * Reads the device vault key from local storage. This key encrypts the
- * identity and every chat/message/note in IndexedDB, so the vault stays
- * encrypted at rest while still unlocking silently when the app opens.
+ * Returns the non-extractable AES-GCM wrapping key, generating it once per
+ * device. Non-extractable means even page JavaScript cannot export its raw
+ * bytes — it can only encrypt/decrypt through the crypto boundary.
  */
-export function readLocalVaultKey(): Uint8Array | null {
+async function getOrCreateWrapperKey(): Promise<CryptoKey> {
+  const database = await openWrapperDatabase();
+  try {
+    const existing = await idbGet<CryptoKey>(database, WRAPPER_KEY_ID);
+    if (existing) return existing;
+    const key = await crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      false, // NOT extractable — the key can never be read out of the crypto layer.
+      ["encrypt", "decrypt"],
+    );
+    await idbPut(database, WRAPPER_KEY_ID, key);
+    return key;
+  } finally {
+    database.close();
+  }
+}
+
+async function wrapVaultKey(key: Uint8Array): Promise<WrappedVaultKeyEnvelope> {
+  const wrapper = await getOrCreateWrapperKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyBuffer = new Uint8Array(key); // fresh ArrayBuffer-backed copy
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    wrapper,
+    keyBuffer,
+  );
+  keyBuffer.fill(0);
+  iv.fill(0);
+  return {
+    version: 1,
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+  };
+}
+
+async function unwrapVaultKey(envelope: WrappedVaultKeyEnvelope): Promise<Uint8Array> {
+  const wrapper = await getOrCreateWrapperKey();
+  const iv = new Uint8Array(base64ToBytes(envelope.iv));
+  const ciphertext = new Uint8Array(base64ToBytes(envelope.ciphertext));
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      wrapper,
+      ciphertext,
+    );
+    return new Uint8Array(plaintext);
+  } finally {
+    iv.fill(0);
+  }
+}
+
+/**
+ * Reads the device vault key. Only the encrypted (wrapped) form is kept in
+ * localStorage; the raw key exists solely in memory after being unwrapped by
+ * the non-extractable IndexedDB key. Returns null when no vault exists yet or
+ * when the stored envelope cannot be unwrapped (e.g. the wrapping key was
+ * cleared by a wipe).
+ */
+export async function readLocalVaultKey(): Promise<Uint8Array | null> {
   if (typeof window === "undefined") return null;
-  const stored = window.localStorage.getItem(LOCAL_VAULT_KEY_STORAGE);
+  const stored = window.localStorage.getItem(WRAPPED_VAULT_KEY_STORAGE);
   if (!stored) return null;
   try {
-    return base64ToBytes(stored);
+    const envelope = JSON.parse(stored) as WrappedVaultKeyEnvelope;
+    if (envelope?.version !== 1 || typeof envelope.iv !== "string" || typeof envelope.ciphertext !== "string") {
+      window.localStorage.removeItem(WRAPPED_VAULT_KEY_STORAGE);
+      return null;
+    }
+    return await unwrapVaultKey(envelope);
   } catch {
-    window.localStorage.removeItem(LOCAL_VAULT_KEY_STORAGE);
+    // A corrupt or unwrappable envelope is treated as "no vault key".
+    window.localStorage.removeItem(WRAPPED_VAULT_KEY_STORAGE);
     return null;
   }
 }
 
 export async function getOrCreateLocalVaultKey(): Promise<Uint8Array> {
-  const existing = readLocalVaultKey();
+  const existing = await readLocalVaultKey();
   if (existing) return existing;
   if (typeof window === "undefined") {
     throw new Error("Vault key storage is unavailable in this environment.");
   }
   const sodium = await initCrypto();
   const key = sodium.randombytes_buf(sodium.crypto_secretbox_KEYBYTES);
-  window.localStorage.setItem(LOCAL_VAULT_KEY_STORAGE, bytesToBase64(key));
+  const wrapped = await wrapVaultKey(key);
+  window.localStorage.setItem(WRAPPED_VAULT_KEY_STORAGE, JSON.stringify(wrapped));
   return key;
 }
 
 export function clearLocalVaultKey(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(LOCAL_VAULT_KEY_STORAGE);
+  window.localStorage.removeItem(WRAPPED_VAULT_KEY_STORAGE);
 }
 
 function serializeIdentity(
@@ -246,4 +382,5 @@ export async function wipeVaultDatabase(): Promise<void> {
   }
   await database.delete();
   clearLocalVaultKey();
+  await idbDeleteWrapperDatabase();
 }

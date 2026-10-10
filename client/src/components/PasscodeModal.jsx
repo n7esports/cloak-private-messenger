@@ -163,6 +163,7 @@ export default function PasscodeModal({
             <label className="block">
               <span className="sr-only">Passcode</span>
               <input
+                aria-label="Passcode"
                 autoComplete="off"
                 className="h-14 w-full rounded-xl border border-zinc-700 bg-zinc-950 text-center font-mono text-2xl tracking-[0.5em] text-zinc-100 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
                 disabled={busy || isLockedOut || !lockoutReady}

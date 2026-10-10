@@ -37,6 +37,10 @@ interface BroadcastPayload {
 
 const ACK_TIMEOUT_MS = 10_000;
 const MAX_BACKOFF_MS = 60_000;
+// L5: a queued message that never delivers must not be retried forever. After
+// this many failures it is dropped from the outbox so stale envelopes do not
+// accumulate indefinitely; the caller is still notified via onError.
+const MAX_QUEUE_ATTEMPTS = 10;
 
 export function getInboxChannelName(publicKey: string): string {
   const keyBytes = decodeBytes(publicKey);
@@ -645,6 +649,11 @@ export class TransportManager {
               : new Error("Queued broadcast delivery failed."),
           );
           const attempts = record.attempts + 1;
+          if (attempts >= MAX_QUEUE_ATTEMPTS) {
+            // Dead-letter: stop retrying a permanently failing envelope.
+            await database.outbox.delete(record.id);
+            continue;
+          }
           const backoff = Math.min(1_000 * 2 ** (attempts - 1), MAX_BACKOFF_MS);
           await database.outbox.update(record.id, {
             attempts,

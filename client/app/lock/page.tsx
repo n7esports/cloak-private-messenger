@@ -109,6 +109,7 @@ export default function LockPage() {
         type="button"
         onClick={panicWipe}
         disabled={isBusy}
+        aria-label="Permanently erase this device's encrypted vault"
         className="fixed bottom-4 left-1/2 z-[110] min-h-11 -translate-x-1/2 rounded-lg px-3 text-sm font-medium text-rose-300 transition hover:text-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Erase this device&apos;s vault

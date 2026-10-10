@@ -152,6 +152,24 @@ const ephemeralExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const TYPING_THROTTLE_MS = 2_500;
 const TYPING_EXPIRY_MS = 6_000;
 
+// M5: client-side message deduplication. The relay dedups by id, but two
+// deliveries of the same packet can still arrive before the first one has been
+// persisted to IndexedDB, and the relay is not the only path messages travel.
+// A bounded in-memory set of already-ingested message ids makes duplicate
+// ingestion idempotent even under that race.
+const MAX_RECENTLY_SEEN_MESSAGE_IDS = 5_000;
+const recentlySeenMessageIds = new Set<string>();
+
+function markMessageSeen(id: string): boolean {
+  if (recentlySeenMessageIds.has(id)) return false;
+  recentlySeenMessageIds.add(id);
+  if (recentlySeenMessageIds.size > MAX_RECENTLY_SEEN_MESSAGE_IDS) {
+    const oldest = recentlySeenMessageIds.values().next().value;
+    if (oldest !== undefined) recentlySeenMessageIds.delete(oldest);
+  }
+  return true;
+}
+
 /**
  * Fires a system notification for a new message when the app is backgrounded.
  * Notification bodies never contain message plaintext — only the sender alias
@@ -726,6 +744,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { identity, vaultKey } = getVaultMaterial();
     if (!(await verifySignedEnvelope(packet))) {
       throw new Error("Incoming message signature is invalid.");
+    }
+    // M5: drop a message we have already ingested this session.
+    if (!markMessageSeen(packet.id)) {
+      const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
+      try {
+        await transportManager.publishReceipt(packet.id, "delivered", encodeBytes(senderEncryptionKey));
+      } catch {
+        // Acknowledgement is best-effort for already-seen messages.
+      }
+      return;
     }
     const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
     const senderKey = encodeBytes(senderEncryptionKey);

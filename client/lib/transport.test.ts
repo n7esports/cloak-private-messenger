@@ -236,6 +236,54 @@ describe("Supabase ephemeral relay transport", () => {
     },
   );
 
+  it("dead-letters a queued envelope that keeps failing instead of retrying forever", async () => {
+    // L5 regression: a permanently failing send must eventually drop the
+    // record from the outbox rather than backing off forever.
+    const packet = makePacket(peerPublicKey);
+    vaultMock.outboxRecords = [
+      {
+        id: packet.id,
+        ciphertext: "encrypted",
+        nonce: "nonce",
+        attempts: 9, // one below the cap; this drain attempt is the 10th
+        nextAttemptAt: Date.now(),
+        createdAt: Date.now(),
+        packet,
+      },
+    ];
+    const failingChannel = {
+      ...createMockChannel(),
+      send: vi.fn().mockRejectedValue(new Error("broadcast failed")),
+    };
+    supabaseMock.channel.mockImplementation((name: string): MockChannel => {
+      const channel =
+        name === getInboxChannelName(peerPublicKey)
+          ? (failingChannel as unknown as MockChannel)
+          : createMockChannel();
+      channels.set(name, channel);
+      return channel;
+    });
+
+    const manager = new TransportManager();
+    const onError = vi.fn();
+    manager.start(new Uint8Array(32), ownPublicKey, {
+      onMessage: vi.fn(),
+      onReceipt: vi.fn(),
+      onSent: vi.fn(),
+      onConnectionChange: vi.fn(),
+      onError,
+    });
+
+    await vi.waitFor(() => {
+      expect(vaultMock.outbox.delete).toHaveBeenCalledWith(packet.id);
+    });
+    // It must have reported the failure but NOT scheduled further retries.
+    expect(onError).toHaveBeenCalled();
+    expect(vaultMock.outbox.update).not.toHaveBeenCalled();
+
+    manager.stop();
+  });
+
   it("creates stable URL-safe inbox channel names from public keys", () => {
     const name = getInboxChannelName(ownPublicKey);
     expect(name).toMatch(/^cloak-inbox-[A-Za-z0-9_-]+$/);

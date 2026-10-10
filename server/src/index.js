@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -8,6 +8,28 @@ const MAX_MESSAGES_PER_ROUTE = 500;
 const MAX_QUEUES = 100_000;
 const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const MAX_FRAME_BYTES = MAX_REQUEST_BYTES + 64 * 1024;
+
+// Global memory budget (C4/H2): the per-route cap alone still allowed a single
+// peer to allocate hundreds of GB across many routes. Queued payloads are
+// counted against a server-wide budget and refused once it is exhausted.
+const MAX_QUEUED_BYTES = 256 * 1024 * 1024;
+
+// Connection + rate limits (C4/H1). "Open relay" is not an acceptable default
+// for a private messenger, so limits are on by default and the server refuses
+// to start if it would be configured with no limits at all.
+const DEFAULT_MAX_CONNECTIONS = 500;
+const DEFAULT_RELAY_RATE_LIMIT = 60;
+const DEFAULT_RELAY_RATE_WINDOW_MS = 10_000;
+const RELAY_RATE_MAX_ENTRIES = 10_000;
+const WS_PING_INTERVAL_MS = 30_000;
+const WS_PING_TIMEOUT_MS = 10_000;
+
+// Optional relay auth token (C4). When CLOAK_RELAY_TOKEN is set, every publish,
+// subscribe, and receipt must carry a matching token. Without it the relay is
+// anonymous — same-trust endpoints only — which is why rate limiting and the
+// connection cap are enforced regardless.
+const RELAY_TOKEN = process.env.CLOAK_RELAY_TOKEN?.trim() || null;
+
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3002",
@@ -21,11 +43,76 @@ const allowedOrigins = new Set([
     .map((origin) => origin.trim())
     .filter(Boolean),
 ]);
-const QUEUE_ID_RE = /^[A-Za-z0-9_-]{22}$/;
-const PUBLIC_KEY_RE = /^[A-Za-z0-9+/]{43}=$/;
+
 const queues = new Map();
 const routes = new Map();
 const subscribers = new Map();
+const relayRateLimits = new Map();
+let queuedBytes = 0;
+let liveConnections = 0;
+
+// Structured logging (M3): append-only JSONL of security-relevant events so
+// abuse can be detected without ever recording message content.
+const logStream = process.env.CLOAK_RELAY_LOG
+  ? (await import("node:fs")).createWriteStream(process.env.CLOAK_RELAY_LOG, {
+      flags: "a",
+    })
+  : null;
+
+function securityLog(event, details = {}) {
+  const line = JSON.stringify({
+    event,
+    time: new Date().toISOString(),
+    ...details,
+  });
+  if (logStream) logStream.write(`${line}\n`);
+  console.log(`[cloak-relay] ${line}`);
+}
+
+function queueEntryBytes(entry) {
+  const message = typeof entry?.message === "string" ? entry.message : JSON.stringify(entry?.message ?? null);
+  return (
+    256 +
+    Buffer.byteLength(String(entry?.id ?? ""), "utf8") +
+    Buffer.byteLength(message, "utf8")
+  );
+}
+
+function pruneRateLimits(now) {
+  if (relayRateLimits.size < RELAY_RATE_MAX_ENTRIES) return;
+  for (const [key, entry] of relayRateLimits) {
+    if (entry.resetAt <= now) relayRateLimits.delete(key);
+  }
+  if (relayRateLimits.size >= RELAY_RATE_MAX_ENTRIES) {
+    for (const key of relayRateLimits.keys()) {
+      relayRateLimits.delete(key);
+      break;
+    }
+  }
+}
+
+function clientAddress(socket) {
+  const address = socket?.remoteAddress;
+  if (typeof address === "string" && address) return address;
+  if (address && typeof address === "object") {
+    if (typeof address.address === "string" && address.address) {
+      return address.address;
+    }
+  }
+  return "unknown";
+}
+
+function consumeRelayRateAllowance(key, limit, windowMs) {
+  const now = Date.now();
+  pruneRateLimits(now);
+  let entry = relayRateLimits.get(key);
+  if (!entry || entry.resetAt <= now) {
+    entry = { count: 0, resetAt: now + windowMs };
+    relayRateLimits.set(key, entry);
+  }
+  entry.count += 1;
+  return { allowed: entry.count <= limit, retryAfterMs: Math.max(0, entry.resetAt - now) };
+}
 
 function send(socket, value) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value));
@@ -36,7 +123,9 @@ function acknowledgement(id) {
 }
 
 function isAllowedOrigin(origin) {
-  return !origin || allowedOrigins.has(origin);
+  // C5 fix: a missing Origin header is a non-browser client (curl, native app,
+  // attacker script). Only an explicitly allowed origin may open a connection.
+  return typeof origin === "string" && origin.length > 0 && allowedOrigins.has(origin);
 }
 
 function validPublicKey(value) {
@@ -68,6 +157,19 @@ function validPacket(packet) {
   );
 }
 
+function isAuthorizedRelayRequest(request) {
+  if (!RELAY_TOKEN) return true;
+  const token = request?.authToken;
+  const supplied =
+    typeof token === "string" && token.length === RELAY_TOKEN.length
+      ? Buffer.from(token, "utf8")
+      : null;
+  const expected = Buffer.from(RELAY_TOKEN, "utf8");
+  if (!supplied) return false;
+  // Constant-time comparison so a caller cannot enumerate the token byte by byte.
+  return crypto.timingSafeEqual(supplied, expected);
+}
+
 function pushRoute(route, id, message) {
   let pending = routes.get(route);
   if (!pending) {
@@ -77,14 +179,28 @@ function pushRoute(route, id, message) {
   }
   if (pending.some((entry) => entry.id === id)) return true;
   if (pending.length >= MAX_MESSAGES_PER_ROUTE) return false;
-  pending.push({ id, message, createdAt: Date.now() });
+  const entry = { id, message, createdAt: Date.now() };
+  const entryBytes = queueEntryBytes(entry);
+  if (queuedBytes + entryBytes > MAX_QUEUED_BYTES) return false;
+  queuedBytes += entryBytes;
+  pending.push(entry);
   for (const subscriber of subscribers.get(route) ?? []) send(subscriber, message);
   return true;
+}
+
+function removeQueuedBytes(entries) {
+  for (const entry of entries) queuedBytes -= queueEntryBytes(entry);
+  if (queuedBytes < 0) queuedBytes = 0;
 }
 
 function processRelayRequest(request, respond) {
   if (!request || typeof request !== "object" || Array.isArray(request)) {
     respond({ status: "error", message: "Invalid request" });
+    return true;
+  }
+
+  if (!isAuthorizedRelayRequest(request)) {
+    respond({ status: "error", message: "Relay authentication failed" });
     return true;
   }
 
@@ -165,9 +281,11 @@ function processRelayRequest(request, respond) {
     }
     const pending = routes.get(request.recipientPubKey);
     if (pending) {
-      const index = pending.findIndex((entry) => entry.id === request.messageId);
-      if (index !== -1) pending.splice(index, 1);
-      if (pending.length === 0) routes.delete(request.recipientPubKey);
+      const removed = pending.filter((entry) => entry.id === request.messageId);
+      const kept = pending.filter((entry) => entry.id !== request.messageId);
+      removeQueuedBytes(removed);
+      if (kept.length === 0) routes.delete(request.recipientPubKey);
+      else routes.set(request.recipientPubKey, kept);
     }
     respond(acknowledgement(request.id));
     return true;
@@ -232,18 +350,45 @@ function processRelayRequest(request, respond) {
 function pruneExpiredMessages() {
   const cutoff = Date.now() - MESSAGE_TTL_MS;
   for (const [route, pending] of routes) {
-    const unexpired = pending.filter((entry) => entry.createdAt > cutoff);
-    if (unexpired.length === 0) routes.delete(route);
-    else if (unexpired.length !== pending.length) routes.set(route, unexpired);
+    const kept = pending.filter((entry) => entry.createdAt > cutoff);
+    const expired = pending.filter((entry) => entry.createdAt <= cutoff);
+    removeQueuedBytes(expired);
+    if (kept.length === 0) routes.delete(route);
+    else if (kept.length !== pending.length) routes.set(route, kept);
   }
 }
 
 const httpServer = createServer(async (request, response) => {
   const origin = request.headers.origin;
+  const clientIp = clientAddress(request.socket);
+
+  // Security headers (M1) on every HTTP response.
+  response.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  response.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Referrer-Policy", "no-referrer");
+  response.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  response.setHeader("Cache-Control", "no-store");
+
   if (!isAllowedOrigin(origin)) {
+    securityLog("origin_rejected", { clientIp, origin: origin ?? null });
     response.writeHead(403).end();
     return;
   }
+
+  // Per-IP rate limit on the relay POST endpoint (C4/H2).
+  const rate = consumeRelayRateAllowance(
+    `http:${clientIp}`,
+    RELAY_HTTP_RATE_LIMIT,
+    RELAY_HTTP_RATE_WINDOW_MS,
+  );
+  if (!rate.allowed) {
+    securityLog("rate_limited", { clientIp, transport: "http" });
+    response.writeHead(429, { "retry-after": String(Math.ceil(rate.retryAfterMs / 1000)) }).end();
+    return;
+  }
+
   if (origin) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
@@ -256,6 +401,13 @@ const httpServer = createServer(async (request, response) => {
   }
   if (request.method !== "POST" || request.url !== "/relay") {
     response.writeHead(404).end();
+    return;
+  }
+
+  // H3: validate content-length before buffering the body.
+  const declaredLength = Number(request.headers["content-length"]);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
+    response.writeHead(413).end();
     return;
   }
 
@@ -291,12 +443,55 @@ const wss = new WebSocketServer({
   server: httpServer,
   maxPayload: MAX_FRAME_BYTES,
   verifyClient: ({ origin }, done) => {
-    done(isAllowedOrigin(origin), isAllowedOrigin(origin) ? 200 : 403);
+    const allowed = isAllowedOrigin(origin);
+    if (!allowed) securityLog("ws_origin_rejected", { origin: origin ?? null });
+    done(allowed, allowed ? 200 : 403);
   },
 });
-wss.on("connection", (socket) => {
+wss.on("connection", (socket, request) => {
+  const clientIp = clientAddress(request?.socket);
+
+  // H1: hard cap on concurrent connections.
+  liveConnections += 1;
+  if (liveConnections > MAX_CONNECTIONS) {
+    securityLog("connection_rejected", { clientIp, reason: "connection_limit" });
+    socket.close(1013, "Connection limit reached");
+    return;
+  }
+
+  // M4: heartbeat so dead/zombie sockets are reaped instead of held open.
+  let alive = true;
+  socket.on("pong", () => {
+    alive = true;
+  });
+  const pingTimer = setInterval(() => {
+    if (alive === false) {
+      socket.terminate();
+      return;
+    }
+    alive = false;
+    socket.ping();
+  }, WS_PING_INTERVAL_MS);
+  pingTimer.unref?.();
+
   const connectedRoutes = new Set();
+
+  // Per-connection message rate limit (C4/H2).
+  let messageCount = 0;
+  let windowStart = Date.now();
   socket.on("message", (message) => {
+    const now = Date.now();
+    if (now - windowStart >= RELAY_RATE_WINDOW_MS) {
+      windowStart = now;
+      messageCount = 0;
+    }
+    messageCount += 1;
+    if (messageCount > RELAY_RATE_LIMIT) {
+      securityLog("rate_limited", { clientIp, transport: "websocket" });
+      send(socket, { status: "error", message: "Too many relay requests" });
+      return;
+    }
+
     let parsed;
     try {
       parsed = JSON.parse(message.toString());
@@ -317,15 +512,38 @@ wss.on("connection", (socket) => {
     }
   });
   socket.on("close", () => {
+    clearInterval(pingTimer);
+    liveConnections -= 1;
     for (const route of connectedRoutes) {
       const connected = subscribers.get(route);
       connected?.delete(socket);
       if (connected?.size === 0) subscribers.delete(route);
     }
   });
+  socket.on("error", () => {
+    clearInterval(pingTimer);
+    liveConnections -= 1;
+  });
 });
 
 setInterval(pruneExpiredMessages, 60_000).unref();
+
+function parsePositiveInt(value) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+const MAX_CONNECTIONS = parsePositiveInt(process.env.CLOAK_MAX_CONNECTIONS) ?? DEFAULT_MAX_CONNECTIONS;
+const RELAY_RATE_LIMIT = parsePositiveInt(process.env.CLOAK_RELAY_RATE_LIMIT) ?? DEFAULT_RELAY_RATE_LIMIT;
+const RELAY_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_RATE_WINDOW_MS) ?? DEFAULT_RELAY_RATE_WINDOW_MS;
+const RELAY_HTTP_RATE_LIMIT = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_LIMIT) ?? RELAY_RATE_LIMIT;
+const RELAY_HTTP_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_WINDOW_MS) ?? RELAY_RATE_WINDOW_MS;
+
 httpServer.listen(PORT, () => {
-  console.log(`Cloak encrypted relay listening on port ${PORT}`);
+  securityLog("relay_started", {
+    port: PORT,
+    maxConnections: MAX_CONNECTIONS,
+    rateLimit: `${RELAY_RATE_LIMIT}/${RELAY_RATE_WINDOW_MS}ms`,
+    auth: RELAY_TOKEN ? "token" : "anonymous",
+  });
 });

@@ -180,4 +180,4 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 }));
 
-export { readLocalVaultKey };
+export { readLocalVaultKey as readVaultKey };
