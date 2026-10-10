@@ -51,7 +51,7 @@ const MUTE_OPTIONS = [
   { label: "For 1 hour", ms: 3_600_000 },
   { label: "For 8 hours", ms: 28_800_000 },
   { label: "For 1 week", ms: 604_800_000 },
-  { label: "Always", ms: Number.POSITIVE_INFINITY },
+  { label: "Always", ms: "forever" as const },
 ];
 
 const DISAPPEARING_OPTIONS = [
@@ -103,7 +103,9 @@ export function ChatOptionsMenu({
     setMounted(true);
   }, []);
 
-  const isMuted = chat.mutedUntil !== undefined && chat.mutedUntil > Date.now();
+  const isMuted =
+    chat.mutedForever === true ||
+    (chat.mutedUntil !== undefined && chat.mutedUntil > Date.now());
 
   useEffect(() => {
     if (!open) {

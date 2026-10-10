@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -21,6 +21,7 @@ const DEFAULT_MAX_CONNECTIONS = 500;
 const DEFAULT_RELAY_RATE_LIMIT = 60;
 const DEFAULT_RELAY_RATE_WINDOW_MS = 10_000;
 const RELAY_RATE_MAX_ENTRIES = 10_000;
+const MAX_ROUTES_PER_CONNECTION = 64;
 const WS_PING_INTERVAL_MS = 30_000;
 const WS_PING_TIMEOUT_MS = 10_000;
 
@@ -43,6 +44,15 @@ const allowedOrigins = new Set([
     .map((origin) => origin.trim())
     .filter(Boolean),
 ]);
+
+// Canonical 32-byte public key: 44 standard-base64 chars ending in a single
+// "=" (32 bytes -> ceil(32/3)*4 = 44 chars with one pad byte). The strict
+// 32-byte length and canonical round-trip are enforced in validPublicKey
+// itself; this gates character set and shape only.
+const PUBLIC_KEY_RE = /^[A-Za-z0-9+/]{43}=$/;
+// Queue ids are minted here as randomBytes(16).toString("base64url"):
+// base64url alphabet, no padding, exactly 22 chars.
+const QUEUE_ID_RE = /^[A-Za-z0-9_-]{22}$/;
 
 const queues = new Map();
 const routes = new Map();
@@ -143,6 +153,7 @@ function validPacket(packet) {
     typeof packet === "object" &&
     packet.type === "message" &&
     typeof packet.id === "string" &&
+    packet.id.length > 0 &&
     packet.id.length <= 128 &&
     typeof packet.senderPubKey === "string" &&
     typeof packet.senderEncryptionPubKey === "string" &&
@@ -167,7 +178,7 @@ function isAuthorizedRelayRequest(request) {
   const expected = Buffer.from(RELAY_TOKEN, "utf8");
   if (!supplied) return false;
   // Constant-time comparison so a caller cannot enumerate the token byte by byte.
-  return crypto.timingSafeEqual(supplied, expected);
+  return timingSafeEqual(supplied, expected);
 }
 
 function pushRoute(route, id, message) {
@@ -193,7 +204,7 @@ function removeQueuedBytes(entries) {
   if (queuedBytes < 0) queuedBytes = 0;
 }
 
-function processRelayRequest(request, respond) {
+function processRelayRequest(request, respond, socket = null) {
   if (!request || typeof request !== "object" || Array.isArray(request)) {
     respond({ status: "error", message: "Invalid request" });
     return true;
@@ -207,7 +218,7 @@ function processRelayRequest(request, respond) {
   if (request.type === "subscribe") {
     if (
       typeof request.id !== "string" ||
-      !respond.socket ||
+      !socket ||
       !validPublicKey(request.recipientPubKey)
     ) {
       respond({ status: "error", message: "Invalid subscription route" });
@@ -215,9 +226,9 @@ function processRelayRequest(request, respond) {
     }
     const route = request.recipientPubKey;
     const connected = subscribers.get(route) ?? new Set();
-    connected.add(respond.socket);
+    connected.add(socket);
     subscribers.set(route, connected);
-    for (const queued of routes.get(route) ?? []) send(respond.socket, queued.message);
+    for (const queued of routes.get(route) ?? []) send(socket, queued.message);
     respond(acknowledgement(request.id));
     return true;
   }
@@ -476,17 +487,22 @@ wss.on("connection", (socket, request) => {
 
   const connectedRoutes = new Set();
 
-  // Per-connection message rate limit (C4/H2).
-  let messageCount = 0;
-  let windowStart = Date.now();
-  socket.on("message", (message) => {
+  // Per-connection message rate limit (C4/H2). A sliding window of recent
+  // event timestamps so a burst cannot straddle a reset boundary and exceed
+  // the intended rate.
+  const recentEvents = [];
+  const allowMessage = () => {
     const now = Date.now();
-    if (now - windowStart >= RELAY_RATE_WINDOW_MS) {
-      windowStart = now;
-      messageCount = 0;
+    while (recentEvents.length > 0 && now - recentEvents[0] >= RELAY_RATE_WINDOW_MS) {
+      recentEvents.shift();
     }
-    messageCount += 1;
-    if (messageCount > RELAY_RATE_LIMIT) {
+    if (recentEvents.length >= RELAY_RATE_LIMIT) return false;
+    recentEvents.push(now);
+    return true;
+  };
+
+  socket.on("message", (message) => {
+    if (!allowMessage()) {
       securityLog("rate_limited", { clientIp, transport: "websocket" });
       send(socket, { status: "error", message: "Too many relay requests" });
       return;
@@ -499,16 +515,23 @@ wss.on("connection", (socket, request) => {
       send(socket, { status: "error", message: "Invalid request format" });
       return;
     }
-    processRelayRequest(parsed, Object.assign((response) => send(socket, response), {
-      socket,
-    }));
+    processRelayRequest(parsed, (response) => send(socket, response), socket);
     if (
       parsed &&
       typeof parsed === "object" &&
       parsed.type === "subscribe" &&
       typeof parsed.recipientPubKey === "string"
     ) {
-      connectedRoutes.add(parsed.recipientPubKey);
+      // Cap distinct routes per connection (H2/H1) so one socket cannot pin
+      // unbounded subscriber entries.
+      if (!connectedRoutes.has(parsed.recipientPubKey)) {
+        if (connectedRoutes.size >= MAX_ROUTES_PER_CONNECTION) {
+          send(socket, { status: "error", message: "Too many subscriptions" });
+          socket.close(1013, "Subscription limit reached");
+          return;
+        }
+        connectedRoutes.add(parsed.recipientPubKey);
+      }
     }
   });
   socket.on("close", () => {
@@ -539,11 +562,25 @@ const RELAY_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_RATE_WINDO
 const RELAY_HTTP_RATE_LIMIT = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_LIMIT) ?? RELAY_RATE_LIMIT;
 const RELAY_HTTP_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_WINDOW_MS) ?? RELAY_RATE_WINDOW_MS;
 
-httpServer.listen(PORT, () => {
-  securityLog("relay_started", {
-    port: PORT,
-    maxConnections: MAX_CONNECTIONS,
-    rateLimit: `${RELAY_RATE_LIMIT}/${RELAY_RATE_WINDOW_MS}ms`,
-    auth: RELAY_TOKEN ? "token" : "anonymous",
+export {
+  validPublicKey,
+  validPacket,
+  processRelayRequest,
+  isAuthorizedRelayRequest,
+};
+
+// Only bind the port when executed directly (node src/index.js), not when
+// imported by the test suite.
+const isMainModule =
+  process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+
+if (isMainModule) {
+  httpServer.listen(PORT, () => {
+    securityLog("relay_started", {
+      port: PORT,
+      maxConnections: MAX_CONNECTIONS,
+      rateLimit: `${RELAY_RATE_LIMIT}/${RELAY_RATE_WINDOW_MS}ms`,
+      auth: RELAY_TOKEN ? "token" : "anonymous",
+    });
   });
-});
+}

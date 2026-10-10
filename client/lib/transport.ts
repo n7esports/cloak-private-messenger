@@ -285,6 +285,12 @@ export class TransportManager {
 
   private readonly onOnline = (): void => {
     if (this.stopped) return;
+    // The link is healthy again — reset the backoff so recovery is immediate
+    // instead of waiting out the pinned MAX_BACKOFF_MS after a long offline
+    // period, and force a fresh channel so the early-return guard in
+    // connect() cannot strand the reconnect loop.
+    this.reconnectAttempt = 0;
+    this.removeChannels();
     void this.connect();
   };
 
@@ -631,9 +637,17 @@ export class TransportManager {
     }
     this.draining = true;
     try {
-      const pendingRecords = await database.outbox
-        .orderBy("createdAt")
-        .toArray();
+      // Sort by nextAttemptAt so due records are attempted first and a
+      // not-yet-due record never forces a full scan (P23). On failure use
+      // `continue` (not `break`) so a single poison envelope at the head
+      // cannot starve newer due records (P22); the dead-letter path below
+      // still guarantees a permanently failing record is eventually dropped.
+      const pendingRecords = (
+        await database.outbox.orderBy("createdAt").toArray()
+      )
+        .slice()
+        .sort((left, right) => left.nextAttemptAt - right.nextAttemptAt);
+      let failed = false;
       for (const record of pendingRecords) {
         if (this.stopped || !this.vaultKey) break;
         if (record.nextAttemptAt > Date.now()) continue;
@@ -659,10 +673,10 @@ export class TransportManager {
             attempts,
             nextAttemptAt: Date.now() + backoff,
           });
-          this.scheduleQueueRetry(backoff);
-          break;
+          failed = true;
         }
       }
+      if (failed) this.scheduleQueueRetry(MAX_BACKOFF_MS);
     } finally {
       this.draining = false;
     }

@@ -58,6 +58,7 @@ export interface ChatSummary {
   pinned: boolean;
   favorite?: boolean;
   mutedUntil?: number;
+  mutedForever?: boolean;
   disappearingMs?: number;
   theme?: string;
   listId?: string;
@@ -175,7 +176,8 @@ function markMessageSeen(id: string): boolean {
  * Notification bodies never contain message plaintext — only the sender alias
  * and a generic line — so no ciphertext-free metadata leaks to the OS tray.
  */
-function notifyIncoming(chat: { alias: string; mutedUntil?: number }): void {
+function notifyIncoming(chat: { alias: string; mutedUntil?: number; mutedForever?: boolean }): void {
+  if (chat.mutedForever) return;
   if (chat.mutedUntil !== undefined && chat.mutedUntil > Date.now()) return;
   void import("../src/lib/notifications.js")
     .then(({ triggerIncomingMessageNotification }) =>
@@ -233,6 +235,9 @@ function isChatSummary(value: unknown): value is ChatSummary {
     (!("mutedUntil" in value) ||
       value.mutedUntil === undefined ||
       typeof value.mutedUntil === "number") &&
+    (!("mutedForever" in value) ||
+      value.mutedForever === undefined ||
+      typeof value.mutedForever === "boolean") &&
     (!("disappearingMs" in value) ||
       value.disappearingMs === undefined ||
       typeof value.disappearingMs === "number") &&
@@ -526,25 +531,21 @@ async function loadMessages(
 }
 
 async function expireMessage(messageId: string): Promise<void> {
-  const chatId = Object.keys(useChatStore.getState().messagesMap).find((id) =>
-    useChatStore
-      .getState()
-      .messagesMap[id].some((message) => message.id === messageId),
-  );
   try {
     await database.messages.delete(messageId);
     await database.notes.delete(messageId);
     await database.outbox.delete(messageId);
     ephemeralExpiryTimers.delete(messageId);
-    if (!chatId) return;
-    useChatStore.setState((state) => ({
-      messagesMap: {
-        ...state.messagesMap,
-        [chatId]: state.messagesMap[chatId].filter(
-          (message) => message.id !== messageId,
-        ),
-      },
-    }));
+    // Reconcile in-memory state across EVERY chat, not just the one that
+    // happened to be found first: a message whose owning chat is not loaded
+    // must not linger in messagesMap and render as a ghost.
+    useChatStore.setState((state) => {
+      const messagesMap: Record<string, ChatMessage[]> = {};
+      for (const [chatId, list] of Object.entries(state.messagesMap)) {
+        messagesMap[chatId] = list.filter((message) => message.id !== messageId);
+      }
+      return { messagesMap };
+    });
   } catch (error) {
     useChatStore.setState({
       transportError:
@@ -635,11 +636,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!chatId) throw new Error("Select a conversation before sending a message.");
     const chat = get().chats.find((entry) => entry.id === chatId);
     if (!chat) throw new Error("The active conversation could not be found.");
-    if (!content.trim() && !attachment) {
-      throw new Error("A message cannot be empty.");
-    }
     if (chat.kind === "system") {
       throw new Error("The Welcome Guide is a read-only system conversation.");
+    }
+    if (!content.trim() && !attachment) {
+      throw new Error("A message cannot be empty.");
     }
 
     const timestamp = Date.now();
@@ -909,8 +910,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!chat || chat.kind !== "direct") return;
     const now = Date.now();
     const lastSent = get().typingSentAt[chatId] ?? 0;
-    // Throttle repeat "typing" pings but always deliver an explicit "stop".
-    if (isTyping && now - lastSent < TYPING_THROTTLE_MS) return;
+    // Throttle BOTH directions so a burst of keystrokes (including backspace,
+    // which emits "stop" on every key) cannot flood the channel. A single
+    // in-flight "stop" per chat is enough — the peer only needs the latest.
+    if (now - lastSent < TYPING_THROTTLE_MS) return;
     set((state) => ({
       typingSentAt: { ...state.typingSentAt, [chatId]: now },
     }));
@@ -1139,7 +1142,46 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const chatId = Object.keys(get().messagesMap).find((key) =>
       get().messagesMap[key].some((message) => message.id === messageId),
     );
-    if (!chatId) return;
+    if (!chatId) {
+      // The owning chat is not in memory (transport was reset, or the chat
+      // was cleared). Persist the status against the encrypted record so it
+      // is not lost, and surface it on the next loadChats.
+      const record = await database.messages.get(messageId);
+      if (!record) return;
+      const payload = await decryptRecord<StoredMessage>(
+        record.ciphertext,
+        record.nonce,
+        vaultKey,
+        isStoredMessage,
+      );
+      if (messageStatusRank[status] <= messageStatusRank[payload.status]) return;
+      await saveEncryptedMessage(
+        {
+          id: messageId,
+          chatId: record.chatId,
+          senderPubKey: payload.senderPubKey,
+          content: payload.content,
+          type: payload.type,
+          status,
+          timestamp: record.createdAt,
+          outgoing: payload.outgoing,
+          ...(payload.ephemeralTimer === undefined
+            ? {}
+            : { ephemeralTimer: payload.ephemeralTimer }),
+          ...(payload.attachment === undefined
+            ? {}
+            : { attachment: payload.attachment }),
+          ...(payload.starred === undefined ? {} : { starred: payload.starred }),
+          ...(payload.pinned === undefined ? {} : { pinned: payload.pinned }),
+          ...(payload.reactions === undefined
+            ? {}
+            : { reactions: payload.reactions }),
+          ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
+        },
+        vaultKey,
+      );
+      return;
+    }
     const current = get().messagesMap[chatId].find(
       (message) => message.id === messageId,
     );

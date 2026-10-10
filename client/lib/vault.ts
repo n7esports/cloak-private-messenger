@@ -205,7 +205,7 @@ async function getOrCreateWrapperKey(): Promise<CryptoKey> {
   }
 }
 
-async function wrapVaultKey(key: Uint8Array): Promise<WrappedVaultKeyEnvelope> {
+export async function wrapVaultKey(key: Uint8Array): Promise<WrappedVaultKeyEnvelope> {
   const wrapper = await getOrCreateWrapperKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const keyBuffer = new Uint8Array(key); // fresh ArrayBuffer-backed copy
@@ -214,16 +214,17 @@ async function wrapVaultKey(key: Uint8Array): Promise<WrappedVaultKeyEnvelope> {
     wrapper,
     keyBuffer,
   );
+  const ivEncoded = bytesToBase64(iv); // snapshot before wiping the buffer
   keyBuffer.fill(0);
   iv.fill(0);
   return {
     version: 1,
-    iv: bytesToBase64(iv),
+    iv: ivEncoded,
     ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
   };
 }
 
-async function unwrapVaultKey(envelope: WrappedVaultKeyEnvelope): Promise<Uint8Array> {
+export async function unwrapVaultKey(envelope: WrappedVaultKeyEnvelope): Promise<Uint8Array> {
   const wrapper = await getOrCreateWrapperKey();
   const iv = new Uint8Array(base64ToBytes(envelope.iv));
   const ciphertext = new Uint8Array(base64ToBytes(envelope.ciphertext));

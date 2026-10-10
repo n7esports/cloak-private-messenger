@@ -1,7 +1,11 @@
 "use client";
 
 import { IconClose, IconFile, IconImage } from "./icons/UiIcons";
-import { formatFileSize, type MessageAttachment } from "../lib/protocol";
+import {
+  formatFileSize,
+  isInlineRenderableImage,
+  type MessageAttachment,
+} from "../lib/protocol";
 
 /**
  * Renders a decrypted attachment. Images and videos display inline from their
@@ -9,7 +13,7 @@ import { formatFileSize, type MessageAttachment } from "../lib/protocol";
  * touches the network — the bytes were already decrypted in the client.
  */
 export function AttachmentView({ attachment }: { attachment: MessageAttachment }) {
-  if (attachment.mime.startsWith("image/")) {
+  if (isInlineRenderableImage(attachment.mime)) {
     return (
       <a
         href={attachment.data}
@@ -70,8 +74,8 @@ export function AttachmentChip({
   onRemove: () => void;
 }) {
   return (
-    <div className="cloak-glass-soft mb-2 flex items-center gap-3 rounded-xl px-3 py-2">
-      {attachment.mime.startsWith("image/") ? (
+    <div className="cloak-glass-soft mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5">
+      {isInlineRenderableImage(attachment.mime) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={attachment.data}

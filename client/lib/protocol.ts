@@ -52,6 +52,16 @@ export const MAX_ATTACHMENT_BYTES = 700 * 1024;
 
 const ATTACHMENT_DATA_URL = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$/i;
 
+// Explicit allowlist of image subtypes that are safe to render inline via
+// <img src>. The general data-URL validation still applies to every
+// attachment (including the non-inline download path); this only gates the
+// inline-render decision in the UI.
+const INLINE_IMAGE_MIME_RE = /^image\/(png|jpe?g|gif|webp|avif)$/i;
+
+export function isInlineRenderableImage(mime: string): boolean {
+  return INLINE_IMAGE_MIME_RE.test(mime);
+}
+
 export function isValidAttachment(value: unknown): value is MessageAttachment {
   return (
     typeof value === "object" &&
@@ -159,6 +169,19 @@ export function getExpiredMessageIds(
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
+
+/**
+ * Decodes decrypted bytes as UTF-8. A fatal decode here means the sender's
+ * payload was not valid UTF-8 — surface that specifically instead of letting
+ * it masquerade as a generic envelope-processing failure.
+ */
+function decodeUtf8(bytes: Uint8Array): string {
+  try {
+    return textDecoder.decode(bytes);
+  } catch {
+    throw new Error("Envelope payload is not valid UTF-8");
+  }
+}
 
 export function encodeBytes(bytes: Uint8Array): string {
   return bytesToBase64(bytes);
@@ -327,7 +350,7 @@ export async function openEnvelope(
       nonce,
       contentKey,
     );
-    const parsed: unknown = JSON.parse(textDecoder.decode(plaintext));
+    const parsed: unknown = JSON.parse(decodeUtf8(plaintext));
     if (
       typeof parsed !== "object" ||
       parsed === null ||
@@ -634,7 +657,7 @@ export async function openTypingSignal(
     identity.encryptionPrivateKey,
   );
   try {
-    const parsed: unknown = JSON.parse(textDecoder.decode(plaintext));
+    const parsed: unknown = JSON.parse(decodeUtf8(plaintext));
     if (
       typeof parsed !== "object" ||
       parsed === null ||

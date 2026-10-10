@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   startChatServices,
   useChatStore,
 } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
+import { SESSION_IDLE_TIMEOUT_MS } from "../../src/lib/security";
 import {
   IconBook,
   IconBroadcast,
@@ -28,6 +29,46 @@ export default function ChatsLayout({ children }: { children: ReactNode }) {
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const loadChats = useChatStore((state) => state.loadChats);
   const [error, setError] = useState("");
+
+  // Idle auto-lock: after SESSION_IDLE_TIMEOUT_MS of no user activity the
+  // vault locks itself and the app returns to the passcode screen. The timer
+  // is refreshed by real activity (pointer/key/scroll/focus) and is cleared
+  // whenever the passcode modal is already up or the vault is manually
+  // locked, so it can never fire spuriously or fight a manual lock.
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  useEffect(() => {
+    if (!isUnlocked) return undefined;
+    const scheduleLock = () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        // Never fire while the passcode modal is already showing (the user is
+        // at /lock) — that would lock an already-locked vault.
+        if (typeof window !== "undefined" && window.location.pathname === "/lock") {
+          return;
+        }
+        lockVault();
+        router.replace("/lock");
+      }, SESSION_IDLE_TIMEOUT_MS);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "wheel",
+      "touchstart",
+      "focus",
+    ];
+    for (const event of activityEvents) {
+      window.addEventListener(event, scheduleLock);
+    }
+    scheduleLock();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = undefined;
+      for (const event of activityEvents) {
+        window.removeEventListener(event, scheduleLock);
+      }
+    };
+  }, [isUnlocked, lockVault, router]);
 
   useEffect(() => {
     if (!sessionRestored) {

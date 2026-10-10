@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import KeyExchangeModal from "../../components/modals/KeyExchangeModal";
 import NewChatModal from "../../components/modals/NewChatModal";
 import { TourOverlay } from "../../components/TourOverlay";
@@ -124,7 +124,16 @@ function downloadTextFile(filename: string, text: string, mime: string) {
 }
 
 export default function ChatsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatsPageInner />
+    </Suspense>
+  );
+}
+
+function ChatsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const chats = useChatStore((state) => state.chats);
   const activeChatId = useChatStore((state) => state.activeChatId);
   const messagesMap = useChatStore((state) => state.messagesMap);
@@ -153,7 +162,6 @@ export default function ChatsPage() {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [content, setContent] = useState("");
   const [query, setQuery] = useState("");
-  const [messageType, setMessageType] = useState<InnerPayload["type"]>("text");
   const [ephemeralTimer, setEphemeralTimer] = useState<number | undefined>();
   const [isTimerMenuOpen, setIsTimerMenuOpen] = useState(false);
   const [error, setError] = useState("");
@@ -227,15 +235,19 @@ export default function ChatsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
     if (params.get("compose") === "1") setIsNewChatOpen(true);
     if (params.get("guide") === "1") setIsGuideOpen(true);
     const timer = Number(params.get("timer"));
     if (EPHEMERAL_TIMERS.some((supported) => supported === timer)) {
       setEphemeralTimer(timer);
     }
-    if (params.size > 0) window.history.replaceState({}, "", "/chats");
-  }, []);
+    if (params.size > 0) {
+      const url = new URL(window.location.href);
+      url.search = "";
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -316,12 +328,12 @@ export default function ChatsPage() {
         ? attachment.mime.startsWith("image/")
           ? "image"
           : "file"
-        : messageType;
+        : "text";
       const replyRef = replyTo
         ? {
             id: replyTo.id,
             alias: replyTo.outgoing ? "You" : activeChat?.alias ?? "Contact",
-            excerpt: (replyTo.content || describeAttachment(replyTo.attachment!)).slice(
+            excerpt: (replyTo.content || describeAttachment(replyTo.attachment ?? { name: "", mime: "", size: 0, data: "" })).slice(
               0,
               160,
             ),
@@ -394,7 +406,7 @@ export default function ChatsPage() {
         setReplyTo(message);
         return;
       case "copy": {
-        const text = message.content || describeAttachment(message.attachment!);
+        const text = message.content || describeAttachment(message.attachment ?? { name: "", mime: "", size: 0, data: "" });
         void navigator.clipboard
           .writeText(text)
           .then(() => setToast("Copied to clipboard"))
@@ -408,6 +420,7 @@ export default function ChatsPage() {
           ? current.filter((entry) => entry !== emoji)
           : [...current, emoji];
         void updateMessage(message.id, { reactions: next });
+        setToast("Reaction saved on this device only");
         return;
       }
       case "forward":
@@ -415,12 +428,22 @@ export default function ChatsPage() {
         return;
       case "pin":
         void updateMessage(message.id, { pinned: !message.pinned });
+        setToast(
+          message.pinned
+            ? "Unpinned on this device only"
+            : "Pinned on this device only",
+        );
         return;
       case "ask-ai":
         setAiPrompt(message.content || "Summarise this message.");
         return;
       case "star":
         void updateMessage(message.id, { starred: !message.starred });
+        setToast(
+          message.starred
+            ? "Removed from favourites on this device only"
+            : "Starred on this device only",
+        );
         return;
       case "delete-me":
         void deleteMessages([message.id]).then(() => setToast("Message deleted"));
@@ -443,7 +466,7 @@ export default function ChatsPage() {
     const previousActive = activeChat.id;
     setActiveChat(targetChatId);
     try {
-      const body = message.content || describeAttachment(message.attachment!);
+      const body = message.content || describeAttachment(message.attachment ?? { name: "", mime: "", size: 0, data: "" });
       await sendMessage(body, message.type, undefined, message.attachment);
       setToast("Message forwarded");
     } catch (cause) {
@@ -578,11 +601,17 @@ export default function ChatsPage() {
         setSelectedIds(new Set());
         return;
       case "mute": {
+        if (value === "forever") {
+          void updateChat(chat.id, {
+            mutedForever: true,
+            mutedUntil: undefined,
+          }).then(() => setToast("Notifications muted"));
+          return;
+        }
         const ms = typeof value === "number" ? value : undefined;
-        const mutedUntil =
-          ms === undefined || !Number.isFinite(ms) ? undefined : Date.now() + ms;
         void updateChat(chat.id, {
-          mutedUntil: Number.isFinite(ms) ? mutedUntil : Number.MAX_SAFE_INTEGER,
+          mutedForever: false,
+          mutedUntil: ms === undefined ? undefined : Date.now() + ms,
         }).then(() =>
           setToast(ms === undefined ? "Notifications unmuted" : "Notifications muted"),
         );
@@ -833,7 +862,9 @@ export default function ChatsPage() {
           )}
           {filteredChats.map((chat) => {
             const typing = chat.id === activeChatId ? activeTyping : false;
-            const muted = chat.mutedUntil !== undefined && chat.mutedUntil > Date.now();
+            const muted =
+              chat.mutedForever === true ||
+              (chat.mutedUntil !== undefined && chat.mutedUntil > Date.now());
             return (
               <button
                 key={chat.id}
@@ -1222,8 +1253,9 @@ export default function ChatsPage() {
               <div className="flex items-center justify-between">
                 <dt className="text-cloak-muted">Muted</dt>
                 <dd>
-                  {activeChat.mutedUntil !== undefined &&
-                  activeChat.mutedUntil > Date.now()
+                  {activeChat.mutedForever === true ||
+                  (activeChat.mutedUntil !== undefined &&
+                    activeChat.mutedUntil > Date.now())
                     ? "Yes"
                     : "No"}
                 </dd>

@@ -4,7 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PasscodeModal from "../../src/components/PasscodeModal";
 import { wipeVaultDatabase } from "../../lib/vault";
-import { hasPasscodes, setPasscodes, verifyPasscode } from "../../src/lib/security";
+import {
+  hasPasscodes,
+  setPasscodes,
+  triggerDecoyWipe,
+  verifyPasscode,
+} from "../../src/lib/security";
 import { useVaultStore } from "../../store/useVaultStore";
 
 export default function LockPage() {
@@ -56,8 +61,22 @@ export default function LockPage() {
 
   async function handleVerify(passcode: string) {
     const result = await verifyPasscode(passcode);
-    if (result === "primary" || result === "decoy") {
+    if (result === "primary") {
       await unlockAfterPasscode();
+      return result;
+    }
+    if (result === "decoy") {
+      // A decoy unlock must NEVER open the real vault. Wipe everything —
+      // identity, chats, notes, and the passcode config itself — so the
+      // device looks like a fresh install to whoever entered the decoy. The
+      // app then lands in the passcode-setup flow, indistinguishable from
+      // first launch.
+      useVaultStore.getState().clearMemoryKeys();
+      await triggerDecoyWipe();
+      await wipeVaultDatabase();
+      setConfigured(false);
+      setError("");
+      return result;
     }
     return result;
   }
@@ -70,10 +89,14 @@ export default function LockPage() {
     ) {
       return;
     }
+    // Guard against a concurrent decoy wipe or a double-click: only one wipe
+    // may run at a time so IndexedDB deletes cannot race each other.
+    if (isBusy) return;
     setError("");
     setIsBusy(true);
     try {
       useVaultStore.getState().clearMemoryKeys();
+      await triggerDecoyWipe();
       await wipeVaultDatabase();
       router.replace("/chats");
     } catch (cause: unknown) {

@@ -335,6 +335,18 @@ export async function verifyPasscode(passcode) {
     return null;
   }
 
+  // Enforce the lockout HERE, not only in the UI: an attacker with script
+  // execution does not render the PasscodeModal, so the check must live in
+  // the verification path itself. Reject before spending any hash work.
+  // NOTE: this is defence-in-depth for a 4-12 digit passcode. A client-side
+  // lockout cannot stop an attacker with local file access who drives this
+  // function directly — the real fix is a server-side or OS-keychain-backed
+  // verifier. This raises the cost; it does not make the passcode unbreakable.
+  const failureState = await getPasscodeFailureState();
+  if (failureState.lockedUntil > Date.now()) {
+    throw new Error('Too many attempts. Try again later.');
+  }
+
   const storage = await getStorage();
   const savedConfiguration = await storage.get();
   if (!savedConfiguration) return null;
@@ -386,7 +398,11 @@ export async function getPasscodeFailureState() {
     if (
       !Number.isInteger(state.attempts) ||
       state.attempts < 0 ||
-      !Number.isFinite(state.lockedUntil)
+      !Number.isFinite(state.lockedUntil) ||
+      state.lockedUntil < 0 ||
+      // Reject absurd far-future lockouts (a corrupted or tampered value
+      // could otherwise pin the vault forever).
+      state.lockedUntil > Date.now() + MAX_LOCKOUT_MS * 10
     ) {
       throw new Error('Invalid security configuration.');
     }
