@@ -1091,6 +1091,17 @@ export default function ChatsPage() {
                     </button>
                   </div>
                 )}
+                {!relayConnected && activeChat.kind === "direct" && (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-200"
+                  >
+                    <IconWifiOff className="h-3.5 w-3.5 shrink-0" />
+                    Relay {relayLabel.toLowerCase()} — messages you send now stay
+                    queued and deliver automatically once reconnected.
+                  </p>
+                )}
                 <div className="relative">
                   <EmojiStickerPicker
                     open={isEmojiOpen}

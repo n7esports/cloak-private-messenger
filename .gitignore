@@ -16,9 +16,8 @@ build/
 # Local Environment Overrides
 .env*.local
 .env
-
-# Allow production config
-!.env.production
+.env.production
+client/.env.production
 
 # Logs & System
 *.log
