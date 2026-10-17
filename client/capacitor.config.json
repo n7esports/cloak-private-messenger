@@ -1,0 +1,15 @@
+{
+  "appId": "com.cloak.messenger",
+  "appName": "Cloak",
+  "webDir": ".next",
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
+    }
+  }
+}

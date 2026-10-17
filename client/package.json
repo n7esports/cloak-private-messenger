@@ -1,0 +1,48 @@
+{
+  "name": "cloak-client",
+  "version": "1.0.0",
+  "description": "Zero-Trust Ephemeral E2EE Messenger",
+  "author": "Abdul Wassay",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "cap:build": "next build && npx cap copy"
+  },
+  "dependencies": {
+    "@scure/bip39": "^2.4.0",
+    "@supabase/supabase-js": "^2.109.0",
+    "dexie": "^4.4.6",
+    "framer-motion": "^12.43.0",
+    "jsqr": "^1.4.0",
+    "libsodium-wrappers-sumo": "^0.8.4",
+    "next": "^14.0.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^5.0.15",
+    "zxcvbn": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/libsodium-wrappers-sumo": "^0.7.8",
+    "@types/node": "^20.19.43",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/zxcvbn": "^4.4.5",
+    "autoprefixer": "^10.6.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}

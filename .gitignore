@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build & Packaging Outputs
+.next/
+**/.next/
+**/.next-dev/
+dist/
+**/dist/
+client/uploads/
+build/
+**/build/
+client/out/
+*.tsbuildinfo
+
+# Local Environment Overrides
+.env*.local
+.env
+.env.production
+client/.env.production
+
+# Logs & System
+*.log
+.DS_Store
+.vscode/
+*.deb

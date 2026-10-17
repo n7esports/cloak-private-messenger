@@ -1,0 +1,16 @@
+{
+  "name": "cloak-private-messenger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-Trust Ephemeral E2EE Messenger",
+  "scripts": {
+    "build": "cd client && next build"
+  },
+  "dependencies": {
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/core": "^6.2.2",
+    "@capacitor/local-notifications": "^6.1.3",
+    "@capacitor/preferences": "^6.0.4",
+    "@capacitor/push-notifications": "^6.0.5"
+  }
+}
