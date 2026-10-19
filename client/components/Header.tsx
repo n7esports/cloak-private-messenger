@@ -2,11 +2,15 @@
 
 import { useChatStore } from "../store/useChatStore";
 import { useVaultStore } from "../store/useVaultStore";
+import { useTheme } from "./ThemeProvider";
+import { encodeBytes } from "../lib/protocol";
 import { EPHEMERAL_TIMERS } from "../lib/protocol";
 import {
+  IconLock,
   IconShieldCheck,
   IconTimer,
 } from "./icons/UiIcons";
+import { ThemeToggle } from "./ThemeToggle";
 
 const PROFILE_ALIAS = "Cipher Zero";
 
@@ -26,6 +30,7 @@ const TIMER_LABELS = new Map<number, string>([
 export function Header() {
   const activeChatId = useChatStore((state) => state.activeChatId);
   const chats = useChatStore((state) => state.chats);
+  const setActiveChat = useChatStore((state) => state.setActiveChat);
   const sidebarOpen = useChatStore((state) => state.sidebarOpen);
   const setSidebarOpen = useChatStore((state) => state.setSidebarOpen);
   const isRelayConnected = useChatStore((state) => state.isRelayConnected);
@@ -88,6 +93,10 @@ export function Header() {
           <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-cloak-accent ring-2 ring-zinc-950" />
         </button>
 
+        {/* Mobile theme toggle (sidebar toggle lives on desktop) */}
+        <div className="lg:hidden">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
