@@ -49,7 +49,6 @@ function formatTime(ts: number): string {
 }
 
 export default function MessagesView() {
-  const pathname = usePathname();
   const chats = useChatStore((s) => s.chats);
   const messagesMap = useChatStore((s) => s.messagesMap);
   const relayStatus = useChatStore((s) => s.relayStatus);
@@ -125,7 +124,7 @@ export default function MessagesView() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-space-sm self-start md:self-auto flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-space-sm self-start md:self-auto flex-wrap">
             <div className="relative flex items-center">
               <IconSearch className="absolute left-3 text-cloak-muted text-[18px] pointer-events-none" />
               <input
@@ -178,8 +177,8 @@ export default function MessagesView() {
                     onClick={() => setActiveTab(tab.key)}
                     className={`px-3 sm:px-4 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-all cursor-pointer ${
                       activeTab === tab.key
-                        ? "bg-cloak-surface-2 text-cloak-accent font-semibold shadow-sm"
-                        : "text-cloak-muted hover:text-cloak-text hover:bg-cloak-surface-1"
+                        ? "bg-[#262a34] !text-[#4edea3] font-semibold shadow-sm"
+                        : "!text-slate-300 hover:!text-white hover:bg-[#1c1f29]"
                     }`}
                   >
                     <span>{tab.label}</span>
@@ -233,11 +232,7 @@ export default function MessagesView() {
                           window.location.href = `/chats/chat/${chat.id}`;
                         }
                       }}
-                      className={`group relative flex items-center gap-4 p-4 rounded-2xl bg-cloak-surface-1/80 hover:bg-cloak-surface-2/80 border border-cloak-border/50 shadow-md cursor-pointer transition-all ${
-                        isUnread
-                          ? "bg-cloak-surface-1 hover:bg-cloak-surface-2"
-                          : "bg-cloak-surface-1/60 hover:bg-cloak-surface-2/80"
-                      }`}
+                      className="group relative flex items-center gap-4 p-4 rounded-2xl bg-[#1c1f29] hover:bg-[#262a34] border border-slate-700/50 shadow-md cursor-pointer transition-all"
                     >
                       {isUnread && (
                         <div
@@ -269,7 +264,7 @@ export default function MessagesView() {
                       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center justify-between gap-space-sm">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-semibold text-base text-cloak-text truncate">
+                            <span className="font-semibold text-base !text-white dark:!text-white truncate">
                               {chat.alias}
                             </span>
                             <IconLock className="text-cloak-accent text-[15px] flex-shrink-0" />
@@ -289,7 +284,7 @@ export default function MessagesView() {
                         </div>
 
                         <div className="flex items-center justify-between gap-space-sm">
-                          <p className="text-sm text-cloak-muted truncate flex items-center gap-1">
+                          <p className="text-sm !text-slate-300 dark:!text-slate-300 truncate flex items-center gap-1">
                             {lastMsg?.attachment && (
                               <IconPaperclip className="text-[14px] text-cloak-muted" />
                             )}

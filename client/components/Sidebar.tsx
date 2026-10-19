@@ -33,6 +33,9 @@ export function Sidebar() {
   const isRelayConnected = useChatStore((state) => state.isRelayConnected);
   const relayStatus = useChatStore((state) => state.relayStatus);
   const identity = useVaultStore((state) => state.identity);
+  const sidebarOpen = useChatStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useChatStore((state) => state.setSidebarOpen);
+  const channels = useChatStore((state) => state.channels);
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,7 +43,6 @@ export function Sidebar() {
 
   const totalUnread = chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
   const directChats = chats.filter((chat) => chat.kind === "direct");
-  const notesChat = chats.find((chat) => chat.kind === "notes");
 
   const toggleTheme = () => {
     setIsDarkMode((prev) => {
