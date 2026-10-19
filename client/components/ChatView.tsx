@@ -88,7 +88,7 @@ export default function ChatView() {
   const [activeReactions, setActiveReactions] = useState<{ [msgId: string]: string[] }>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
   const messages = useMemo(
@@ -131,7 +131,7 @@ export default function ChatView() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       void handleSend();

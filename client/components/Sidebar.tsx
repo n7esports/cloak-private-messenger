@@ -37,6 +37,8 @@ export function Sidebar() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const channels = useChatStore((state) => state.channels);
 
   const totalUnread = chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
   const directChats = chats.filter((chat) => chat.kind === "direct");

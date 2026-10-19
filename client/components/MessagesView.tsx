@@ -49,7 +49,6 @@ function formatTime(ts: number): string {
 }
 
 export default function MessagesView() {
-  const pathname = usePathname();
   const chats = useChatStore((s) => s.chats);
   const messagesMap = useChatStore((s) => s.messagesMap);
   const relayStatus = useChatStore((s) => s.relayStatus);
