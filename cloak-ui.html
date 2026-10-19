@@ -1,0 +1,3312 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cloak Private Messenger — UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CLOAK PRIVATE MESSENGER — DESIGN SYSTEM
+   Extracted from source: tailwind.config.ts + globals.css
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+  /* Dark theme (default) */
+  --cloak-bg: 9 9 11;
+  --cloak-surface-1: 24 24 27;
+  --cloak-surface-2: 39 39 42;
+  --cloak-surface-3: 63 63 70;
+  --cloak-border: 63 63 70;
+  --cloak-accent: 16 185 129;
+  --cloak-accent-hover: 5 150 105;
+  --cloak-text: 250 250 250;
+  --cloak-muted: 161 161 170;
+  --cloak-dim: 82 82 91;
+  --cloak-danger: 239 68 68;
+  --cloak-success: 34 197 94;
+  --cloak-warning: 245 158 11;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --margin: 1.5rem;
+  --margin-mobile: 1rem;
+  --gutter: 1rem;
+  --gutter-mobile: 0.75rem;
+
+  /* Radii */
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --radius-bubble: 20px;
+  --radius-input: 10px;
+
+  /* Shadows */
+  --shadow-glow: 0 0 24px rgba(16, 185, 129, 0.4);
+  --shadow-glow-sm: 0 0 12px rgba(16, 185, 129, 0.24);
+  --shadow-glow-hero: 0 0 50px rgba(16, 185, 129, 0.16);
+
+  /* Safe areas */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+  /* Transitions */
+  --ease-cloak: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --cloak-bg: 240 244 248;
+  --cloak-surface-1: 255 255 255;
+  --cloak-surface-2: 241 245 249;
+  --cloak-surface-3: 226 232 240;
+  --cloak-border: 203 213 225;
+  --cloak-accent: 5 150 105;
+  --cloak-accent-hover: 4 120 87;
+  --cloak-text: 24 32 42;
+  --cloak-muted: 71 85 105;
+  --cloak-dim: 100 116 139;
+  --cloak-danger: 220 38 38;
+  --cloak-success: 22 163 74;
+  --cloak-warning: 217 119 6;
+}
+
+/* ---- Reset & Base ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100dvh; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior: none; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: rgb(var(--cloak-bg));
+  color: rgb(var(--cloak-text));
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; border: none; background: none; }
+a { color: inherit; text-decoration: none; }
+::selection { background: #6ee7b7; color: rgb(var(--cloak-bg)); }
+
+/* ---- Glassmorphism System ---- */
+.cloak-glass {
+  background: color-mix(in srgb, rgb(var(--cloak-surface-1)) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgb(var(--cloak-border) / 0.35);
+}
+.cloak-glass-strong {
+  background: color-mix(in srgb, rgb(var(--cloak-surface-1)) 86%, transparent);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgb(var(--cloak-border) / 0.45);
+}
+.cloak-glass-soft {
+  background: color-mix(in srgb, rgb(var(--cloak-surface-2)) 55%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+}
+.cloak-ambient {
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(16, 185, 129, 0.14), transparent 60%),
+    radial-gradient(50% 45% at 88% 4%, rgba(16, 185, 129, 0.1), transparent 55%),
+    radial-gradient(70% 60% at 50% 100%, rgba(16, 185, 129, 0.08), transparent 60%),
+    rgb(var(--cloak-bg));
+}
+
+/* ---- Scrollbars ---- */
+.cloak-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--cloak-muted) / 0.35) transparent; }
+.cloak-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.cloak-scroll::-webkit-scrollbar-track { background: transparent; }
+.cloak-scroll::-webkit-scrollbar-thumb { background: rgb(var(--cloak-muted) / 0.3); border-radius: 999px; }
+.cloak-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--cloak-muted) / 0.5); }
+
+/* ---- Typography Helpers ---- */
+.font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.text-label { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+/* ---- Utility Classes ---- */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.min-w-0 { min-width: 0; }
+.flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-30 { z-index: 30; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }
+.z-60 { z-index: 60; }
+.z-70 { z-index: 70; }
+.z-80 { z-index: 80; }
+.z-90 { z-index: 90; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grid { display: grid; }
+.hidden { display: none; }
+
+/* ---- Animations ---- */
+@keyframes cloak-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes cloak-typing { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+@keyframes cloak-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cloak-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cloak-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes cloak-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+
+.animate-fade-in { animation: cloak-fade-in 0.2s ease-out; }
+.animate-slide-up { animation: cloak-slide-up 0.3s var(--ease-cloak); }
+.animate-scale-in { animation: cloak-scale-in 0.2s var(--ease-cloak); }
+.animate-pulse-dot { animation: cloak-pulse 2s ease-in-out infinite; }
+
+.typing-dot { animation: cloak-typing 1.2s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.app-shell {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgb(var(--cloak-border) / 0.5);
+  background: rgb(var(--cloak-bg) / 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: 50;
+  transition: transform 0.3s var(--ease-cloak);
+}
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+
+/* ---- Main Content ---- */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ---- Top Header ---- */
+.top-header {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--margin);
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-bg) / 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 30;
+}
+
+/* ---- Content Area ---- */
+.content-area {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+}
+
+/* ============================================================
+   SIDEBAR COMPONENTS
+   ============================================================ */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+}
+.sidebar-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--cloak-accent) / 0.3);
+  background: rgb(var(--cloak-accent) / 0.1);
+  color: rgb(var(--cloak-accent));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.sidebar-logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--cloak-text));
+}
+.sidebar-logo-lock {
+  color: rgb(var(--cloak-accent));
+  font-size: 14px;
+}
+
+.sidebar-search {
+  padding: 0 1rem 0.5rem;
+}
+.sidebar-search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.5);
+}
+.sidebar-search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: rgb(var(--cloak-text));
+  min-width: 0;
+}
+.sidebar-search-box input::placeholder { color: rgb(var(--cloak-dim)); }
+.sidebar-search-icon { color: rgb(var(--cloak-dim)); font-size: 14px; flex-shrink: 0; }
+
+.sidebar-status-card {
+  margin: 0 1rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.sidebar-status-card .label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgb(var(--cloak-muted));
+  font-family: 'JetBrains Mono', monospace;
+}
+.sidebar-status-card .value {
+  color: rgb(var(--cloak-accent));
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+  position: relative;
+}
+.status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+  animation: cloak-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--cloak-muted));
+  transition: all 0.15s ease;
+}
+.sidebar-nav-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.sidebar-nav-item.active {
+  background: rgb(var(--cloak-surface-1) / 0.7);
+  color: rgb(var(--cloak-accent));
+  font-weight: 600;
+}
+.sidebar-nav-item .nav-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.sidebar-nav-item .nav-icon { font-size: 18px; }
+.sidebar-nav-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  background: rgb(var(--cloak-surface-2) / 0.5);
+  color: rgb(var(--cloak-muted));
+}
+.sidebar-nav-item.active .nav-badge {
+  background: rgb(var(--cloak-accent) / 0.2);
+  color: rgb(var(--cloak-accent));
+}
+
+.sidebar-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgb(var(--cloak-border) / 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sidebar-browse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--cloak-text));
+  transition: background 0.15s ease;
+}
+.sidebar-browse-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0;
+}
+.sidebar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05));
+  border: 1px solid rgb(var(--cloak-accent) / 0.4);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+  position: relative;
+  flex-shrink: 0;
+}
+.sidebar-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+  border: 2px solid rgb(var(--cloak-bg));
+}
+.sidebar-profile-info { min-width: 0; flex: 1; }
+.sidebar-profile-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--cloak-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-profile-key {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgb(var(--cloak-accent));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Sidebar Top Actions ---- */
+.sidebar-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sidebar-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 16px;
+  transition: all 0.15s ease;
+}
+.sidebar-icon-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+
+/* ============================================================
+   HEADER COMPONENTS
+   ============================================================ */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.header-menu-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 18px;
+}
+.header-menu-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.header-e2ee-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgb(var(--cloak-muted));
+}
+.header-e2ee-badge .shield-icon { color: rgb(var(--cloak-accent)); font-size: 13px; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.header-ephemeral-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  color: rgb(var(--cloak-muted));
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease;
+}
+.header-ephemeral-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.header-ephemeral-btn .timer-icon { color: rgb(var(--cloak-accent)); font-size: 14px; }
+.header-action-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 18px;
+  transition: all 0.15s ease;
+}
+.header-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-accent)); }
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05));
+  border: 1px solid rgb(var(--cloak-accent) / 0.4);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+  position: relative;
+}
+.header-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+  border: 2px solid rgb(var(--cloak-bg));
+}
+
+/* ============================================================
+   CHATS LIST (MessagesView)
+   ============================================================ */
+.chats-panel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-bg) / 0.5);
+}
+.chats-panel-header {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
+}
+.chats-panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.chats-panel-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--cloak-text));
+}
+.chats-panel-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.chats-panel-new-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.chats-panel-new-btn .plus-icon { font-size: 14px; }
+
+.chats-filter-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  overflow-x: auto;
+}
+.chats-filter-tab {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--cloak-muted));
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+.chats-filter-tab:hover { color: rgb(var(--cloak-text)); }
+.chats-filter-tab.active {
+  background: rgb(var(--cloak-surface-2) / 0.7);
+  color: rgb(var(--cloak-accent));
+  font-weight: 600;
+}
+
+.chats-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+.chat-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); }
+.chat-item.active {
+  background: rgb(var(--cloak-surface-1) / 0.7);
+  border-color: rgb(var(--cloak-border) / 0.3);
+}
+.chat-item-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+}
+.chat-item-info { flex: 1; min-width: 0; }
+.chat-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-item-preview {
+  font-size: 12px;
+  color: rgb(var(--cloak-muted));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.chat-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.chat-item-time {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgb(var(--cloak-dim));
+}
+.chat-item-unread {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+}
+
+/* ============================================================
+   CHAT VIEW (ChatView)
+   ============================================================ */
+.chat-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.chat-view-header {
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--cloak-bg) / 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  flex-shrink: 0;
+}
+.chat-view-back {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 18px;
+}
+.chat-view-back:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.chat-view-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--cloak-accent) / 0.3);
+  background: rgb(var(--cloak-accent) / 0.1);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+  flex-shrink: 0;
+}
+.chat-view-info { flex: 1; min-width: 0; }
+.chat-view-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-view-status {
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 1px;
+}
+.chat-view-status.encrypted { color: rgb(var(--cloak-accent)); }
+.chat-view-status .lock-icon { font-size: 12px; }
+.chat-view-status .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: rgb(var(--cloak-accent)); display: inline-block; }
+
+.chat-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.chat-view-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 18px;
+  transition: all 0.15s ease;
+}
+.chat-view-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+
+/* ---- Messages Area ---- */
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.messages-date-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+.messages-date-divider::before,
+.messages-date-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgb(var(--cloak-border) / 0.3);
+}
+.messages-date-label {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(var(--cloak-muted));
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+}
+
+/* ---- Message Bubble ---- */
+.message-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.message-group.outgoing { justify-content: flex-end; }
+.message-group.incoming { justify-content: flex-start; }
+.message-bubble {
+  max-width: 75%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 18px;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+.message-group.outgoing .message-bubble {
+  background: rgb(var(--cloak-accent) / 0.2);
+  border-bottom-right-radius: 6px;
+  color: rgb(var(--cloak-text));
+}
+.message-group.incoming .message-bubble {
+  background: rgb(var(--cloak-surface-1) / 0.6);
+  border-bottom-left-radius: 6px;
+  color: rgb(var(--cloak-text));
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+}
+.message-bubble .reply-preview {
+  margin-bottom: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border-left: 2px solid rgb(var(--cloak-accent) / 0.6);
+  background: rgba(0,0,0,0.2);
+}
+.message-bubble .reply-preview .reply-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+}
+.message-bubble .reply-preview .reply-text {
+  font-size: 11px;
+  color: rgb(var(--cloak-muted));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  font-size: 10px;
+  color: rgb(--cloak-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.message-meta .msg-timer { color: rgb(var(--cloak-accent)); }
+.message-meta .msg-timer .flame-icon { font-size: 10px; }
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+.message-reaction {
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgba(0,0,0,0.25);
+  font-size: 11px;
+}
+.message-status-ticks {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+}
+.message-status-ticks.read { color: rgb(var(--cloak-accent)); }
+.message-status-ticks .tick-icon { font-size: 12px; }
+
+/* ---- Typing Indicator ---- */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 18px;
+  background: rgb(var(--cloak-surface-1) / 0.6);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  border-bottom-left-radius: 6px;
+}
+.typing-indicator .typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-muted));
+}
+
+/* ---- Message Input ---- */
+.message-input-area {
+  padding: 0.65rem 1rem;
+  padding-bottom: max(0.65rem, var(--safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.message-input-box {
+  border-radius: 18px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.message-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+.message-textarea {
+  flex: 1;
+  max-height: 120px;
+  min-height: 40px;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgb(var(--cloak-text));
+}
+.message-textarea::placeholder { color: rgb(var(--cloak-dim)); }
+.message-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0 0.25rem;
+}
+.msg-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 18px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.msg-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.msg-action-btn.active { color: rgb(var(--cloak-accent)); background: rgb(var(--cloak-accent) / 0.1); }
+.msg-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 18px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.msg-send-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.msg-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: cloak-fade-in 0.2s ease-out;
+}
+.modal-panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 1.5rem;
+  position: relative;
+  animation: cloak-scale-in 0.2s var(--ease-cloak);
+}
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 16px;
+}
+.modal-close:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgb(var(--cloak-text));
+  margin-bottom: 0.25rem;
+}
+.modal-subtitle {
+  font-size: 13px;
+  color: rgb(var(--cloak-muted));
+  margin-bottom: 1.25rem;
+}
+
+/* ---- Key Exchange Modal ---- */
+.key-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  margin-bottom: 1.25rem;
+}
+.key-tab {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(var(--cloak-muted));
+  text-align: center;
+  transition: all 0.15s ease;
+}
+.key-tab.active {
+  background: rgb(var(--cloak-surface-2) / 0.7);
+  color: rgb(var(--cloak-text));
+  font-weight: 600;
+}
+.key-qr-placeholder {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 1rem;
+  border-radius: 16px;
+  background: rgb(var(--cloak-surface-1));
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  color: rgb(var(--cloak-accent));
+}
+.key-hex-display {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: rgb(var(--cloak-text));
+  word-break: break-all;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+.key-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--cloak-text));
+  transition: all 0.15s ease;
+}
+.key-copy-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+
+/* ---- New Chat Modal ---- */
+.new-chat-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  font-size: 14px;
+  color: rgb(var(--cloak-text));
+  outline: none;
+  margin-bottom: 0.75rem;
+}
+.new-chat-input:focus { border-color: rgb(var(--cloak-accent) / 0.4); }
+.new-chat-input::placeholder { color: rgb(var(--cloak-dim)); }
+.new-chat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: rgb(var(--cloak-muted));
+  margin-bottom: 0.35rem;
+}
+.new-chat-scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px dashed rgb(var(--cloak-accent) / 0.3);
+  background: rgb(var(--cloak-accent) / 0.05);
+  font-size: 13px;
+  color: rgb(var(--cloak-accent));
+  transition: all 0.15s ease;
+}
+.new-chat-scan-btn:hover { background: rgb(var(--cloak-accent) / 0.1); }
+.new-chat-scan-btn .camera-icon { font-size: 18px; }
+
+/* ---- Security Modal ---- */
+.security-modal-section {
+  margin-bottom: 1.25rem;
+}
+.security-modal-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: rgb(var(--cloak-muted));
+  margin-bottom: 0.5rem;
+}
+.security-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  margin-bottom: 0.35rem;
+  font-size: 13px;
+}
+.security-modal-row .row-label { color: rgb(var(--cloak-muted)); }
+.security-modal-row .row-value { color: rgb(var(--cloak-text)); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.security-modal-row .row-value.success { color: rgb(var(--cloak-accent)); }
+
+/* ---- Settings View ---- */
+.settings-section {
+  margin-bottom: 1.5rem;
+}
+.settings-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: rgb(var(--cloak-muted));
+  margin-bottom: 0.5rem;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  margin-bottom: 0.35rem;
+}
+.settings-row .row-label { font-size: 13px; color: rgb(var(--cloak-text)); }
+.settings-row .row-desc { font-size: 11px; color: rgb(var(--cloak-muted)); margin-top: 2px; }
+.settings-row .row-value { font-size: 12px; color: rgb(var(--cloak-muted)); font-family: 'JetBrains Mono', monospace; }
+.settings-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgb(var(--cloak-surface-3) / 0.5);
+  position: relative;
+  transition: background 0.2s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.settings-toggle.active { background: rgb(var(--cloak-accent)); }
+.settings-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+}
+.settings-toggle.active::after { transform: translateX(18px); }
+
+/* ============================================================
+   CHANNELS VIEW
+   ============================================================ */
+.channels-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.channels-header {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.channels-header-left { flex: 1; min-width: 200px; }
+.channels-header-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+  margin-bottom: 0.35rem;
+}
+.channels-header-tag .pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+}
+.channels-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--cloak-text));
+}
+.channels-header-desc {
+  font-size: 13px;
+  color: rgb(var(--cloak-muted));
+  margin-top: 0.25rem;
+  max-width: 480px;
+}
+.channels-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.channels-relay-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgb(var(--cloak-muted));
+}
+.channels-relay-pill .wifi-icon { color: rgb(var(--cloak-accent)); font-size: 14px; }
+.channels-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(78, 222, 163, 0.25);
+  transition: all 0.15s ease;
+}
+.channels-create-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.channels-create-btn .plus-icon { font-size: 16px; }
+
+.channels-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.channels-list-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.channels-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.channels-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.channels-list-count {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-surface-2) / 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgb(var(--cloak-accent));
+}
+.channels-filter-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.2);
+}
+.channels-filter-tab {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--cloak-muted));
+  transition: all 0.15s ease;
+}
+.channels-filter-tab.active {
+  background: rgb(var(--cloak-surface-2) / 0.7);
+  color: rgb(var(--cloak-text));
+}
+.channel-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.channel-card:hover { background: rgb(var(--cloak-surface-1) / 0.7); }
+.channel-card.active {
+  background: rgb(var(--cloak-surface-2) / 0.5);
+  border-color: rgb(var(--cloak-accent) / 0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.channel-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.channel-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: rgb(var(--cloak-accent));
+  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.2), rgb(var(--cloak-accent) / 0.05));
+  flex-shrink: 0;
+}
+.channel-card-info { min-width: 0; }
+.channel-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.channel-card-name .lock-icon { font-size: 13px; color: rgb(var(--cloak-accent)); }
+.channel-card-meta {
+  font-size: 11px;
+  color: rgb(var(--cloak-muted));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 2px;
+}
+.channel-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.channel-card-time {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgb(var(--cloak-dim));
+}
+.channel-card-new {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent) / 0.1);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgb(var(--cloak-accent));
+}
+
+/* ---- Channel Detail Panel ---- */
+.channel-detail {
+  border-radius: 20px;
+  border: 1px solid rgb(var(--cloak-border) / 0.4);
+  background: rgb(var(--cloak-surface-1) / 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.channel-detail-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.channel-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.channel-detail-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: rgb(var(--cloak-accent));
+  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.2), rgb(var(--cloak-accent) / 0.05));
+}
+.channel-detail-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgb(var(--cloak-text));
+}
+.channel-detail-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent) / 0.15);
+  border: 1px solid rgb(var(--cloak-accent) / 0.2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+  margin-top: 2px;
+}
+.channel-detail-meta {
+  font-size: 12px;
+  color: rgb(var(--cloak-muted));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 3px;
+}
+.channel-detail-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.channel-detail-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 16px;
+  transition: all 0.15s ease;
+}
+.channel-detail-action-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+
+.channel-subscribers-bar {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgb(var(--cloak-muted));
+}
+.channel-subscribers-avatars {
+  display: flex;
+  align-items: center;
+}
+.channel-subscribers-avatars .sub-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.1));
+  border: 2px solid rgb(var(--cloak-surface-1));
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgb(var(--cloak-accent));
+  margin-left: -6px;
+}
+.channel-subscribers-avatars .sub-avatar:first-child { margin-left: 0; }
+.channel-subscribers-avatars .sub-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-surface-3) / 0.5);
+  border: 2px solid rgb(var(--cloak-surface-1));
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgb(var(--cloak-accent));
+  margin-left: -6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.channel-ephemeral-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.channel-ephemeral-tag .pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--cloak-accent));
+}
+
+.channel-broadcasts {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.broadcast-card {
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+}
+.broadcast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.broadcast-sender {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.broadcast-sender-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgb(var(--cloak-accent) / 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgb(var(--cloak-accent));
+}
+.broadcast-sender-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+}
+.broadcast-sender-sig {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgb(var(--cloak-accent));
+}
+.broadcast-hash {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgb(var(--cloak-surface-2) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgb(var(--cloak-text));
+}
+.broadcast-hash .shield-icon { color: rgb(var(--cloak-accent)); font-size: 12px; }
+.broadcast-content {
+  font-size: 14px;
+  color: rgb(var(--cloak-text));
+  line-height: 1.6;
+}
+.broadcast-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgb(var(--cloak-border) / 0.2);
+  font-size: 10px;
+  color: rgb(var(--cloak-muted));
+  font-family: 'JetBrains Mono', monospace;
+}
+.broadcast-footer .relay-info {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: rgb(var(--cloak-accent));
+}
+
+.broadcast-composer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-2) / 0.3);
+}
+.broadcast-composer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.broadcast-composer-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.broadcast-composer-title .broadcast-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
+.broadcast-composer-role {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgb(var(--cloak-muted));
+}
+.broadcast-composer-box {
+  border-radius: 14px;
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  padding: 0.5rem;
+}
+.broadcast-textarea {
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 13px;
+  color: rgb(var(--cloak-text));
+  padding: 0.35rem;
+  min-height: 60px;
+}
+.broadcast-textarea::placeholder { color: rgb(var(--cloak-dim)); }
+.broadcast-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgb(var(--cloak-border) / 0.2);
+}
+.broadcast-composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.broadcast-tool-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+.broadcast-tool-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.broadcast-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.broadcast-send-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+
+/* ---- Mesh Health Widget ---- */
+.mesh-health-card {
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+}
+.mesh-health-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.mesh-health-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+}
+.mesh-health-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+}
+.mesh-health-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgb(var(--cloak-surface-3) / 0.3);
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+.mesh-health-bar .bar-primary {
+  height: 100%;
+  background: rgb(var(--cloak-accent));
+  border-radius: 999px;
+}
+.mesh-health-bar .bar-secondary {
+  height: 100%;
+  background: rgb(var(--cloak-accent) / 0.6);
+}
+.mesh-health-bar .bar-tertiary {
+  height: 100%;
+  background: rgb(var(--cloak-border));
+}
+.mesh-health-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgb(var(--cloak-muted));
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ---- Info Cards ---- */
+.info-cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  grid-column: 1 / -1;
+}
+.info-card {
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.info-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgb(var(--cloak-accent) / 0.1);
+  color: rgb(var(--cloak-accent));
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.info-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  margin-bottom: 0.2rem;
+}
+.info-card-desc {
+  font-size: 11px;
+  color: rgb(var(--cloak-muted));
+  line-height: 1.5;
+}
+
+/* ============================================================
+   CONTEXT MENU (ChatOptionsMenu)
+   ============================================================ */
+.context-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 200px;
+  border-radius: 16px;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: cloak-scale-in 0.15s var(--ease-cloak);
+}
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  font-size: 13px;
+  color: rgb(var(--cloak-text));
+  transition: background 0.1s ease;
+  text-align: left;
+  width: 100%;
+}
+.context-menu-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); }
+.context-menu-item.danger { color: rgb(var(--cloak-danger)); }
+.context-menu-item .menu-icon { font-size: 16px; }
+.context-menu-item .menu-chevron { margin-left: auto; font-size: 14px; opacity: 0.5; }
+
+/* ============================================================
+   THEME TOGGLE
+   ============================================================ */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  color: rgb(var(--cloak-muted));
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+.theme-toggle:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+.toast {
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--cloak-text));
+  animation: cloak-slide-up 0.3s var(--ease-cloak);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.toast .toast-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
+
+/* ============================================================
+   MOBILE RESPONSIVE
+   ============================================================ */
+@media (max-width: 1024px) {
+  .channels-body {
+    grid-template-columns: 1fr;
+  }
+  .info-cards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    width: 280px;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop.show {
+    display: block;
+  }
+  .chats-panel {
+    width: 100%;
+    border-right: none;
+  }
+  .chats-panel.hidden-mobile {
+    display: none;
+  }
+  .chat-view {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgb(var(--cloak-bg));
+  }
+  .chat-view.visible {
+    display: flex;
+  }
+  .header-e2ee-badge {
+    display: none;
+  }
+  .header-ephemeral-btn span {
+    display: none;
+  }
+  .channels-header {
+    padding: 1rem;
+  }
+  .channels-body {
+    padding: 0 1rem 1rem;
+  }
+  .message-bubble {
+    max-width: 85%;
+  }
+  .top-header {
+    padding: 0 0.75rem;
+  }
+  .channels-view {
+    padding: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .channels-header-title {
+    font-size: 20px;
+  }
+  .channels-relay-pill {
+    display: none;
+  }
+  .message-input-area {
+    padding: 0.5rem 0.75rem;
+  }
+  .chat-view-header {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* ============================================================
+   EMPTY STATES
+   ============================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+.empty-state-icon {
+  font-size: 48px;
+  color: rgb(var(--cloak-dim));
+  margin-bottom: 0.75rem;
+}
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  margin-bottom: 0.25rem;
+}
+.empty-state-desc {
+  font-size: 13px;
+  color: rgb(var(--cloak-muted));
+  max-width: 300px;
+}
+
+/* ============================================================
+   MISC COMPONENTS
+   ============================================================ */
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  background: rgb(var(--cloak-surface-2) / 0.5);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  font-size: 12px;
+}
+.attachment-chip .file-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
+.attachment-chip .file-name { color: rgb(var(--cloak-text)); }
+.attachment-chip .file-size { color: rgb(var(--cloak-muted)); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.attachment-chip .remove-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 12px;
+  margin-left: auto;
+}
+.attachment-chip .remove-btn:hover { background: rgb(var(--cloak-danger) / 0.2); color: rgb(var(--cloak-danger)); }
+
+.emoji-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  padding: 0.75rem;
+  border-radius: 16px;
+  margin-bottom: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.25rem;
+}
+.emoji-picker .emoji-btn {
+  font-size: 22px;
+  padding: 0.35rem;
+  border-radius: 8px;
+  text-align: center;
+  transition: background 0.1s ease;
+}
+.emoji-picker .emoji-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  background: rgb(var(--cloak-accent) / 0.1);
+  border: 1px solid rgb(var(--cloak-accent) / 0.2);
+  font-size: 13px;
+  color: rgb(var(--cloak-text));
+}
+.selection-bar .sel-count {
+  font-weight: 600;
+  color: rgb(var(--cloak-accent));
+}
+.selection-bar .sel-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--cloak-muted));
+  font-size: 15px;
+}
+.selection-bar .sel-action:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.selection-bar .sel-close {
+  margin-left: auto;
+}
+
+/* ---- Notes View ---- */
+.notes-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.notes-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.notes-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgb(var(--cloak-text));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.notes-title .notes-icon { color: rgb(var(--cloak-accent)); font-size: 20px; }
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.note-card {
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.note-card:hover { background: rgb(var(--cloak-surface-1) / 0.7); }
+.note-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--cloak-text));
+  margin-bottom: 0.25rem;
+}
+.note-card-preview {
+  font-size: 12px;
+  color: rgb(var(--cloak-muted));
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.note-card-time {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgb(var(--cloak-dim));
+  margin-top: 0.5rem;
+}
+
+/* ---- Lock Screen ---- */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--cloak-bg));
+  padding: 2rem;
+}
+.lock-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: rgb(var(--cloak-accent) / 0.1);
+  border: 1px solid rgb(var(--cloak-accent) / 0.3);
+  display: grid;
+  place-items: center;
+  font-size: 36px;
+  color: rgb(var(--cloak-accent));
+  margin-bottom: 1.5rem;
+}
+.lock-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: rgb(var(--cloak-text));
+  margin-bottom: 0.5rem;
+}
+.lock-subtitle {
+  font-size: 14px;
+  color: rgb(var(--cloak-muted));
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.lock-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--cloak-surface-1) / 0.5);
+  font-size: 16px;
+  color: rgb(var(--cloak-text));
+  outline: none;
+  text-align: center;
+  letter-spacing: 0.2em;
+  margin-bottom: 1rem;
+}
+.lock-input:focus { border-color: rgb(var(--cloak-accent) / 0.4); }
+.lock-btn {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgb(var(--cloak-accent));
+  color: rgb(var(--cloak-bg));
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.lock-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+
+/* ---- Responsive utility ---- */
+@media (min-width: 769px) {
+  .md-hidden { display: none !important; }
+}
+@media (max-width: 768px) {
+  .mobile-hidden { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div class="app-shell" id="app">
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+  <!-- ============================================================
+       SIDEBAR
+       ============================================================ -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Logo & Top Actions -->
+    <div class="flex items-center justify-between" style="padding: 0.75rem 1rem 0.5rem;">
+      <div class="sidebar-logo" style="padding: 0;">
+        <div class="sidebar-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="sidebar-logo-text">Cloak</span>
+          <svg class="sidebar-logo-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+      </div>
+      <div class="sidebar-top-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+          <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <svg id="themeIconMoon" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="sidebar-icon-btn" title="Channels" onclick="showScreen('channels')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+        <button class="sidebar-icon-btn md-hidden" onclick="toggleSidebar()" title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="sidebar-search">
+      <div class="sidebar-search-box">
+        <svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search conversations..." />
+      </div>
+    </div>
+
+    <!-- Device Vault Card -->
+    <div class="sidebar-status-card">
+      <span class="label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Device Vault: 4 devices
+      </span>
+      <span class="value">Active</span>
+    </div>
+
+    <!-- Relay Status Card -->
+    <div class="sidebar-status-card">
+      <span class="label">
+        <span class="status-dot"></span>
+        Relay Connected
+      </span>
+      <span class="value" style="color: rgb(var(--cloak-accent));">23ms</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item active" href="#" onclick="showScreen('chats'); return false;">
+        <span class="nav-left">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chats
+        </span>
+        <span class="sidebar-nav-badge">12</span>
+      </a>
+      <a class="sidebar-nav-item" href="#" onclick="showScreen('channels'); return false;">
+        <span class="nav-left">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+          Channels
+        </span>
+        <span class="sidebar-nav-badge">6</span>
+      </a>
+      <a class="sidebar-nav-item" href="#" onclick="showScreen('contacts'); return false;">
+        <span class="nav-left">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Contacts
+        </span>
+      </a>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <a class="sidebar-browse-btn" href="#" onclick="showScreen('channels'); return false;">
+        <span class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+          Browse Channels
+        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar">C</div>
+        <div class="sidebar-profile-info">
+          <div class="sidebar-profile-name">Cipher Zero</div>
+          <div class="sidebar-profile-key">0x98f4...3a1c</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT
+       ============================================================ -->
+  <div class="main-content">
+
+    <!-- ---- Top Header ---- -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="header-menu-btn md-hidden" onclick="toggleSidebar()" aria-label="Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="header-e2ee-badge">
+          <svg class="shield-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          E2EE: DOUBLE RATCHET
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="header-ephemeral-btn" title="Ephemeral timer">
+          <svg class="timer-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Ephemeral: Off</span>
+        </button>
+        <button class="header-action-btn" title="Security Status" onclick="showModal('security')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </button>
+        <div class="header-avatar">C</div>
+      </div>
+    </header>
+
+    <!-- ---- Content Area ---- -->
+    <div class="content-area">
+
+      <!-- ============================================================
+           SCREEN: CHATS LIST
+           ============================================================ -->
+      <div id="screen-chats" class="chats-panel">
+        <div class="chats-panel-header">
+          <div class="chats-panel-title-row">
+            <h1 class="chats-panel-title">Messages</h1>
+            <button class="chats-panel-new-btn" onclick="showModal('newChat')">
+              <svg class="plus-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Session
+            </button>
+          </div>
+          <div class="chats-filter-tabs">
+            <button class="chats-filter-tab active">All Encrypted</button>
+            <button class="chats-filter-tab">Unread</button>
+            <button class="chats-filter-tab">Mesh Channels</button>
+          </div>
+        </div>
+        <div class="chats-list">
+          <div class="chat-item active" onclick="showChat('alice')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #10b98120, #10b98105); color: #10b981;">A</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Alice</div>
+              <div class="chat-item-preview">Key exchange verified. Ready for E2EE.</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">2:34 PM</span>
+              <span class="chat-item-unread">3</span>
+            </div>
+          </div>
+          <div class="chat-item" onclick="showChat('bob')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #3b82f620, #3b82f605); color: #3b82f6;">B</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Bob</div>
+              <div class="chat-item-preview">Private vault synced. 12 new messages.</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">1:15 PM</span>
+              <span class="chat-item-unread">12</span>
+            </div>
+          </div>
+          <div class="chat-item" onclick="showChat('charlie')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #f59e0b20, #f59e0b05); color: #f59e0b;">C</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Charlie</div>
+              <div class="chat-item-preview">Voice call ended · 4:32 min</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">11:48 AM</span>
+            </div>
+          </div>
+          <div class="chat-item" onclick="showChat('diana')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #8b5cf620, #8b5cf605); color: #8b5cf6;">D</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Diana</div>
+              <div class="chat-item-preview">Photo · Encrypted attachment</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">10:22 AM</span>
+              <span class="chat-item-unread">1</span>
+            </div>
+          </div>
+          <div class="chat-item" onclick="showChat('notes')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #10b98120, #10b98105); color: #10b981;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Private Notes</div>
+              <div class="chat-item-preview">Device vault · On-device only</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">Yesterday</span>
+            </div>
+          </div>
+          <div class="chat-item" onclick="showChat('eve')">
+            <div class="chat-item-avatar" style="background: linear-gradient(135deg, #ef444420, #ef444405); color: #ef4444;">E</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">Eve</div>
+              <div class="chat-item-preview">Blocked · Key mismatch detected</div>
+            </div>
+            <div class="chat-item-right">
+              <span class="chat-item-time">Yesterday</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCREEN: ACTIVE CHAT
+           ============================================================ -->
+      <div id="screen-chat" class="chat-view" style="display: none;">
+        <!-- Chat Header -->
+        <div class="chat-view-header">
+          <button class="chat-view-back md-hidden" onclick="closeChat()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="chat-view-avatar">A</div>
+          <div class="chat-view-info">
+            <div class="chat-view-name">Alice</div>
+            <div class="chat-view-status encrypted">
+              <svg class="lock-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              E2EE Encrypted
+            </div>
+          </div>
+          <div class="chat-view-actions">
+            <button class="chat-view-action-btn mobile-hidden" title="Video Call" onclick="showModal('call')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            </button>
+            <button class="chat-view-action-btn mobile-hidden" title="Voice Call" onclick="showModal('call')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </button>
+            <button class="chat-view-action-btn" title="Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="chat-view-action-btn mobile-hidden" title="Verify Key" onclick="showModal('keyExchange')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            </button>
+            <button class="chat-view-action-btn" title="More options" onclick="showContextMenu(event, 'chatOptions')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="messages-area" id="messagesArea">
+          <div class="messages-date-divider">
+            <span class="messages-date-label">Today</span>
+          </div>
+
+          <!-- Incoming message -->
+          <div class="message-group incoming">
+            <div class="message-bubble">
+              <p>Hey! Did you verify the new relay nodes? The mesh network latency dropped to 18ms.</p>
+              <div class="message-meta">
+                <time>2:30 PM</time>
+              </div>
+            </div>
+          </div>
+
+          <!-- Outgoing message -->
+          <div class="message-group outgoing">
+            <div class="message-bubble">
+              <p>Yes! The new onion routing layer is performing exceptionally well. Zero packet loss across all 6 relays.</p>
+              <div class="message-meta">
+                <time>2:31 PM</time>
+                <span class="message-status-ticks read">
+                  <svg class="tick-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 17 12 7"/><polyline points="9 12 14 17 19 9"/></svg>
+                  Read
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Incoming with reply -->
+          <div class="message-group incoming">
+            <div class="message-bubble">
+              <div class="reply-preview">
+                <div class="reply-name">You</div>
+                <div class="reply-text">Yes! The new onion routing layer is performing...</div>
+              </div>
+              <p>Excellent. I'm deploying the quantum-key channel next. The ephemeral TTL is set to 24h.</p>
+              <div class="message-meta">
+                <time>2:32 PM</time>
+              </div>
+            </div>
+          </div>
+
+          <!-- Outgoing with reactions -->
+          <div class="message-group outgoing">
+            <div class="message-bubble">
+              <p>Perfect. I'll rotate the ephemeral key after the deployment completes.</p>
+              <div class="message-reactions">
+                <span class="message-reaction">👍</span>
+                <span class="message-reaction">🔒</span>
+              </div>
+              <div class="message-meta">
+                <span class="msg-timer">
+                  <svg class="flame-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                  24h
+                </span>
+                <time>2:33 PM</time>
+                <span class="message-status-ticks read">
+                  <svg class="tick-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 17 12 7"/><polyline points="9 12 14 17 19 9"/></svg>
+                  Read
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Incoming with attachment -->
+          <div class="message-group incoming">
+            <div class="message-bubble">
+              <div class="attachment-chip" style="margin-bottom: 0.5rem;">
+                <svg class="file-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span class="file-name">node-config.json</span>
+                <span class="file-size">2.4 KB</span>
+              </div>
+              <p>Here's the updated relay configuration. All signatures verified.</p>
+              <div class="message-meta">
+                <time>2:34 PM</time>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing indicator -->
+          <div class="message-group incoming" id="typingIndicator" style="display: none;">
+            <div class="typing-indicator">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="message-input-area">
+          <div class="message-input-box cloak-glass">
+            <div class="message-input-row">
+              <textarea class="message-textarea" placeholder="Write an encrypted message..." rows="1"></textarea>
+            </div>
+            <div class="message-input-actions">
+              <button class="msg-action-btn" title="Disappearing messages">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </button>
+              <button class="msg-action-btn" title="Emoji">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              </button>
+              <button class="msg-action-btn" title="Attach file">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <button class="msg-send-btn" title="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCREEN: CHANNELS
+           ============================================================ -->
+      <div id="screen-channels" class="channels-view cloak-ambient" style="display: none;">
+        <div class="channels-header">
+          <div class="channels-header-left">
+            <div class="channels-header-tag">
+              <span class="pulse-dot animate-pulse-dot"></span>
+              Decentralized Topic Mesh
+            </div>
+            <h1 class="channels-header-title">Encrypted Channels & Broadcasts</h1>
+            <p class="channels-header-desc">Cryptographically isolated multi-party relays. Zero metadata leakage, deterministic forward secrecy, and verifiable onion routing.</p>
+          </div>
+          <div class="channels-header-actions">
+            <div class="channels-relay-pill">
+              <svg class="wifi-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              RELAYS: 6/6 SYNCED
+            </div>
+            <button class="channels-create-btn" onclick="showModal('createChannel')">
+              <svg class="plus-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create Channel
+            </button>
+          </div>
+        </div>
+
+        <div class="channels-body">
+          <!-- Left: Channel List -->
+          <div class="channels-list-col">
+            <div class="channels-list-header">
+              <span class="channels-list-title">
+                Active Channels
+                <span class="channels-list-count">6 Total</span>
+              </span>
+              <div class="channels-filter-tabs">
+                <button class="channels-filter-tab active">All</button>
+                <button class="channels-filter-tab">Broadcasts</button>
+                <button class="channels-filter-tab">Private</button>
+              </div>
+            </div>
+
+            <div class="channel-card active">
+              <div class="channel-card-left">
+                <div class="channel-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="channel-card-info">
+                  <div class="channel-card-name">
+                    #security-alerts
+                    <svg class="lock-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <div class="channel-card-meta">
+                    <span>2.4k members</span>
+                    <span>·</span>
+                    <span style="color: rgb(var(--cloak-accent));">Threat level: LOW</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-card-right">
+                <span class="channel-card-time">2m ago</span>
+                <span class="channel-card-new">NEW</span>
+              </div>
+            </div>
+
+            <div class="channel-card">
+              <div class="channel-card-left">
+                <div class="channel-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="channel-card-info">
+                  <div class="channel-card-name">
+                    #quantum-keys
+                    <svg class="lock-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <div class="channel-card-meta">
+                    <span>847 members</span>
+                    <span>·</span>
+                    <span style="color: rgb(var(--cloak-accent));">Key rotation active</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-card-right">
+                <span class="channel-card-time">15m ago</span>
+              </div>
+            </div>
+
+            <div class="channel-card">
+              <div class="channel-card-left">
+                <div class="channel-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                </div>
+                <div class="channel-card-info">
+                  <div class="channel-card-name">
+                    #mesh-nodes
+                    <svg class="lock-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <div class="channel-card-meta">
+                    <span>1.2k members</span>
+                    <span>·</span>
+                    <span style="color: rgb(var(--cloak-accent));">6/6 nodes synced</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-card-right">
+                <span class="channel-card-time">1h ago</span>
+              </div>
+            </div>
+
+            <!-- Mesh Health Widget -->
+            <div class="mesh-health-card">
+              <div class="mesh-health-header">
+                <span class="mesh-health-title">Decentralized Mesh Health</span>
+                <span class="mesh-health-value">99.98%</span>
+              </div>
+              <div class="mesh-health-bar">
+                <div class="bar-primary" style="width: 88%"></div>
+                <div class="bar-secondary" style="width: 10%"></div>
+                <div class="bar-tertiary" style="width: 2%"></div>
+              </div>
+              <div class="mesh-health-footer">
+                <span>Primary Ingress: 18 Nodes</span>
+                <span>Relay Latency: <18ms</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Channel Detail -->
+          <div class="channel-detail">
+            <div class="channel-detail-header">
+              <div class="channel-detail-title-row">
+                <div class="channel-detail-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <div class="channel-detail-name">#security-alerts</div>
+                  <div class="channel-detail-verified">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    VERIFIED BROADCAST
+                  </div>
+                  <div class="channel-detail-meta">
+                    <span>2,418 members</span>
+                    <span>·</span>
+                    <span>Broadcast-only thread</span>
+                    <span>·</span>
+                    <span style="color: rgb(var(--cloak-accent)); font-family: 'JetBrains Mono', monospace;">ID: 0x7f3a...e91b</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-detail-actions">
+                <button class="channel-detail-action-btn" title="Key Export">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </button>
+                <button class="channel-detail-action-btn" title="Notifications">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="channel-subscribers-bar">
+              <div class="flex items-center gap-2">
+                <span class="text-label">Subscribers:</span>
+                <div class="channel-subscribers-avatars">
+                  <div class="sub-avatar">A</div>
+                  <div class="sub-avatar">B</div>
+                  <div class="sub-avatar">C</div>
+                  <div class="sub-avatar">D</div>
+                  <div class="sub-more">+1.4k</div>
+                </div>
+              </div>
+              <div class="channel-ephemeral-tag">
+                <span class="pulse-dot animate-pulse-dot"></span>
+                Ephemeral Cache: <strong style="color: rgb(var(--cloak-text)); font-family: 'JetBrains Mono', monospace;">23h Remaining</strong>
+              </div>
+            </div>
+
+            <div class="channel-broadcasts">
+              <div class="messages-date-divider" style="padding: 0.25rem 0;">
+                <span class="messages-date-label">Today · Authenticated Broadcast</span>
+              </div>
+
+              <div class="broadcast-card">
+                <div class="broadcast-header">
+                  <div class="broadcast-sender">
+                    <div class="broadcast-sender-avatar">S</div>
+                    <div>
+                      <div class="broadcast-sender-name">SecOps Dispatch Node #01</div>
+                      <div class="broadcast-sender-sig">SIG: ed25519::7f82c...991a</div>
+                    </div>
+                  </div>
+                  <div class="broadcast-hash">
+                    <svg class="shield-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    SHA-256 MATCH
+                  </div>
+                </div>
+                <div class="broadcast-content">
+                  All relay nodes have been updated to protocol v3.2.1. Quantum-key exchange is now live across all 6 mesh nodes. Ephemeral TTL remains at 24h. No anomalies detected in the onion routing layer.
+                </div>
+                <div class="broadcast-footer">
+                  <span class="relay-info">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 17 12 7"/><polyline points="9 12 14 17 19 9"/></svg>
+                    Relayed by 16 nodes
+                  </span>
+                  <span>Payload: 312 Bytes · 14:32:07 UTC</span>
+                </div>
+              </div>
+
+              <div class="broadcast-card">
+                <div class="broadcast-header">
+                  <div class="broadcast-sender">
+                    <div class="broadcast-sender-avatar">N</div>
+                    <div>
+                      <div class="broadcast-sender-name">Node #03</div>
+                      <div class="broadcast-sender-sig">SIG: ed25519::a41b2...77e3</div>
+                    </div>
+                  </div>
+                  <div class="broadcast-hash">
+                    <svg class="shield-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    SHA-256 MATCH
+                  </div>
+                </div>
+                <div class="broadcast-content">
+                  Scheduled key rotation for #quantum-keys channel will complete at 18:00 UTC. All subscribers should verify the new Ed25519 fingerprint before the transition window closes.
+                </div>
+                <div class="broadcast-footer">
+                  <span class="relay-info">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 17 12 7"/><polyline points="9 12 14 17 19 9"/></svg>
+                    Relayed by 12 nodes
+                  </span>
+                  <span>Payload: 198 Bytes · 14:45:22 UTC</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="broadcast-composer">
+              <div class="broadcast-composer-header">
+                <span class="broadcast-composer-title">
+                  <svg class="broadcast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+                  Broadcast Dispatcher
+                </span>
+                <span class="broadcast-composer-role">ROLE: NODE OPERATOR</span>
+              </div>
+              <div class="broadcast-composer-box">
+                <textarea class="broadcast-textarea" placeholder="Compose verifiable encrypted broadcast advisory..." rows="3"></textarea>
+                <div class="broadcast-composer-actions">
+                  <div class="broadcast-composer-tools">
+                    <button class="broadcast-tool-btn" title="GPG Signature">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </button>
+                    <button class="broadcast-tool-btn" title="Hash Digest">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+                    </button>
+                    <button class="broadcast-tool-btn" title="Burn on Read">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </button>
+                    <span style="width: 1px; height: 20px; background: rgb(var(--cloak-border) / 0.3); margin: 0 0.25rem;"></span>
+                    <span class="text-label" style="color: rgb(var(--cloak-accent));">GPG AUTO-SIGN ACTIVE</span>
+                  </div>
+                  <button class="broadcast-send-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Broadcast to Channel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Cards -->
+          <div class="info-cards-row">
+            <div class="info-card">
+              <div class="info-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              </div>
+              <div>
+                <div class="info-card-title">Double-Ratchet Mesh</div>
+                <p class="info-card-desc">Every broadcast header carries ratcheted root ephemeral keys. Compromised nodes cannot reconstruct prior advisory streams.</p>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <div class="info-card-title">Zero Metadata Registry</div>
+                <p class="info-card-desc">Subscriber IP mappings are never recorded on disk. Relays retain ephemeral routing tables strictly in volatile RAM.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCREEN: CONTACTS (placeholder)
+           ============================================================ -->
+      <div id="screen-contacts" class="flex flex-col items-center justify-center flex-1" style="display: none;">
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="empty-state-title">Contacts</div>
+          <p class="empty-state-desc">Manage your verified contacts and public keys. QR scanning available on mobile.</p>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- ============================================================
+     MODALS
+     ============================================================ -->
+
+<!-- Key Exchange Modal -->
+<div id="modal-keyExchange" class="modal-backdrop" style="display: none;" onclick="hideModal('keyExchange')">
+  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="hideModal('keyExchange')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2 class="modal-title">Key Exchange</h2>
+    <p class="modal-subtitle">Verify your identity and add contacts securely</p>
+    <div class="key-tabs">
+      <button class="key-tab active">My Public Key</button>
+      <button class="key-tab">Add Contact</button>
+    </div>
+    <div class="key-qr-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+    </div>
+    <div class="key-hex-display">0x98f4a2b1c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234a1c</div>
+    <button class="key-copy-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy Public Key
+    </button>
+  </div>
+</div>
+
+<!-- New Chat Modal -->
+<div id="modal-newChat" class="modal-backdrop" style="display: none;" onclick="hideModal('newChat')">
+  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="hideModal('newChat')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2 class="modal-title">New Encrypted Session</h2>
+    <p class="modal-subtitle">Start a secure conversation with key verification</p>
+    <div class="new-chat-label">Contact Name (required)</div>
+    <input class="new-chat-input" type="text" placeholder="Enter contact name..." />
+    <div class="new-chat-label">Public Key</div>
+    <input class="new-chat-input" type="text" placeholder="Paste raw public key (hex)..." />
+    <button class="new-chat-scan-btn" style="margin-top: 0.75rem;">
+      <svg class="camera-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Scan QR Code with Camera
+    </button>
+  </div>
+</div>
+
+<!-- Security Modal -->
+<div id="modal-security" class="modal-backdrop" style="display: none;" onclick="hideModal('security')">
+  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="hideModal('security')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2 class="modal-title">Cryptographic Health</h2>
+    <p class="modal-subtitle">Safety numbers, key status, and relay information</p>
+    <div class="security-modal-section">
+      <div class="security-modal-section-title">Encryption Status</div>
+      <div class="security-modal-row">
+        <span class="row-label">Protocol</span>
+        <span class="row-value success">X25519 + XSalsa20-Poly1305</span>
+      </div>
+      <div class="security-modal-row">
+        <span class="row-label">Ratchet</span>
+        <span class="row-value success">Double Ratchet Active</span>
+      </div>
+      <div class="security-modal-row">
+        <span class="row-label">Forward Secrecy</span>
+        <span class="row-value success">Enabled</span>
+      </div>
+      <div class="security-modal-row">
+        <span class="row-label">Key Verification</span>
+        <span class="row-value success">Verified</span>
+      </div>
+    </div>
+    <div class="security-modal-section">
+      <div class="security-modal-section-title">Safety Numbers</div>
+      <div class="key-hex-display" style="text-align: left;">0x98f4 a2b1 c3d4 e5f6 7890 abcd ef12 3456 7890 abcd ef12 3456 7890 abcd ef12 34a1c</div>
+    </div>
+    <div class="security-modal-section">
+      <div class="security-modal-section-title">Relay Nodes</div>
+      <div class="security-modal-row">
+        <span class="row-label">Active Relays</span>
+        <span class="row-value">6/6 Online</span>
+      </div>
+      <div class="security-modal-row">
+        <span class="row-label">Latency</span>
+        <span class="row-value">23ms average</span>
+      </div>
+      <div class="security-modal-row">
+        <span class="row-label">Onion Routing</span>
+        <span class="row-value success">3 layers active</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Call Modal -->
+<div id="modal-call" class="modal-backdrop" style="display: none;" onclick="hideModal('call')">
+  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()" style="max-width: 360px; text-align: center;">
+    <button class="modal-close" onclick="hideModal('call')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05)); border: 1px solid rgb(var(--cloak-accent) / 0.4); display: grid; place-items: center; margin: 0 auto 1rem; font-size: 24px; font-weight: 700; color: rgb(var(--cloak-accent));">A</div>
+    <h2 class="modal-title">Alice</h2>
+    <p class="modal-subtitle">End-to-end encrypted call</p>
+    <div class="flex items-center justify-center gap-3" style="margin-top: 1.5rem;">
+      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-surface-2) / 0.5);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </button>
+      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-danger) / 0.2); color: rgb(var(--cloak-danger));" onclick="hideModal('call')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/></svg>
+      </button>
+      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-surface-2) / 0.5);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Channel Modal -->
+<div id="modal-createChannel" class="modal-backdrop" style="display: none;" onclick="hideModal('createChannel')">
+  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="hideModal('createChannel')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2 class="modal-title">Create New Channel</h2>
+    <p class="modal-subtitle">Deploy an isolated topic feed across peer relays</p>
+    <div class="new-chat-label">Channel Handle</div>
+    <div class="flex items-center gap-2" style="padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid rgb(var(--cloak-border) / 0.3); background: rgb(var(--cloak-surface-1) / 0.5); margin-bottom: 0.75rem;">
+      <span style="color: rgb(var(--cloak-accent)); font-family: 'JetBrains Mono', monospace;">#</span>
+      <input class="new-chat-input" style="border: none; background: none; padding: 0; margin: 0;" type="text" placeholder="e.g. quantum-keys-updates" />
+    </div>
+    <div class="new-chat-label">Channel Type</div>
+    <div class="grid grid-cols-2 gap-2" style="margin-bottom: 0.75rem;">
+      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--cloak-surface-1) / 0.5); border-color: rgb(var(--cloak-accent) / 0.4);">
+        <div class="flex items-center justify-between mb-1">
+          <span style="font-size: 13px; font-weight: 600;">Broadcast</span>
+          <input type="radio" name="ch-type" checked style="accent-color: rgb(var(--cloak-accent));" />
+        </div>
+        <span style="font-size: 11px; color: rgb(var(--cloak-muted));">Only approved signers can dispatch.</span>
+      </label>
+      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--cloak-surface-1) / 0.3); border-color: rgb(var(--cloak-border) / 0.3);">
+        <div class="flex items-center justify-between mb-1">
+          <span style="font-size: 13px; font-weight: 600;">Multi-Peer</span>
+          <input type="radio" name="ch-type" style="accent-color: rgb(var(--cloak-accent));" />
+        </div>
+        <span style="font-size: 11px; color: rgb(var(--cloak-muted));">All verified keyholders can converse.</span>
+      </label>
+    </div>
+    <div class="flex items-center justify-between p-3 rounded-xl border" style="background: rgb(var(--cloak-surface-1) / 0.3); border-color: rgb(var(--cloak-border) / 0.3); margin-bottom: 1rem;">
+      <div class="flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(var(--cloak-accent));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div>
+          <div style="font-size: 13px; font-weight: 600;">Default Ephemeral TTL</div>
+          <div style="font-size: 11px; color: rgb(var(--cloak-muted));">Purge messages after 24 hours</div>
+        </div>
+      </div>
+      <input type="checkbox" checked style="accent-color: rgb(var(--cloak-accent)); width: 18px; height: 18px;" />
+    </div>
+    <div class="flex items-center justify-end gap-2">
+      <button onclick="hideModal('createChannel')" class="px-4 py-2 rounded-full text-sm font-medium" style="color: rgb(var(--cloak-muted));">Cancel</button>
+      <button class="px-5 py-2 rounded-full text-sm font-semibold" style="background: rgb(var(--cloak-accent)); color: rgb(var(--cloak-bg));">Generate Channel Keypair</button>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div id="contextMenu" class="context-menu cloak-glass-strong" style="display: none; top: 60px; right: 16px;">
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    Contact info
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Search
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Select messages
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Mute notifications
+    <svg class="menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Disappearing messages
+    <svg class="menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    Chat theme
+    <svg class="menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Add to favourites
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export chat
+  </button>
+  <button class="context-menu-item">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Close chat
+  </button>
+  <button class="context-menu-item danger">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    Block contact
+  </button>
+  <button class="context-menu-item danger">
+    <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    Delete chat
+  </button>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ---- Theme Toggle ----
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') !== 'light';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('cloak-theme', isDark ? 'light' : 'dark');
+
+  const sun = document.getElementById('themeIconSun');
+  const moon = document.getElementById('themeIconMoon');
+  if (sun && moon) {
+    sun.classList.toggle('hidden', !isDark);
+    moon.classList.toggle('hidden', isDark);
+  }
+}
+
+// Restore theme
+(function() {
+  const saved = localStorage.getItem('cloak-theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    const sun = document.getElementById('themeIconSun');
+    const moon = document.getElementById('themeIconMoon');
+    if (sun && moon) {
+      sun.classList.toggle('hidden', saved !== 'dark');
+      moon.classList.toggle('hidden', saved === 'dark');
+    }
+  }
+})();
+
+// ---- Sidebar Toggle (Mobile) ----
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  if (sidebar && backdrop) {
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('show');
+  }
+}
+
+// ---- Screen Navigation ----
+function showScreen(name) {
+  // Hide all screens
+  document.querySelectorAll('.chats-panel, .chat-view, .channels-view').forEach(el => {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('#screen-contacts').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Show target
+  if (name === 'chats') {
+    document.getElementById('screen-chats').style.display = 'flex';
+  } else if (name === 'channels') {
+    document.getElementById('screen-channels').style.display = 'flex';
+  } else if (name === 'contacts') {
+    document.getElementById('screen-contacts').style.display = 'flex';
+  }
+
+  // Close sidebar on mobile
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  if (sidebar && backdrop && window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('show');
+  }
+}
+
+// ---- Chat Navigation ----
+function showChat(contact) {
+  document.getElementById('screen-chats').style.display = 'none';
+  const chatView = document.getElementById('screen-chat');
+  chatView.style.display = 'flex';
+  chatView.classList.add('visible');
+
+  // Update chat header based on contact
+  const names = { alice: 'Alice', bob: 'Bob', charlie: 'Charlie', diana: 'Diana', notes: 'Private Notes', eve: 'Eve' };
+  const name = names[contact] || contact;
+  const nameEl = chatView.querySelector('.chat-view-name');
+  if (nameEl) nameEl.textContent = name;
+
+  const avatarEl = chatView.querySelector('.chat-view-avatar');
+  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+
+  // Show/hide notes-specific elements
+  const isNotes = contact === 'notes';
+  const statusEl = chatView.querySelector('.chat-view-status');
+  if (statusEl) {
+    if (isNotes) {
+      statusEl.innerHTML = '<svg class="lock-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> Device Vault';
+    } else {
+      statusEl.innerHTML = '<svg class="lock-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> E2EE Encrypted';
+    }
+  }
+}
+
+function closeChat() {
+  document.getElementById('screen-chat').style.display = 'none';
+  document.getElementById('screen-chats').style.display = 'flex';
+}
+
+// ---- Modal Management ----
+function showModal(name) {
+  const modal = document.getElementById('modal-' + name);
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideModal(name) {
+  const modal = document.getElementById('modal-' + name);
+  if (modal) modal.style.display = 'none';
+}
+
+// ---- Context Menu ----
+function showContextMenu(event, type) {
+  event.preventDefault();
+  event.stopPropagation();
+  const menu = document.getElementById('contextMenu');
+  if (menu) {
+    menu.style.display = 'flex';
+    // Position near click
+    const x = Math.min(event.clientX, window.innerWidth - 220);
+    const y = Math.min(event.clientY, window.innerHeight - 400);
+    menu.style.top = y + 'px';
+    menu.style.right = 'auto';
+    menu.style.left = x + 'px';
+  }
+}
+
+// Close context menu on click outside
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('contextMenu');
+  if (menu && menu.style.display === 'flex' && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// ---- Toast Notifications ----
+function showToast(message) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast cloak-glass-strong';
+  toast.innerHTML = '<svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> ' + message;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// ---- Message Input Auto-resize ----
+document.addEventListener('input', function(e) {
+  if (e.target.classList.contains('message-textarea') || e.target.classList.contains('broadcast-textarea')) {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+});
+
+// ---- Enter to send ----
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    const ta = e.target;
+    if (ta.classList.contains('message-textarea')) {
+      e.preventDefault();
+      ta.style.height = 'auto';
+      // Simulate send
+      showToast('Message sent — encrypted and relayed');
+      ta.value = '';
+    }
+  }
+});
+
+// ---- Initialize ----
+document.addEventListener('DOMContentLoaded', function() {
+  // Show chats by default
+  showScreen('chats');
+});
+</script>
+
+</body>
+</html>
