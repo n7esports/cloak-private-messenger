@@ -130,6 +130,11 @@ export interface ChatState {
   callModalState: "closed" | "outgoing" | "incoming" | "active";
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  setEphemeralTtl: (ttl: number | null) => void;
+  setGlobalSearch: (search: string) => void;
+  setVaultModalOpen: (open: boolean) => void;
+  setSecurityModalOpen: (open: boolean) => void;
+  setCallModalState: (state: "closed" | "outgoing" | "incoming" | "active") => void;
   // Phase 2: New actions
   addChannel: (channel: Channel) => void;
   removeDevice: (deviceId: string) => void;
@@ -686,6 +691,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   callModalState: "closed",
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  setEphemeralTtl: (ttl) => set({ ephemeralTtl: ttl }),
+  setGlobalSearch: (search) => set({ globalSearch: search }),
+  setVaultModalOpen: (open) => set({ vaultModalOpen: open }),
+  setSecurityModalOpen: (open) => set({ securityModalOpen: open }),
+  setCallModalState: (state) => set({ callModalState: state }),
 
   // Phase 2: New actions
   addChannel: (channel) =>
