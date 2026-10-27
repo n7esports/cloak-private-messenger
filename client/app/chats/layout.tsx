@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Sidebar } from "../../components/Sidebar";
 import { Header } from "../../components/Header";
+import { VaultModal } from "../../components/modals/VaultModal";
+import { SecurityModal } from "../../components/modals/SecurityModal";
+import { CallModal } from "../../components/modals/CallModal";
 
 export default function ChatsLayout({
   children,
@@ -36,6 +39,11 @@ export default function ChatsLayout({
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
+
+      {/* Global modals */}
+      <VaultModal />
+      <SecurityModal />
+      <CallModal />
     </div>
   );
 }
