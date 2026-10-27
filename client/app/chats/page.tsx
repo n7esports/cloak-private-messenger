@@ -1,40 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { MessagesView } from "../../components/MessagesView";
 import { ChatView } from "../../components/ChatView";
 import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
-import { startChatServices } from "../../store/useChatStore";
 
 type MobileView = "list" | "chat";
 
 export default function ChatsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const isUnlocked = useVaultStore((state) => state.isUnlocked);
   const activeChatId = useChatStore((state) => state.activeChatId);
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const [mobileView, setMobileView] = useState<MobileView>("list");
-
-  const currentChatParam = searchParams.get("chat");
-  const currentChatParamRef = useRef(currentChatParam);
-  currentChatParamRef.current = currentChatParam;
-
-  useEffect(() => {
-    if (!isUnlocked) {
-      router.replace("/lock");
-    } else {
-      startChatServices();
-    }
-  }, [isUnlocked, router]);
-
-  useEffect(() => {
-    if (activeChatId && currentChatParamRef.current !== activeChatId) {
-      router.replace(`/chats?chat=${activeChatId}`, { scroll: false });
-    }
-  }, [activeChatId, router]);
 
   if (!isUnlocked) return null;
 
