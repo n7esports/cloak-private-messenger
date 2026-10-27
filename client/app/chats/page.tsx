@@ -28,12 +28,6 @@ export default function ChatsPage() {
   }, [isUnlocked, router]);
 
   useEffect(() => {
-    if (currentChatParam && currentChatParam !== activeChatId) {
-      setActiveChat(currentChatParam);
-    }
-  }, [currentChatParam, activeChatId, setActiveChat]);
-
-  useEffect(() => {
     if (activeChatId && currentChatParam !== activeChatId) {
       router.replace(`/chats?chat=${activeChatId}`, { scroll: false });
     }

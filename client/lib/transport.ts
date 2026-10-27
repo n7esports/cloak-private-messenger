@@ -324,7 +324,11 @@ export class TransportManager {
     void this.connect();
   };
 
+  private lastConnectionStatus: RelayStatus | null = null;
+
   private setConnectionStatus(status: RelayStatus): void {
+    if (this.lastConnectionStatus === status) return;
+    this.lastConnectionStatus = status;
     this.callbacks?.onConnectionChange(status);
   }
 
