@@ -8,8 +8,10 @@ import { startChatServices } from "../../store/useChatStore";
 
 export default function LockPage() {
   const router = useRouter();
-  const { isUnlocked, sessionRestored, sessionRestoreError, unlockVault } =
-    useVaultStore();
+  const isUnlocked = useVaultStore((state) => state.isUnlocked);
+  const sessionRestored = useVaultStore((state) => state.sessionRestored);
+  const sessionRestoreError = useVaultStore((state) => state.sessionRestoreError);
+  const unlockVault = useVaultStore((state) => state.unlockVault);
 
   useEffect(() => {
     if (sessionRestored && isUnlocked) {
