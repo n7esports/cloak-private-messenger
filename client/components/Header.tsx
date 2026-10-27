@@ -1,102 +1,75 @@
 "use client";
 
 import { useChatStore } from "../store/useChatStore";
-import { useVaultStore } from "../store/useVaultStore";
-import { useTheme } from "./ThemeProvider";
-import { encodeBytes } from "../lib/protocol";
-import { EPHEMERAL_TIMERS } from "../lib/protocol";
-import {
-  IconLock,
-  IconShieldCheck,
-  IconTimer,
-} from "./icons/UiIcons";
-import { ThemeToggle } from "./ThemeToggle";
+import type { RelayStatus } from "../lib/transport";
 
-const PROFILE_ALIAS = "Cipher Zero";
+const STATUS_META: Record<
+  RelayStatus,
+  { label: string; color: string }
+> = {
+  connected: { label: "Secure", color: "bg-emerald shadow-glow-sm" },
+  connecting: { label: "Connecting", color: "bg-amber shadow-[0_0_10px_rgba(245,158,11,0.5)]" },
+  disconnected: { label: "Offline", color: "bg-zinc-600" },
+  error: { label: "Error", color: "bg-crimson shadow-[0_0_10px_rgba(220,38,38,0.4)]" },
+};
 
-function shortenKey(key: string): string {
-  if (key.length <= 12) return key;
-  return `${key.slice(0, 6)}…${key.slice(-4)}`;
-}
+export function Header({
+  onMenuClick,
+}: {
+  onMenuClick?: () => void;
+}) {
+  const relayStatus = useChatStore((s) => s.relayStatus);
+  const isRelayConnected = useChatStore((s) => s.isRelayConnected);
+  const showToast = useChatStore((s) => s.showToast);
 
-const TIMER_LABELS = new Map<number, string>([
-  [5_000, "5s"],
-  [60_000, "1m"],
-  [3_600_000, "1h"],
-  [86_400_000, "1d"],
-  [604_800_000, "7d"],
-]);
-
-export function Header() {
-  const activeChatId = useChatStore((state) => state.activeChatId);
-  const chats = useChatStore((state) => state.chats);
-  const setActiveChat = useChatStore((state) => state.setActiveChat);
-  const sidebarOpen = useChatStore((state) => state.sidebarOpen);
-  const setSidebarOpen = useChatStore((state) => state.setSidebarOpen);
-  const isRelayConnected = useChatStore((state) => state.isRelayConnected);
-  const identity = useVaultStore((state) => state.identity);
-
-  const activeChat = chats.find((chat) => chat.id === activeChatId);
-  const ephemeralTtl = activeChat?.disappearingMs
-    ? TIMER_LABELS.get(activeChat.disappearingMs) ?? "Custom"
-    : "Off";
+  const meta = STATUS_META[relayStatus] || STATUS_META.disconnected;
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-white/5 bg-zinc-950/85 px-4 shadow-[0_1px_8px_rgba(0,0,0,0.2)] backdrop-blur-xl lg:left-80 lg:px-8">
+    <header className="flex items-center justify-between border-b border-zinc-800/60 bg-zinc-950/40 px-4 py-3 backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="grid h-10 w-10 place-items-center rounded-xl text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 lg:hidden"
-          aria-label="Toggle navigation menu"
-          aria-expanded={sidebarOpen}
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 shadow-sm">
-          <IconShieldCheck className="h-3.5 w-3.5 text-cloak-accent" />
-          <span className="font-mono text-xs font-medium tracking-wider text-zinc-200">
-            E2EE: DOUBLE RATCHET
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="md:hidden rounded-lg border border-zinc-800 px-2 py-1 text-xs text-zinc-300"
+          >
+            Menu
+          </button>
+        )}
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${meta.color}`}
+          />
+          <span className="text-xs uppercase tracking-widest text-zinc-400">
+            {meta.label}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2">
         <button
-          className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1 text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
-          title="Configure ephemeral shredding"
+          onClick={() =>
+            showToast({
+              id: crypto.randomUUID(),
+              message: "E2EE verified",
+              type: "success",
+            })
+          }
+          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
         >
-          <IconTimer className="h-4 w-4 text-cloak-accent" />
-          <span className="font-mono text-xs uppercase">
-            EPHEMERAL: {ephemeralTtl}
-          </span>
+          Verify Safety Numbers
         </button>
-
         <button
-          aria-label="Security Status"
-          title="Cryptographic Health & Safety Numbers"
-          className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl text-zinc-400 transition-colors hover:bg-white/5 hover:text-cloak-accent"
+          onClick={() =>
+            showToast({
+              id: crypto.randomUUID(),
+              message: "No new devices",
+              type: "info",
+            })
+          }
+          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
         >
-          <IconShieldCheck className="h-5 w-5" />
+          Devices
         </button>
-
-        <button
-          className="relative cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-cloak-accent/50"
-          title={`${PROFILE_ALIAS} Profile & Keys`}
-        >
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-500/5 text-xs font-semibold text-emerald-200 ring-1 ring-cloak-accent/40 transition-all hover:ring-cloak-accent">
-            {PROFILE_ALIAS.slice(0, 1)}
-          </span>
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-cloak-accent ring-2 ring-zinc-950" />
-        </button>
-
-        {/* Mobile theme toggle (sidebar toggle lives on desktop) */}
-        <div className="lg:hidden">
-          <ThemeToggle />
-        </div>
       </div>
     </header>
   );

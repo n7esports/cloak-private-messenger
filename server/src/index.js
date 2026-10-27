@@ -346,7 +346,7 @@ function processRelayRequest(request, respond, socket = null) {
       respond({ status: "error", message: "Queue not found or full", id: request.id });
       return true;
     }
-    pending.push(request.payload);
+    pending.push({ payload: request.payload, createdAt: Date.now() });
     respond({ status: "ok", action: "push", queueId: request.queueId, id: request.id });
     return true;
   }
@@ -356,11 +356,12 @@ function processRelayRequest(request, respond, socket = null) {
       respond({ status: "error", message: "Invalid queue ID", id: request.id });
       return true;
     }
-    const messages = queues.get(request.queueId);
-    if (!messages) {
+    const pending = queues.get(request.queueId);
+    if (!pending) {
       respond({ status: "error", message: "Queue not found", id: request.id });
       return true;
     }
+    const messages = pending.map((entry) => entry.payload);
     queues.delete(request.queueId);
     respond({ status: "ok", action: "pull", queueId: request.queueId, messages, id: request.id });
     return true;
@@ -378,6 +379,15 @@ function pruneExpiredMessages() {
     removeQueuedBytes(expired);
     if (kept.length === 0) routes.delete(route);
     else if (kept.length !== pending.length) routes.set(route, kept);
+  }
+}
+
+function pruneExpiredQueues() {
+  const cutoff = Date.now() - MESSAGE_TTL_MS;
+  for (const [queueId, pending] of queues) {
+    const kept = pending.filter((entry) => entry.createdAt > cutoff);
+    if (kept.length === 0) queues.delete(queueId);
+    else if (kept.length !== pending.length) queues.set(queueId, kept);
   }
 }
 
@@ -559,6 +569,8 @@ wss.on("connection", (socket, request) => {
   });
   socket.on("close", () => {
     clearInterval(pingTimer);
+    if (socket._cloakClosed) return;
+    socket._cloakClosed = true;
     liveConnections -= 1;
     for (const route of connectedRoutes) {
       const connected = subscribers.get(route);
@@ -568,11 +580,14 @@ wss.on("connection", (socket, request) => {
   });
   socket.on("error", () => {
     clearInterval(pingTimer);
+    if (socket._cloakClosed) return;
+    socket._cloakClosed = true;
     liveConnections -= 1;
   });
 });
 
 setInterval(pruneExpiredMessages, 60_000).unref();
+setInterval(pruneExpiredQueues, 60_000).unref();
 
 export {
   validPublicKey,

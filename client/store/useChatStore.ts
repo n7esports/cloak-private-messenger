@@ -195,6 +195,24 @@ const ephemeralExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const TYPING_THROTTLE_MS = 2_500;
 const TYPING_EXPIRY_MS = 6_000;
 
+// Per-chat async mutex: serialize ratchet operations so concurrent sends/
+// receives on the same chat cannot read the same chain key and overwrite
+// each other's counters.
+const chatLocks = new Map<string, Promise<unknown>>();
+
+async function withChatLock<T>(chatId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = chatLocks.get(chatId) ?? Promise.resolve();
+  const next = previous.then(fn, () => fn());
+  chatLocks.set(chatId, next);
+  try {
+    return (await next) as Promise<T>;
+  } finally {
+    if (chatLocks.get(chatId) === next) {
+      chatLocks.delete(chatId);
+    }
+  }
+}
+
 // M5: client-side message deduplication. The relay dedups by id, but two
 // deliveries of the same packet can still arrive before the first one has been
 // persisted to IndexedDB, and the relay is not the only path messages travel.
@@ -816,293 +834,301 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return chat;
   },
 
-  sendMessage: async (content, type = "text", ephemeralTimer, attachment, replyTo) => {
-    const { identity, vaultKey } = getVaultMaterial();
+  sendMessage: async (...args) => {
+    const content = args[0];
+    const type = args[1] ?? "text";
+    const ephemeralTimer = args[2];
+    const attachment = args[3];
+    const replyTo = args[4];
     const chatId = get().activeChatId;
     if (!chatId) throw new Error("Select a conversation before sending a message.");
-    const chat = get().chats.find((entry) => entry.id === chatId);
-    if (!chat) throw new Error("The active conversation could not be found.");
-    if (chat.kind === "system") {
-      throw new Error("The Welcome Guide is a read-only system conversation.");
-    }
-    if (!content.trim() && !attachment) {
-      throw new Error("A message cannot be empty.");
-    }
-
-    const timestamp = Date.now();
-    const id = crypto.randomUUID();
-    const base: ChatMessage = {
-      id,
-      chatId,
-      senderPubKey: encodeBytes(identity.signingPublicKey),
-      content,
-      type,
-      status: chat.kind === "notes" ? "read" : "queued",
-      timestamp,
-      outgoing: true,
-      ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
-      ...(attachment === undefined ? {} : { attachment }),
-      ...(replyTo === undefined ? {} : { replyTo }),
-    };
-
-    if (chat.kind === "notes") {
-      await saveEncryptedMessage(base, vaultKey);
-      const notePlaintext = toPlaintext({
-        content,
-        type,
-        ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
-        ...(attachment === undefined ? {} : { attachment }),
-        ...(replyTo === undefined ? {} : { replyTo }),
-      });
-      try {
-        const encrypted = await encryptVaultPayload(notePlaintext, vaultKey);
-        await database.notes.put({
-          id,
-          ciphertext: encrypted.ciphertext,
-          nonce: encrypted.nonce,
-          updatedAt: timestamp,
-        });
-      } finally {
-        notePlaintext.fill(0);
+    return withChatLock(chatId, async () => {
+      const { identity, vaultKey } = getVaultMaterial();
+      const chat = get().chats.find((entry) => entry.id === chatId);
+      if (!chat) throw new Error("The active conversation could not be found.");
+      if (chat.kind === "system") {
+        throw new Error("The Welcome Guide is a read-only system conversation.");
       }
-    } else {
-      const recipientPublicKey = decodeBytes(chat.recipientPubKey);
-      let session = await getRatchetSession(
+      if (!content.trim() && !attachment) {
+        throw new Error("A message cannot be empty.");
+      }
+
+      const timestamp = Date.now();
+      const id = crypto.randomUUID();
+      const base: ChatMessage = {
+        id,
         chatId,
-        identity,
-        recipientPublicKey,
-        vaultKey,
-      );
-      const rotated = await rotateSessionKey(session, "send");
-      session = rotated.session;
-      const payload: InnerPayload = {
-        type,
+        senderPubKey: encodeBytes(identity.signingPublicKey),
         content,
+        type,
+        status: chat.kind === "notes" ? "read" : "queued",
+        timestamp,
+        outgoing: true,
         ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
         ...(attachment === undefined ? {} : { attachment }),
         ...(replyTo === undefined ? {} : { replyTo }),
       };
-      try {
-        const envelope = await buildEnvelope(
-          payload,
-          recipientPublicKey,
-          rotated.messageKey,
-          timestamp,
-          rotated.session.sendCounter - 1,
-        );
-        const packet = await signEnvelope(envelope, identity, id);
-        await saveRatchetSession(chatId, session, vaultKey);
-        await saveEncryptedMessage(base, vaultKey);
-        const updatedChat = { ...chat, updatedAt: timestamp };
-        await saveEncryptedChat(updatedChat, vaultKey);
-        set((state) => ({
-          chats: replaceChat(state.chats, updatedChat),
-          messagesMap: {
-            ...state.messagesMap,
-            [chatId]: [...(state.messagesMap[chatId] ?? []), base],
-          },
-        }));
-        scheduleMessageExpiry(base);
-        await transportManager.enqueue(packet);
-        if (chat.kind === "direct") {
-          void buildTypingSignal("stop", identity, recipientPublicKey)
-            .then((signal) => transportManager.sendTyping(signal))
-            .catch(() => {});
-        }
-      } finally {
-        rotated.messageKey.fill(0);
-        session.sendChainKey.fill(0);
-      }
-      return base;
-    }
 
-    await saveEncryptedChat({ ...chat, updatedAt: timestamp }, vaultKey);
-    set((state) => ({
-      chats: replaceChat(state.chats, { ...chat, updatedAt: timestamp }),
-      messagesMap: {
-        ...state.messagesMap,
-        [chatId]: [...(state.messagesMap[chatId] ?? []), base],
-      },
-    }));
-    scheduleMessageExpiry(base);
-    return base;
+      if (chat.kind === "notes") {
+        await saveEncryptedMessage(base, vaultKey);
+        const notePlaintext = toPlaintext({
+          content,
+          type,
+          ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
+          ...(attachment === undefined ? {} : { attachment }),
+          ...(replyTo === undefined ? {} : { replyTo }),
+        });
+        try {
+          const encrypted = await encryptVaultPayload(notePlaintext, vaultKey);
+          await database.notes.put({
+            id,
+            ciphertext: encrypted.ciphertext,
+            nonce: encrypted.nonce,
+            updatedAt: timestamp,
+          });
+        } finally {
+          notePlaintext.fill(0);
+        }
+      } else {
+        const recipientPublicKey = decodeBytes(chat.recipientPubKey);
+        let session = await getRatchetSession(
+          chatId,
+          identity,
+          recipientPublicKey,
+          vaultKey,
+        );
+        const rotated = await rotateSessionKey(session, "send");
+        session = rotated.session;
+        const payload: InnerPayload = {
+          type,
+          content,
+          ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
+          ...(attachment === undefined ? {} : { attachment }),
+          ...(replyTo === undefined ? {} : { replyTo }),
+        };
+        try {
+          const envelope = await buildEnvelope(
+            payload,
+            recipientPublicKey,
+            rotated.messageKey,
+            timestamp,
+            rotated.session.sendCounter - 1,
+          );
+          const packet = await signEnvelope(envelope, identity, id);
+          await saveRatchetSession(chatId, session, vaultKey);
+          await saveEncryptedMessage(base, vaultKey);
+          const updatedChat = { ...chat, updatedAt: timestamp };
+          await saveEncryptedChat(updatedChat, vaultKey);
+          set((state) => ({
+            chats: replaceChat(state.chats, updatedChat),
+            messagesMap: {
+              ...state.messagesMap,
+              [chatId]: [...(state.messagesMap[chatId] ?? []), base],
+            },
+          }));
+          scheduleMessageExpiry(base);
+          await transportManager.enqueue(packet);
+          if (chat.kind === "direct") {
+            void buildTypingSignal("stop", identity, recipientPublicKey)
+              .then((signal) => transportManager.sendTyping(signal))
+              .catch(() => {});
+          }
+        } finally {
+          rotated.messageKey.fill(0);
+          session.sendChainKey.fill(0);
+        }
+        return base;
+      }
+
+      await saveEncryptedChat({ ...chat, updatedAt: timestamp }, vaultKey);
+      set((state) => ({
+        chats: replaceChat(state.chats, { ...chat, updatedAt: timestamp }),
+        messagesMap: {
+          ...state.messagesMap,
+          [chatId]: [...(state.messagesMap[chatId] ?? []), base],
+        },
+      }));
+      scheduleMessageExpiry(base);
+      return base;
+    });
   },
 
   receiveMessage: async (packet) => {
-    const { identity, vaultKey } = getVaultMaterial();
-    if (!(await verifySignedEnvelope(packet))) {
-      throw new Error("Incoming message signature is invalid.");
-    }
-    // M5: drop a message we have already ingested this session.
-    if (!markMessageSeen(packet.id)) {
-      const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
-      try {
-        await transportManager.publishReceipt(
-          packet.id,
-          "delivered",
-          encodeBytes(senderEncryptionKey),
-          identity,
-        );
-      } catch {
-        // Acknowledgement is best-effort for already-seen messages.
-      }
-      return;
-    }
     const senderEncryptionKey = decodeBytes(packet.senderEncryptionPubKey);
     const senderKey = encodeBytes(senderEncryptionKey);
-    // P7: reject a replayed or clock-skewed envelope. The timestamp is part
-    // of the signed payload, so it is authenticated. A generous 24h window
-    // tolerates a device with a bad clock while bounding replay.
-    const MAX_SKEW_MS = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    if (
-      !Number.isSafeInteger(packet.envelope.timestamp) ||
-      packet.envelope.timestamp < now - MAX_SKEW_MS ||
-      packet.envelope.timestamp > now + MAX_SKEW_MS
-    ) {
-      return;
-    }
-    // P7: check the already-persisted store BEFORE mutating any state, so a
-    // replay cannot create a phantom contact or advance a ratchet.
-    const alreadyPersisted = await database.messages.get(packet.id);
-    if (alreadyPersisted) {
-      await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
-      return;
-    }
-    // Silently drop anything from a blocked contact, but still acknowledge it
-    // so the sender's delivery state does not hang.
-    const blockedChat = get().chats.find(
-      (entry) => entry.kind === "direct" && entry.recipientPubKey === senderKey,
-    );
-    if (blockedChat?.blocked) {
+    return withChatLock(senderKey, async () => {
+      const { identity, vaultKey } = getVaultMaterial();
+      if (!(await verifySignedEnvelope(packet))) {
+        throw new Error("Incoming message signature is invalid.");
+      }
+      // M5: drop a message we have already ingested this session.
+      if (!markMessageSeen(packet.id)) {
+        try {
+          await transportManager.publishReceipt(
+            packet.id,
+            "delivered",
+            senderKey,
+            identity,
+          );
+        } catch {
+          // Acknowledgement is best-effort for already-seen messages.
+        }
+        return;
+      }
+      // P7: reject a replayed or clock-skewed envelope. The timestamp is part
+      // of the signed payload, so it is authenticated. A generous 24h window
+      // tolerates a device with a bad clock while bounding replay.
+      const MAX_SKEW_MS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      if (
+        !Number.isSafeInteger(packet.envelope.timestamp) ||
+        packet.envelope.timestamp < now - MAX_SKEW_MS ||
+        packet.envelope.timestamp > now + MAX_SKEW_MS
+      ) {
+        return;
+      }
+      // P7: check the already-persisted store BEFORE mutating any state, so a
+      // replay cannot create a phantom contact or advance a ratchet.
+      const alreadyPersisted = await database.messages.get(packet.id);
+      if (alreadyPersisted) {
+        await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
+        return;
+      }
+      // Silently drop anything from a blocked contact, but still acknowledge it
+      // so the sender's delivery state does not hang.
+      const blockedChat = get().chats.find(
+        (entry) => entry.kind === "direct" && entry.recipientPubKey === senderKey,
+      );
+      if (blockedChat?.blocked) {
+        try {
+          await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
+        } catch {
+          // Acknowledgement is best-effort for dropped messages.
+        }
+        return;
+      }
+      let chat = get().chats.find(
+        (entry) =>
+          entry.kind === "direct" && entry.recipientPubKey === senderKey,
+      );
+      if (!chat) {
+        // P12: do NOT auto-create a chat or write a ratchet session for an
+        // unsolicited sender. Park the message for explicit user acceptance so
+        // a hostile peer cannot populate the sidebar or grow IndexedDB.
+        if (
+          !get().pendingRequests.some(
+            (request) => request.senderEncryptionPubKey === senderKey,
+          )
+        ) {
+          set((state) => ({
+            pendingRequests: [
+              ...state.pendingRequests,
+              {
+                senderEncryptionPubKey: senderKey,
+                senderPubKey: packet.senderPubKey,
+                packet,
+                receivedAt: Date.now(),
+              },
+            ],
+          }));
+        }
+        return;
+      }
+      // P6: bind the sender's signing identity to this contact. The signature
+      // only proves validity for whatever signing key the packet claims; that
+      // key must be the one we recorded for this contact, or anyone holding the
+      // contact's encryption key could inject messages under an arbitrary key.
+      if (chat.peerSigningPubKey && chat.peerSigningPubKey !== packet.senderPubKey) {
+        return;
+      }
+      let session = await getRatchetSession(
+        chat.id,
+        identity,
+        senderEncryptionKey,
+        vaultKey,
+      );
+      // P8 + P5: only advance and persist the receive ratchet AFTER the
+      // envelope decrypts, and derive-and-skip over a gap so a single dropped
+      // message cannot permanently desync the conversation.
+      const skipped = new Map(session.skippedKeys ?? []);
+      let messageKey: Uint8Array;
+      let advancedSession: RatchetSession;
+      try {
+        const result = await deriveAndSkipReceiveKey(
+          session,
+          packet.envelope.counter,
+          skipped,
+        );
+        messageKey = result.messageKey;
+        advancedSession = result.session;
+      } catch {
+        // Counter out of tolerated range — drop rather than desync.
+        return;
+      }
+      let payload: InnerPayload;
+      try {
+        payload = await openEnvelope(
+          packet.envelope,
+          identity,
+          messageKey,
+        );
+      } finally {
+        messageKey.fill(0);
+      }
+      session = advancedSession;
+      await saveRatchetSession(chat.id, session, vaultKey);
+      session.receiveChainKey.fill(0);
+      const incoming: ChatMessage = {
+        id: packet.id,
+        chatId: chat.id,
+        senderPubKey: packet.senderPubKey,
+        content: payload.content,
+        type: payload.type,
+        status: get().activeChatId === chat.id ? "read" : "delivered",
+        timestamp: packet.envelope.timestamp,
+        outgoing: false,
+        ...(payload.ephemeralTimer === undefined
+          ? {}
+          : { ephemeralTimer: payload.ephemeralTimer }),
+        ...(payload.attachment === undefined
+          ? {}
+          : { attachment: payload.attachment }),
+        ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
+      };
+      await saveEncryptedMessage(incoming, vaultKey);
+      const isActive = get().activeChatId === chat.id;
+      const updatedChat: ChatSummary = {
+        ...chat,
+        updatedAt: incoming.timestamp,
+        unreadCount: isActive ? 0 : chat.unreadCount + 1,
+        // P6: record the peer's signing key on first contact so subsequent
+        // messages are bound to this identity.
+        peerSigningPubKey: chat.peerSigningPubKey ?? packet.senderPubKey,
+      };
+      await saveEncryptedChat(updatedChat, vaultKey);
+      set((state) => ({
+        chats: replaceChat(state.chats, updatedChat),
+        messagesMap: {
+          ...state.messagesMap,
+          [chat.id]: [...(state.messagesMap[chat.id] ?? []), incoming],
+        },
+      }));
+      scheduleMessageExpiry(incoming);
+      if (!isActive) {
+        notifyIncoming(updatedChat);
+      }
       try {
         await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
-      } catch {
-        // Acknowledgement is best-effort for dropped messages.
+        if (isActive) {
+          await transportManager.publishReceipt(packet.id, "read", senderKey, identity);
+        }
+      } catch (error) {
+        set({
+          transportError:
+            error instanceof Error ? error.message : "Could not acknowledge incoming message.",
+        });
       }
-      return;
-    }
-    let chat = get().chats.find(
-      (entry) =>
-        entry.kind === "direct" && entry.recipientPubKey === senderKey,
-    );
-    if (!chat) {
-      // P12: do NOT auto-create a chat or write a ratchet session for an
-      // unsolicited sender. Park the message for explicit user acceptance so
-      // a hostile peer cannot populate the sidebar or grow IndexedDB.
-      if (
-        !get().pendingRequests.some(
-          (request) => request.senderEncryptionPubKey === senderKey,
-        )
-      ) {
-        set((state) => ({
-          pendingRequests: [
-            ...state.pendingRequests,
-            {
-              senderEncryptionPubKey: senderKey,
-              senderPubKey: packet.senderPubKey,
-              packet,
-              receivedAt: Date.now(),
-            },
-          ],
-        }));
-      }
-      return;
-    }
-    // P6: bind the sender's signing identity to this contact. The signature
-    // only proves validity for whatever signing key the packet claims; that
-    // key must be the one we recorded for this contact, or anyone holding the
-    // contact's encryption key could inject messages under an arbitrary key.
-    if (chat.peerSigningPubKey && chat.peerSigningPubKey !== packet.senderPubKey) {
-      return;
-    }
-    let session = await getRatchetSession(
-      chat.id,
-      identity,
-      senderEncryptionKey,
-      vaultKey,
-    );
-    // P8 + P5: only advance and persist the receive ratchet AFTER the
-    // envelope decrypts, and derive-and-skip over a gap so a single dropped
-    // message cannot permanently desync the conversation.
-    const skipped = new Map(session.skippedKeys ?? []);
-    let messageKey: Uint8Array;
-    let advancedSession: RatchetSession;
-    try {
-      const result = await deriveAndSkipReceiveKey(
-        session,
-        packet.envelope.counter,
-        skipped,
-      );
-      messageKey = result.messageKey;
-      advancedSession = result.session;
-    } catch {
-      // Counter out of tolerated range — drop rather than desync.
-      return;
-    }
-    let payload: InnerPayload;
-    try {
-      payload = await openEnvelope(
-        packet.envelope,
-        identity,
-        messageKey,
-      );
-    } finally {
-      messageKey.fill(0);
-    }
-    session = advancedSession;
-    await saveRatchetSession(chat.id, session, vaultKey);
-    session.receiveChainKey.fill(0);
-    const incoming: ChatMessage = {
-      id: packet.id,
-      chatId: chat.id,
-      senderPubKey: packet.senderPubKey,
-      content: payload.content,
-      type: payload.type,
-      status: get().activeChatId === chat.id ? "read" : "delivered",
-      timestamp: packet.envelope.timestamp,
-      outgoing: false,
-      ...(payload.ephemeralTimer === undefined
-        ? {}
-        : { ephemeralTimer: payload.ephemeralTimer }),
-      ...(payload.attachment === undefined
-        ? {}
-        : { attachment: payload.attachment }),
-      ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
-    };
-    await saveEncryptedMessage(incoming, vaultKey);
-    const isActive = get().activeChatId === chat.id;
-    const updatedChat: ChatSummary = {
-      ...chat,
-      updatedAt: incoming.timestamp,
-      unreadCount: isActive ? 0 : chat.unreadCount + 1,
-      // P6: record the peer's signing key on first contact so subsequent
-      // messages are bound to this identity.
-      peerSigningPubKey: chat.peerSigningPubKey ?? packet.senderPubKey,
-    };
-    await saveEncryptedChat(updatedChat, vaultKey);
-    set((state) => ({
-      chats: replaceChat(state.chats, updatedChat),
-      messagesMap: {
-        ...state.messagesMap,
-        [chat.id]: [...(state.messagesMap[chat.id] ?? []), incoming],
-      },
-    }));
-    scheduleMessageExpiry(incoming);
-    if (!isActive) {
-      notifyIncoming(updatedChat);
-    }
-    try {
-      await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
-      if (isActive) {
-        await transportManager.publishReceipt(packet.id, "read", senderKey, identity);
-      }
-    } catch (error) {
-      set({
-        transportError:
-          error instanceof Error ? error.message : "Could not acknowledge incoming message.",
-      });
-    }
+    });
   },
 
   markAsRead: async (chatId) => {

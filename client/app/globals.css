@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-obsidian: #09090b;
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-100: #f4f4f5;
+  --color-crimson: #dc2626;
+  --color-violet: #7c3aed;
+  --color-emerald: #10b981;
+}
+
+@layer base {
+  body {
+    @apply bg-obsidian text-zinc-100 antialiased;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply backdrop-blur-md bg-zinc-900/60 border border-zinc-800/50;
+  }
+  .glass-surface {
+    @apply backdrop-blur-sm bg-zinc-900/40 border border-zinc-800/40;
+  }
+  .accent-node {
+    @apply bg-gradient-to-br from-crimson to-violet shadow-[0_0_18px_rgba(220,38,38,0.25)];
+  }
+  .status-online {
+    @apply bg-emerald shadow-[0_0_10px_rgba(16,185,129,0.5)];
+  }
+}
