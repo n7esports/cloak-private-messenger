@@ -1,11 +1,11 @@
 "use client";
 
-// React #185 hotfix: no router/searchParams sync in this component.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessagesView } from "../../components/MessagesView";
 import { ChatView } from "../../components/ChatView";
 import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
+import { startChatServices } from "../../store/useChatStore";
 
 type MobileView = "list" | "chat";
 
@@ -14,6 +14,14 @@ export default function ChatsPage() {
   const activeChatId = useChatStore((state) => state.activeChatId);
   const setActiveChat = useChatStore((state) => state.setActiveChat);
   const [mobileView, setMobileView] = useState<MobileView>("list");
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (isUnlocked && !startedRef.current) {
+      startedRef.current = true;
+      startChatServices();
+    }
+  }, [isUnlocked]);
 
   if (!isUnlocked) return null;
 
