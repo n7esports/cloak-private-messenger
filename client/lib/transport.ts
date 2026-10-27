@@ -52,6 +52,9 @@ const MAX_CACHED_CHANNELS = 64;
 // this many failures it is dropped from the outbox so stale envelopes do not
 // accumulate indefinitely; the caller is still notified via onError.
 const MAX_QUEUE_ATTEMPTS = 10;
+// Give up after this many reconnect attempts so a permanently misconfigured
+// client (for example missing Supabase env vars) does not loop forever.
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 export function getInboxChannelName(publicKey: string): string {
   const keyBytes = decodeBytes(publicKey);
@@ -340,6 +343,9 @@ export class TransportManager {
     }
     if (this.inboxChannel) return Promise.resolve();
     if (this.connectPromise) return this.connectPromise;
+    if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      return Promise.resolve();
+    }
 
     this.setConnectionStatus("connecting");
     let trackedAttempt: Promise<void>;
@@ -572,7 +578,8 @@ export class TransportManager {
     if (
       this.stopped ||
       this.reconnectTimer ||
-      (typeof navigator !== "undefined" && !navigator.onLine)
+      (typeof navigator !== "undefined" && !navigator.onLine) ||
+      this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS
     ) {
       return;
     }

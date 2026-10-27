@@ -17,8 +17,7 @@ export default function ChatsPage() {
   const { activeChatId, setActiveChat } = useChatStore();
   const [mobileView, setMobileView] = useState<MobileView>("list");
 
-  const activeChatIdRef = useRef(activeChatId);
-  activeChatIdRef.current = activeChatId;
+  const currentChatParam = searchParams.get("chat");
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -29,24 +28,16 @@ export default function ChatsPage() {
   }, [isUnlocked, router]);
 
   useEffect(() => {
-    const chatParam = searchParams.get("chat");
-    if (chatParam && chatParam !== activeChatIdRef.current) {
-      setActiveChat(chatParam);
+    if (currentChatParam && currentChatParam !== activeChatId) {
+      setActiveChat(currentChatParam);
     }
-  }, [searchParams.toString(), setActiveChat]);
+  }, [currentChatParam, activeChatId, setActiveChat]);
 
   useEffect(() => {
-    const chatParam = searchParams.get("chat");
-    if (chatParam !== activeChatId) {
-      const params = new URLSearchParams(searchParams.toString());
-      if (activeChatId) {
-        params.set("chat", activeChatId);
-      } else {
-        params.delete("chat");
-      }
-      router.replace(`/chats?${params.toString()}`, { scroll: false });
+    if (activeChatId && currentChatParam !== activeChatId) {
+      router.replace(`/chats?chat=${activeChatId}`, { scroll: false });
     }
-  }, [activeChatId, router, searchParams.toString()]);
+  }, [activeChatId, currentChatParam, router]);
 
   if (!isUnlocked) return null;
 
