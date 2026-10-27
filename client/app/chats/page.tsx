@@ -1,23 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MessagesView } from "../../components/MessagesView";
 import { ChatView } from "../../components/ChatView";
-import { ChannelsView } from "../../components/ChannelsView";
-import { SettingsView } from "../../components/SettingsView";
 import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
 import { startChatServices } from "../../store/useChatStore";
 
-type View = "chats" | "channels" | "settings";
+type MobileView = "list" | "chat";
 
 export default function ChatsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isUnlocked } = useVaultStore();
   const { activeChatId, setActiveChat } = useChatStore();
-  const [view, setView] = useState<View>("chats");
-  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [mobileView, setMobileView] = useState<MobileView>("list");
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -27,22 +25,36 @@ export default function ChatsPage() {
     }
   }, [isUnlocked, router]);
 
-  if (!isUnlocked) return null;
+  useEffect(() => {
+    const chatParam = searchParams.get("chat");
+    if (chatParam && chatParam !== activeChatId) {
+      setActiveChat(chatParam);
+    }
+  }, [searchParams, activeChatId, setActiveChat]);
 
-  if (view === "channels") {
-    return <ChannelsView />;
-  }
-  if (view === "settings") {
-    return <SettingsView />;
-  }
+  useEffect(() => {
+    const chatParam = searchParams.get("chat");
+    if (chatParam !== activeChatId) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (activeChatId) {
+        params.set("chat", activeChatId);
+      } else {
+        params.delete("chat");
+      }
+      router.replace(`/chats?${params.toString()}`, { scroll: false });
+    }
+  }, [activeChatId, router, searchParams]);
+
+  if (!isUnlocked) return null;
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="hidden md:flex md:w-80 lg:w-96 flex-col">
         <MessagesView
           activeChatId={activeChatId}
-          onSelectChat={(id) => setActiveChat(id)}
-          onNavigateToChannels={() => setView("channels")}
+          onSelectChat={(id) => {
+            setActiveChat(id);
+          }}
         />
       </div>
 
@@ -55,7 +67,6 @@ export default function ChatsPage() {
                 setActiveChat(id);
                 setMobileView("chat");
               }}
-              onNavigateToChannels={() => setView("channels")}
             />
           </div>
         ) : (

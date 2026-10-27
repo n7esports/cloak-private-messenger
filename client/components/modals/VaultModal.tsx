@@ -75,7 +75,21 @@ export function VaultModal() {
           </button>
         </div>
 
-        <div className="mt-6 border-t border-zinc-800/60 pt-4">
+        <div className="mt-3">
+          <button
+            onClick={() => {
+              lockVault();
+              setVaultModalOpen(false);
+              setPassphrase("");
+              setError(null);
+            }}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+          >
+            Lock Vault
+          </button>
+        </div>
+
+        <div className="mt-4 border-t border-zinc-800/60 pt-4">
           <p className="text-xs uppercase tracking-widest text-zinc-500">
             Danger zone
           </p>

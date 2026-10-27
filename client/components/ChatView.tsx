@@ -16,6 +16,8 @@ export function ChatView({
   const chats = useChatStore((s) => s.chats);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const showToast = useChatStore((s) => s.showToast);
+  const setSecurityModalOpen = useChatStore((s) => s.setSecurityModalOpen);
+  const setCallModalState = useChatStore((s) => s.setCallModalState);
   const [content, setContent] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -73,16 +75,16 @@ export function ChatView({
           </p>
         </div>
         <button
-          onClick={() =>
-            showToast({
-              id: crypto.randomUUID(),
-              message: "Safety numbers verified",
-              type: "success",
-            })
-          }
+          onClick={() => setSecurityModalOpen(true)}
           className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
         >
           Verify
+        </button>
+        <button
+          onClick={() => setCallModalState("outgoing")}
+          className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+        >
+          Call
         </button>
       </header>
 

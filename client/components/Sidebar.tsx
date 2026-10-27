@@ -2,11 +2,11 @@
 
 import { useChatStore } from "../store/useChatStore";
 import type { Channel } from "../types";
+import Link from "next/link";
 
 const NAV_ITEMS = [
   { label: "Chats", href: "/chats", icon: "chat" },
   { label: "Channels", href: "/chats/channels", icon: "tv" },
-  { label: "Contacts", href: "/chats/contacts", icon: "people" },
   { label: "Settings", href: "/chats/settings", icon: "settings" },
 ] as const;
 
@@ -23,6 +23,7 @@ export function Sidebar({
   const removeDevice = useChatStore((s) => s.removeDevice);
   const devices = useChatStore((s) => s.devices);
   const panicShred = useChatStore((s) => s.panicShred);
+  const setVaultModalOpen = useChatStore((s) => s.setVaultModalOpen);
   const showToast = useChatStore((s) => s.showToast);
 
   const unreadTotal = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
@@ -47,26 +48,17 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="px-2 py-2">
         {NAV_ITEMS.map((item) => (
-          <a
+          <Link
             key={item.href}
             href={item.href}
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate?.();
-              // Phase 6 will wire routing; for now just toast
-              showToast({
-                id: crypto.randomUUID(),
-                message: `Navigate to ${item.label}`,
-                type: "info",
-              });
-            }}
+            onClick={onNavigate}
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900/60 hover:text-zinc-100"
           >
             <span className="material-symbols-outlined text-base text-zinc-400">
               {item.icon}
             </span>
             {item.label}
-          </a>
+          </Link>
         ))}
       </nav>
 
@@ -190,15 +182,14 @@ export function Sidebar({
       {/* Panic */}
       <div className="mt-auto px-4 py-4">
         <button
-          onClick={() => {
-            panicShred();
-            showToast({
-              id: crypto.randomUUID(),
-              message: "Vault shredded",
-              type: "warning",
-            });
-          }}
-          className="w-full rounded-xl border border-crimson/40 bg-crimson/10 px-3 py-2 text-xs font-medium text-crimson transition hover:bg-crimson/20"
+          onClick={() => setVaultModalOpen(true)}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+        >
+          Lock Vault
+        </button>
+        <button
+          onClick={() => setVaultModalOpen(true)}
+          className="mt-2 w-full rounded-xl border border-crimson/40 bg-crimson/10 px-3 py-2 text-xs font-medium text-crimson transition hover:bg-crimson/20"
         >
           Panic Shred
         </button>

@@ -20,7 +20,8 @@ export function Header({
 }) {
   const relayStatus = useChatStore((s) => s.relayStatus);
   const isRelayConnected = useChatStore((s) => s.isRelayConnected);
-  const showToast = useChatStore((s) => s.showToast);
+  const setSecurityModalOpen = useChatStore((s) => s.setSecurityModalOpen);
+  const setCallModalState = useChatStore((s) => s.setCallModalState);
 
   const meta = STATUS_META[relayStatus] || STATUS_META.disconnected;
 
@@ -47,28 +48,16 @@ export function Header({
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() =>
-            showToast({
-              id: crypto.randomUUID(),
-              message: "E2EE verified",
-              type: "success",
-            })
-          }
+          onClick={() => setSecurityModalOpen(true)}
           className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
         >
           Verify Safety Numbers
         </button>
         <button
-          onClick={() =>
-            showToast({
-              id: crypto.randomUUID(),
-              message: "No new devices",
-              type: "info",
-            })
-          }
+          onClick={() => setCallModalState("outgoing")}
           className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
         >
-          Devices
+          Call
         </button>
       </div>
     </header>
