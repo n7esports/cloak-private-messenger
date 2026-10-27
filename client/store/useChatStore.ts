@@ -778,12 +778,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
-  setRelayStatus: (relayStatus) =>
+  setRelayStatus: (relayStatus) => {
+    const current = get();
+    if (current.relayStatus === relayStatus && current.isRelayConnected === (relayStatus === "connected")) return;
     set({
       relayStatus,
       isRelayConnected: relayStatus === "connected",
       ...(relayStatus === "connected" ? { transportError: null } : {}),
-    }),
+    });
+  },
 
   setActiveChat: (chatId) => {
     if (get().activeChatId === chatId) return;

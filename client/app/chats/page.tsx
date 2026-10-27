@@ -13,8 +13,9 @@ type MobileView = "list" | "chat";
 export default function ChatsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isUnlocked } = useVaultStore();
-  const { activeChatId, setActiveChat } = useChatStore();
+  const isUnlocked = useVaultStore((state) => state.isUnlocked);
+  const activeChatId = useChatStore((state) => state.activeChatId);
+  const setActiveChat = useChatStore((state) => state.setActiveChat);
   const [mobileView, setMobileView] = useState<MobileView>("list");
 
   const currentChatParam = searchParams.get("chat");
