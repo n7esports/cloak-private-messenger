@@ -1,5 +1,6 @@
 "use client";
 
+// React #185 hotfix: no router/searchParams sync in this component.
 import { useState } from "react";
 import { MessagesView } from "../../components/MessagesView";
 import { ChatView } from "../../components/ChatView";
