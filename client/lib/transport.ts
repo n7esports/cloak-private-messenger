@@ -461,6 +461,8 @@ export class TransportManager {
           return;
         }
 
+        // A newer channel (or stop) supersedes this one — ignore the stale
+        // callback to prevent rapid state oscillations that trigger React Error #185.
         if (this.inboxChannel !== channel || this.stopped) return;
         const cause =
           error ??
