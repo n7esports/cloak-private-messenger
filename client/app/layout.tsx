@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Crimson_Pro, Inter } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
+import "../styles/tokens.css";
 
 export const metadata: Metadata = {
   title: "Cloak",
@@ -9,20 +9,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#0a0e16",
 };
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const crimsonPro = Crimson_Pro({
-  subsets: ["latin"],
-  variable: "--font-crimson",
-  display: "swap",
-});
 
 export default function RootLayout({
   children,
@@ -31,9 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body
-        className={`${inter.variable} ${crimsonPro.variable} bg-obsidian text-zinc-100 antialiased`}
-      >
+      <body className="font-sans bg-surface text-on-surface antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

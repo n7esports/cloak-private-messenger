@@ -128,15 +128,11 @@ export interface ChatState {
   globalSearch: string;
   // Modal state
   vaultModalOpen: boolean;
-  securityModalOpen: boolean;
-  callModalState: "closed" | "outgoing" | "incoming" | "active";
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   setEphemeralTtl: (ttl: number | null) => void;
   setGlobalSearch: (search: string) => void;
   setVaultModalOpen: (open: boolean) => void;
-  setSecurityModalOpen: (open: boolean) => void;
-  setCallModalState: (state: "closed" | "outgoing" | "incoming" | "active") => void;
   // Phase 2: New actions
   addChannel: (channel: Channel) => void;
   removeDevice: (deviceId: string) => void;
@@ -695,15 +691,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   globalSearch: "",
   // Modal state
   vaultModalOpen: false,
-  securityModalOpen: false,
-  callModalState: "closed",
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setEphemeralTtl: (ttl) => set({ ephemeralTtl: ttl }),
   setGlobalSearch: (search) => set({ globalSearch: search }),
   setVaultModalOpen: (open) => set({ vaultModalOpen: open }),
-  setSecurityModalOpen: (open) => set({ securityModalOpen: open }),
-  setCallModalState: (state) => set({ callModalState: state }),
 
   // Phase 2: New actions
   addChannel: (channel) =>
@@ -729,8 +721,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       toasts: [],
       globalSearch: "",
       vaultModalOpen: false,
-      securityModalOpen: false,
-      callModalState: "closed",
       sidebarOpen: false,
       typingByChat: {},
       peerTypingByChat: {},
@@ -1567,8 +1557,6 @@ registerMemoryKeyCleanup(() => {
     toasts: [],
     globalSearch: "",
     vaultModalOpen: false,
-    securityModalOpen: false,
-    callModalState: "closed",
     sidebarOpen: false,
   });
 });

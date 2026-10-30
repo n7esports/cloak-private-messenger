@@ -21,6 +21,13 @@ let nativeTokenWaiter;
 const NOTIFICATION_TITLE = 'Cloak';
 const PRIVATE_NOTIFICATION_BODY = 'New encrypted message received';
 
+// List-Unsubscribe header helper: returns the RFC 8058 header value for any
+// outbound email. No email routes exist yet in this client, so this is a
+// utility — wire it into the email transport when that layer is built.
+export function listUnsubscribeHeader(method = 'POST', email = 'unsubscribe@cloak') {
+  return `<${method}:${email}>`;
+}
+
 function getWebPushKey() {
   return process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
 }

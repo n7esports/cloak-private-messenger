@@ -2,36 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/geist/Geist-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/geist/Geist-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/geist/Geist-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/geist/Geist-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-Bold.ttf") format("truetype");
+}
+
 :root {
-  --color-obsidian: #09090b;
-  --color-zinc-950: #09090b;
-  --color-zinc-900: #18181b;
-  --color-zinc-800: #27272a;
-  --color-zinc-700: #3f3f46;
-  --color-zinc-400: #a1a1aa;
-  --color-zinc-100: #f4f4f5;
-  --color-crimson: #dc2626;
-  --color-violet: #7c3aed;
-  --color-emerald: #10b981;
+  --font-geist: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @layer base {
   body {
-    @apply bg-obsidian text-zinc-100 antialiased;
+    @apply bg-surface text-on-surface antialiased;
   }
 }
 
 @layer components {
-  .glass-panel {
-    @apply backdrop-blur-md bg-zinc-900/60 border border-zinc-800/50;
-  }
-  .glass-surface {
-    @apply backdrop-blur-sm bg-zinc-900/40 border border-zinc-800/40;
-  }
-  .accent-node {
-    @apply bg-gradient-to-br from-crimson to-violet shadow-[0_0_18px_rgba(220,38,38,0.25)];
-  }
-  .status-online {
-    @apply bg-emerald shadow-[0_0_10px_rgba(16,185,129,0.5)];
+  .glass-layer {
+    background: rgba(15, 19, 28, 0.80);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 }

@@ -64,7 +64,6 @@ export interface Channel {
   id: string;
   name: string;
   icon: string;
-  gradient: string;
   memberCount: number;
   unread?: boolean;
   category: 'broadcast' | 'private' | 'public';

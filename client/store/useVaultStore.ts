@@ -74,6 +74,27 @@ function setLockFlag(locked: boolean): void {
   }
 }
 
+async function logVaultCreationConsent(): Promise<void> {
+  // Best-effort: log TOS/privacy consent at vault creation (sign-up equivalent).
+  // Failures are silently swallowed by the caller.
+  try {
+    const payload = {
+      kind: "tos" as const,
+      version: "1.0",
+      granted: true,
+      ts: new Date().toISOString(),
+    };
+    await fetch("/api/consent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      // fire-and-forget: no credential needed for this self-logging endpoint
+    });
+  } catch {
+    // consent logging is best-effort; vault creation must not fail because of it
+  }
+}
+
 function clearKeys(state: Pick<VaultState, "vaultKey" | "identity">): void {
   state.vaultKey?.fill(0);
   state.identity?.signingPrivateKey.fill(0);
@@ -99,6 +120,10 @@ async function createIdentityWithVaultKey(vaultKey: Uint8Array): Promise<Identit
     encryptionPrivateKey: encryption.privateKey,
   };
   await saveIdentityWithVaultKey(identity, vaultKey);
+
+  // Log consent at vault creation (sign-up equivalent for this client-side app).
+  void logVaultCreationConsent().catch(() => { /* best-effort */ });
+
   return identity;
 }
 
