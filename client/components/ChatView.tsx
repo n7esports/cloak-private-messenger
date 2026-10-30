@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useChatStore } from "../store/useChatStore";
+import { useChatStore, type ChatMessage } from "../store/useChatStore";
+
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 export function ChatView({
   chatId,
@@ -10,9 +12,8 @@ export function ChatView({
   chatId: string | null;
   onBack?: () => void;
 }) {
-  const messages = useChatStore((s) =>
-    chatId ? s.messagesMap[chatId] ?? [] : [],
-  );
+  const rawMessages = useChatStore((s) => (chatId ? s.messagesMap[chatId] : undefined));
+  const messages = rawMessages ?? EMPTY_MESSAGES;
   const chats = useChatStore((s) => s.chats);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const showToast = useChatStore((s) => s.showToast);
