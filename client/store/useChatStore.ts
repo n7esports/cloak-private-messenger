@@ -44,6 +44,8 @@ import {
 } from "./useVaultStore";
 import type { Channel, DeviceSession, ToastNotification } from "../types";
 
+let chatServicesStarted = false;
+
 export const PRIVATE_NOTES_CHAT_ID = "private-notes";
 export const WELCOME_CHAT_ID = "welcome-guide";
 
@@ -636,17 +638,23 @@ async function expireMessage(messageId: string): Promise<void> {
     // must not linger in messagesMap and render as a ghost.
     useChatStore.setState((state) => {
       const messagesMap: Record<string, ChatMessage[]> = {};
+      let changed = false;
       for (const [chatId, list] of Object.entries(state.messagesMap)) {
-        messagesMap[chatId] = list.filter((message) => message.id !== messageId);
+        const filtered = list.filter((message) => message.id !== messageId);
+        if (filtered.length !== list.length) changed = true;
+        messagesMap[chatId] = filtered;
       }
+      if (!changed) return state;
       return { messagesMap };
     });
   } catch (error) {
-    useChatStore.setState({
-      transportError:
+    useChatStore.setState((state) => {
+      const newError =
         error instanceof Error
           ? `Could not expire message: ${error.message}`
-          : "Could not expire message.",
+          : "Could not expire message.";
+      if (state.transportError === newError) return state;
+      return { transportError: newError };
     });
   }
 }
@@ -1536,6 +1544,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 registerMemoryKeyCleanup(() => {
   transportManager.stop();
+  chatServicesStarted = false;
   for (const timer of ephemeralExpiryTimers.values()) clearTimeout(timer);
   ephemeralExpiryTimers.clear();
   useChatStore.setState({
@@ -1565,10 +1574,14 @@ registerMemoryKeyCleanup(() => {
 });
 
 export function startChatServices(): () => void {
+  if (chatServicesStarted) {
+    return () => {};
+  }
   const { identity, vaultKey, isUnlocked } = useVaultStore.getState();
   if (!isUnlocked || !identity || !vaultKey) {
     throw new Error("Unlock the vault before starting relay transport.");
   }
+  chatServicesStarted = true;
   transportManager.start(vaultKey, encodeBytes(identity.encryptionPublicKey), {
     onMessage: (packet) => useChatStore.getState().receiveMessage(packet),
     onTyping: (signal) => useChatStore.getState().receiveTyping(signal),
@@ -1583,5 +1596,8 @@ export function startChatServices(): () => void {
     onError: (error) =>
       useChatStore.setState({ transportError: error.message }),
   });
-  return () => transportManager.stop();
+  return () => {
+    chatServicesStarted = false;
+    transportManager.stop();
+  };
 }

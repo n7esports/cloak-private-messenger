@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVaultStore } from "../../store/useVaultStore";
 import { useChatStore } from "../../store/useChatStore";
-import { startChatServices } from "../../store/useChatStore";
 
 export default function LockPage() {
   const router = useRouter();
@@ -15,7 +14,6 @@ export default function LockPage() {
 
   useEffect(() => {
     if (sessionRestored && isUnlocked) {
-      startChatServices();
       router.replace("/chats");
     }
   }, [sessionRestored, isUnlocked, router]);
