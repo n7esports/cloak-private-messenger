@@ -12,6 +12,7 @@ import IconPlus from "../icons/IconPlus";
 import IconSearch from "../icons/IconSearch";
 import IconSettings from "../icons/IconSettings";
 import AddContactModal from "../modals/AddContactModal";
+import { useVaultStore } from "../../store/useVaultStore";
 
 const formatTime = (ts: number) => {
   const d = new Date(ts);
@@ -55,6 +56,8 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const isUnlocked = useVaultStore((s) => s.isUnlocked);
+  const loadChats = useChatStore((s: ChatState) => s.loadChats);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userAlias, setUserAlias] = useState("");
@@ -118,6 +121,10 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
     await updateChat(chatId, { mutedForever: true });
     setContextMenu(null);
   };
+
+  useEffect(() => {
+    if (isUnlocked) void loadChats().catch(() => {});
+  }, [isUnlocked, loadChats]);
 
   return (
     <aside className="flex h-screen w-80 flex-col border-r border-hairline bg-surface-container">
