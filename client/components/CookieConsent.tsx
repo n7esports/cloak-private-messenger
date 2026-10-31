@@ -45,30 +45,33 @@ export default function CookieConsent() {
   }, []);
 
   const acceptAll = () => {
-    console.log("[cookie] acceptAll clicked");
+    console.log("[cookie] Accept clicked");
+    setShowBanner(false);
+    setConsentCookie();
     setToggles({ essential: true, analytics: true, marketing: true });
-    postConsent(true).then(() => {
-      setConsentCookie();
-      setShowBanner(false);
-    });
+    postConsent(true).catch((err) =>
+      console.error("[cookie] Accept API error", err)
+    );
   };
 
   const rejectNonEssential = () => {
-    console.log("[cookie] rejectNonEssential clicked");
+    console.log("[cookie] Reject clicked");
+    setShowBanner(false);
+    setConsentCookie();
     setToggles({ essential: true, analytics: false, marketing: false });
-    postConsent(false).then(() => {
-      setConsentCookie();
-      setShowBanner(false);
-    });
+    postConsent(false).catch((err) =>
+      console.error("[cookie] Reject API error", err)
+    );
   };
 
   const savePreferences = () => {
     const granted = toggles.analytics || toggles.marketing;
-    console.log("[cookie] savePreferences clicked", granted);
-    postConsent(granted).then(() => {
-      setConsentCookie();
-      setOpen(false);
-    });
+    console.log("[cookie] Save preferences clicked", granted);
+    setOpen(false);
+    setConsentCookie();
+    postConsent(granted).catch((err) =>
+      console.error("[cookie] Save preferences API error", err)
+    );
   };
 
   const toggle = (id: Category) => {

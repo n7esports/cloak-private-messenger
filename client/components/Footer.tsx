@@ -13,7 +13,7 @@ const LINKS = [
   { href: "/legal/contact", label: "Contact" },
   { href: "/legal/data-request", label: "Data request" },
   { href: "/legal/unsubscribe", label: "Unsubscribe" },
-  { href: "/legal/cookies/cookie-settings", label: "Cookie settings" },
+  { href: "/legal/cookies", label: "Cookie settings" },
   { href: "/legal/licenses", label: "Licenses" },
 ];
 
