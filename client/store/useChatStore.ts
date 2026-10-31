@@ -38,6 +38,7 @@ import {
   type EncryptedChatRecord,
   type EncryptedMessageRecord,
 } from "../lib/vault";
+import { supabase } from "../lib/supabase";
 import {
   registerMemoryKeyCleanup,
   useVaultStore,
@@ -841,6 +842,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       pinned: false,
     };
     await saveEncryptedChat(chat, vaultKey);
+    const { data: userData } = await supabase.auth.getUser();
+    const ownerId = userData?.user?.id;
+    if (!ownerId) throw new Error("Not authenticated.");
+    const { error: insertError } = await supabase.from("contacts").insert({
+      owner_id: ownerId,
+      alias: chat.alias,
+      public_key: chat.recipientPubKey,
+    });
+    if (insertError) throw new Error(insertError.message);
     set((state) => ({ chats: replaceChat(state.chats, chat) }));
     return chat;
   },
