@@ -211,22 +211,19 @@ describe("E2EE attachments", () => {
     ).rejects.toThrow("Invalid message payload");
   });
 
-  it("only allows the approved image MIME types to render inline", () => {
-    for (const mime of [
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-      "image/gif",
-      "image/svg+xml",
-    ]) {
+  it("only allows PNG, JPEG, and WebP images to render inline", () => {
+    for (const mime of ["image/png", "image/jpeg", "image/webp"]) {
       expect(isInlineRenderableImage(mime)).toBe(true);
       expect(isDataUrl(`data:${mime};base64,AAAA`)).toBe(true);
     }
 
-    expect(isInlineRenderableImage("image/avif")).toBe(false);
-    expect(isInlineRenderableImage("image/jpg")).toBe(false);
+    for (const mime of ["image/gif", "image/svg+xml", "image/avif", "image/jpg"]) {
+      expect(isInlineRenderableImage(mime)).toBe(false);
+      expect(isDataUrl(`data:${mime};base64,AAAA`)).toBe(false);
+    }
+
+    expect(isDataUrl("data:text/plain;base64,SGVsbG8=")).toBe(false);
     expect(isDataUrl("data:text/html;base64,PHNjcmlwdD4=")).toBe(false);
-    expect(isDataUrl("data:image/svg+xml;charset=utf-8;base64,AAAA")).toBe(false);
   });
 
   it("rejects mismatched and active-content attachment data URLs", () => {

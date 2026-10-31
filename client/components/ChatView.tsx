@@ -247,7 +247,7 @@ export function ChatView({
               type="file"
               className="hidden"
               onChange={handleFileChange}
-              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,text/plain"
+              accept="image/png,image/jpeg,image/webp,text/plain"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
