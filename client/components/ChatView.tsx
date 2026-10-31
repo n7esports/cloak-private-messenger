@@ -182,7 +182,7 @@ export function ChatView({
       )}
 
       {/* Composer */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border-default bg-surface">
+      <div className="flex-shrink-0 border-t border-border-default bg-surface">
         {/* Attachment preview */}
         {pendingAttachment && (
           <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
