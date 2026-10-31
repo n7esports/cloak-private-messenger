@@ -13,10 +13,8 @@ import {
 } from "../../lib/vault";
 import IconKey from "../icons/IconKey";
 import IconCopy from "../icons/IconCopy";
-import BoxQRCode from "../icons/BoxQRCode";
 
 const ALIAS_STORAGE_KEY = "cloak.identity.alias";
-const QR_REFRESH_MS = 5 * 60_000; // 5 minutes
 
 export function MyIdentityModal({
   open,
@@ -36,19 +34,6 @@ export function MyIdentityModal({
 
   // QR payload rotates on a 5-minute timer so the canvas re-renders with a
   // fresh timestamp. shortcut: visible QR doesn't change, only the embedded ts.
-  const [qrTimestamp, setQrTimestamp] = useState(Date.now());
-
-  useEffect(() => {
-    if (!open) return;
-    const id = setInterval(() => setQrTimestamp(Date.now()), QR_REFRESH_MS);
-    return () => clearInterval(id);
-  }, [open]);
-
-  const qrPayload = useMemo(() => {
-    if (!publicKey) return "";
-    return `cloak:${publicKey}?ts=${qrTimestamp}`;
-  }, [publicKey, qrTimestamp]);
-
   const [alias, setAlias] = useState("");
   const [savedAlias, setSavedAlias] = useState("");
   const [copied, setCopied] = useState(false);
@@ -158,18 +143,6 @@ export function MyIdentityModal({
             <p className="mb-1 text-xs font-medium text-on-surface-variant">Device</p>
             <p className="text-xs text-on-surface break-all">{deviceInfo}</p>
           </div>
-
-          {/* QR code */}
-          {publicKey && (
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative rounded-xl border border-hairline bg-surface-container p-3">
-                <BoxQRCode payload={qrPayload} size={256} />
-              </div>
-              {savedAlias && (
-                <p className="text-xs text-on-surface-variant">{savedAlias}</p>
-              )}
-            </div>
-          )}
 
           {/* Public key with copy */}
           {publicKey && (

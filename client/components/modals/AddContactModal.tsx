@@ -255,12 +255,38 @@ export default function AddContactModal({
                 <span className="text-xs font-medium text-on-surface-variant">
                   Contact Public Key (hex)
                 </span>
-                <input
-                  value={hexKey}
-                  onChange={(e) => setHexKey(e.target.value)}
-                  placeholder="64-char hex key"
-                  className="w-full rounded-xl border border-hairline bg-surface-container px-3 py-2.5 font-mono text-sm text-on-surface outline-none focus:border-primary"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={hexKey}
+                    onChange={(e) => setHexKey(e.target.value)}
+                    placeholder="64-char hex key"
+                    className="flex-1 rounded-xl border border-hairline bg-surface-container px-3 py-2.5 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alert("QR scanning would open the device camera here.")}
+                    className="rounded-xl border border-hairline bg-surface-container px-3 py-2.5 text-on-surface-variant transition hover:border-primary hover:text-primary"
+                    title="Scan QR Code"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                      <path d="M21 14v3a2 2 0 0 1-2 2h-3" />
+                      <path d="M14 21h-3a2 2 0 0 1-2-2v-3" />
+                    </svg>
+                  </button>
+                </div>
               </label>
 
               <label className="flex flex-col gap-1.5">

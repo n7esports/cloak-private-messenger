@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useChatStore, type ChatState, type ChatSummary } from "../../store/useChatStore";
 import IconChat from "../icons/IconChat";
 import IconChannel from "../icons/IconChannel";
@@ -9,6 +10,7 @@ import IconBellOff from "../icons/IconBellOff";
 import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
 import IconSearch from "../icons/IconSearch";
+import IconSettings from "../icons/IconSettings";
 import AddContactModal from "../modals/AddContactModal";
 
 const formatTime = (ts: number) => {
@@ -77,6 +79,14 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   useEffect(() => {
     const stored = localStorage.getItem("cloak.identity.alias");
     if (stored) setUserAlias(stored);
+
+    function handleStorage(e: StorageEvent) {
+      if (e.key === "cloak.identity.alias") {
+        setUserAlias(e.newValue || "");
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const handleContextMenu = (e: React.MouseEvent, chat: ChatSummary) => {
@@ -271,6 +281,17 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
           <IconChannel size={18} />
           <span>Channels</span>
         </button>
+
+        <Link
+          href="/settings"
+          className="flex items-center gap-2 px-4 py-3 text-sm transition-colors"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+        >
+          <IconSettings size={18} />
+          <span>Settings</span>
+        </Link>
 
         <button
           onClick={onOpenIdentity}
