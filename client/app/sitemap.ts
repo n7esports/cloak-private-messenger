@@ -1,8 +1,6 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://your-url.vercel.app";
-
-export const dynamic = "force-static";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://cloak-private-messenger.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [

@@ -122,6 +122,14 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const nonce = generateNonce();
 
+  // Allow crawler and static metadata files without CSP/nonce
+  const userAgent = request.headers.get("user-agent") || "";
+  const isCrawler = /bot|crawler|spider|crawling/i.test(userAgent);
+  const isMetadataFile = path === "/sitemap.xml" || path === "/robots.txt";
+  if (isCrawler || isMetadataFile) {
+    return NextResponse.next({ request: { headers: new Headers(request.headers) } });
+  }
+
   // Maintenance / forbidden pages
   if (path === "/maintenance") {
     return new NextResponse(MAINTENANCE_HTML, {
