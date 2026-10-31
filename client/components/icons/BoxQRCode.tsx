@@ -30,17 +30,17 @@ export default function BoxQRCode({ payload, size = 256 }: { payload: string; si
       const cy = y + cellSize / 2;
       if (cx >= iconLeft && cx <= iconRight && cy >= iconTop && cy <= iconBottom) continue;
       const mod = (row + col) % 3;
-      const r = cellSize * 0.25;
+      const r = cellSize * 0.35;
       if (mod === 0) {
-        const w = cellSize * 1.05;
-        const h = cellSize * 0.22;
+        const w = cellSize * 1.6;
+        const h = cellSize * 0.55;
         rects.push({ x: x + (cellSize - w) / 2, y: y + (cellSize - h) / 2, w, h, rx: r });
       } else if (mod === 1) {
-        const w = cellSize * 1.25;
-        const h = cellSize * 0.16;
+        const w = cellSize * 1.9;
+        const h = cellSize * 0.45;
         rects.push({ x: x + (cellSize - w) / 2, y: y + (cellSize - h) / 2, w, h, rx: r });
       } else {
-        const s = cellSize * 0.28;
+        const s = cellSize * 0.7;
         rects.push({ x: x + (cellSize - s) / 2, y: y + (cellSize - s) / 2, w: s, h: s, rx: r });
       }
     }

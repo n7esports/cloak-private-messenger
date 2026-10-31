@@ -26,6 +26,7 @@ export default function AddContactModal({
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const identity = useVaultStore((s) => s.identity);
@@ -113,38 +114,25 @@ export default function AddContactModal({
   }, [myCodeKey]);
 
   const handleSaveContact = async () => {
+    setError(null);
     const trimmed = hexKey.trim().replace(/^cloak:/i, "");
     if (!TAB_ALLOWED.test(trimmed) || trimmed.length !== 64) {
-      showToast({
-        id: crypto.randomUUID(),
-        message: "Enter a valid 256-bit hex key.",
-        type: "info",
-      });
+      setError("Enter a valid 64-character hex key.");
       return;
     }
     if (!nickname.trim()) {
-      showToast({
-        id: crypto.randomUUID(),
-        message: "Enter a nickname.",
-        type: "info",
-      });
+      setError("Enter a nickname.");
       return;
     }
     setSaving(true);
     try {
       const chat = await addContact(nickname.trim(), trimmed);
-      showToast({
-        id: crypto.randomUUID(),
-        message: `Contact "${chat.alias}" added.`,
-        type: "success",
-      });
+      showToast({ id: crypto.randomUUID(), message: `Contact "${chat.alias}" added.`, type: "success" });
+      setHexKey("");
+      setNickname("");
       onClose();
     } catch (err) {
-      showToast({
-        id: crypto.randomUUID(),
-        message: err instanceof Error ? err.message : "Could not add contact.",
-        type: "info",
-      });
+      setError(err instanceof Error ? err.message : "Could not add contact.");
     } finally {
       setSaving(false);
     }
@@ -287,6 +275,8 @@ export default function AddContactModal({
                   className="w-full rounded-xl border border-hairline bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
                 />
               </label>
+
+              {error && <p className="text-xs text-error">{error}</p>}
 
               <button
                 onClick={handleSaveContact}

@@ -58,6 +58,8 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userAlias, setUserAlias] = useState("");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClick() {
@@ -87,6 +89,14 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
     }
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setIsSettingsOpen(false);
+    }
+    document.addEventListener("click", handle);
+    return () => document.removeEventListener("click", handle);
   }, []);
 
   const handleContextMenu = (e: React.MouseEvent, chat: ChatSummary) => {
@@ -293,15 +303,30 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
             </div>
             <span className="text-sm font-medium text-on-surface">{userAlias || "Set alias"}</span>
           </button>
-          <Link
-            href="/settings"
-            className="flex h-8 w-8 items-center justify-center rounded-lg transition"
-            style={{ color: "var(--text-secondary)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-          >
-            <IconSettings size={18} />
-          </Link>
+          <div ref={settingsRef} className="relative">
+            <button
+              onClick={() => setIsSettingsOpen((v) => !v)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+            >
+              <IconSettings size={18} />
+            </button>
+            {isSettingsOpen && (
+              <div className="absolute bottom-10 right-0 z-50 w-48 rounded-xl border border-hairline bg-surface-container py-1 shadow-panel">
+                {["Linked Devices", "Account", "Appearance", "Notifications", "Privacy"].map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-on-surface hover:bg-surface-high"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="px-4 pb-3">
           <p className="text-[10px] font-mono text-on-surface-variant">ID 0x4F2A_C91D</p>

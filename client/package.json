@@ -16,6 +16,8 @@
   "dependencies": {
     "@scure/bip39": "^2.4.0",
     "@supabase/supabase-js": "^2.109.0",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "dexie": "^4.4.6",
     "framer-motion": "^12.43.0",
     "jsqr": "^1.4.0",
