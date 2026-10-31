@@ -116,8 +116,8 @@ export default function AddContactModal({
   const handleSaveContact = async () => {
     setError(null);
     const trimmed = hexKey.trim().replace(/[\s\u200B-\u200D\uFEFF]/g, "").replace(/^cloak:/i, "");
-    if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) {
-      setError("Enter a valid 64-character hex key.");
+    if (!trimmed || trimmed.length < 43) {
+      setError("Enter a valid Base64 public key.");
       return;
     }
     if (!nickname.trim()) {
@@ -228,7 +228,7 @@ export default function AddContactModal({
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-on-surface-variant">
-                  Contact Public Key (hex)
+                  Contact Public Key (Base64)
                 </span>
                 <div className="flex gap-2">
                   <input

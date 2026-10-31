@@ -40,7 +40,7 @@ export default function BoxQRCode({ payload, size = 256 }: { payload: string; si
           className="flex items-center justify-center rounded-full"
           style={{ width: circleSize, height: circleSize, backgroundColor: DARK }}
         >
-          <IconKey size={circleSize * 0.45} className="text-emerald-400" />
+          <IconKey size={circleSize * 0.45} className="text-[#dfe2ee]" strokeWidth={2.5} />
         </div>
       </div>
     </div>
