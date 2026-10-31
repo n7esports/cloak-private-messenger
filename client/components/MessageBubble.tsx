@@ -62,7 +62,7 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         {/* Time */}
         <div className="mt-1 flex items-center justify-end gap-2">
           <span className="text-[10px] text-text-secondary">
-            {message.senderName}
+            {isMe ? "You" : message.senderPubKey.slice(0, 8)}
           </span>
           <span className="text-[10px] text-text-secondary">
             {new Date(message.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
