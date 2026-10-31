@@ -147,10 +147,18 @@ export function middleware(request: NextRequest) {
 
   // CSP in production: nonce-based for scripts; connect to Supabase and relay;
   // allow service worker for push.
+  // Known inline script hashes from deployed app (Next.js hydration + app scripts).
+  const inlineHashes = [
+    "sha256-Q+8tPsjVtiDsjF/Cv8FMOpg2Yg91oKFKDAJat1PPb2g=",
+    "sha256-iBHaZGFqud0wskX+6DuA+ySrJkXX4XPcebKbQ9poYqQ=",
+    "sha256-jbxGn8ke4sYjigvuR2vvtKGaYTc5IeraFrT2KhPRcGY=",
+    "sha256-aHaO8UGI2gdjWrMLnZqqafYckg3/17MYJaKxe6243yo=",
+    "sha256-GEKJvKBHhAEcI31HO0dtQflA2216332e4Bv7g7YihfY=",
+  ];
   const cspDirectives = isProduction
     ? [
         "default-src 'self'",
-        `script-src 'self' 'nonce-${nonce}'`,
+        `script-src 'self' 'nonce-${nonce}' ${inlineHashes.join(" ")}`,
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: https:",
         "connect-src 'self' https: wss:",
