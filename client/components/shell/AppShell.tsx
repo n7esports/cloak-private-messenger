@@ -56,6 +56,9 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const pendingRequests = useChatStore((s: ChatState) => s.pendingRequests);
+  const acceptPendingRequest = useChatStore((s: ChatState) => s.acceptPendingRequest);
+  const dismissPendingRequest = useChatStore((s: ChatState) => s.dismissPendingRequest);
   const isUnlocked = useVaultStore((s) => s.isUnlocked);
   const loadChats = useChatStore((s: ChatState) => s.loadChats);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -177,6 +180,19 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
         </div>
       </div>
 
+      {pendingRequests.length > 0 && (
+        <div className="px-4 pb-2">
+          {pendingRequests.map((req) => (
+            <div key={req.senderEncryptionPubKey} className="mb-2 rounded-lg border border-hairline bg-surface-container p-3">
+              <p className="text-xs text-on-surface">New chat request from {req.senderEncryptionPubKey.substring(0,8)}...</p>
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => acceptPendingRequest(req.senderEncryptionPubKey)} className="rounded bg-primary px-2 py-1 text-xs text-on-primary">Accept</button>
+                <button onClick={() => dismissPendingRequest(req.senderEncryptionPubKey)} className="rounded border border-hairline px-2 py-1 text-xs text-on-surface">Dismiss</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* Chats nav */}
       <div
         className="flex items-center justify-between px-4 py-2 text-sm font-semibold cursor-pointer transition-colors"
