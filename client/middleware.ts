@@ -143,7 +143,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers: new Headers(request.headers) } });
   }
 
-  // Require a valid signed application session before rendering private chat pages.\n  if (path === "/chats" || path.startsWith("/chats/")) {\n    const token = request.cookies.get(sessionCookie.name)?.value;\n    const session = await verifySessionToken(token);\n    if (!session) {\n      const signInUrl = request.nextUrl.clone();\n      signInUrl.pathname = "/auth/sign-in";\n      signInUrl.search = "";\n      return NextResponse.redirect(signInUrl);\n    }\n  }\n\n  // Maintenance / forbidden pages
+  // Maintenance / forbidden pages
   if (path === "/maintenance") {
     return new NextResponse(MAINTENANCE_HTML, {
       status: 503,
