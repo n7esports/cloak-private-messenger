@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { consentSchema } from "@/lib/validations/consent";
 
@@ -13,83 +14,64 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
-  }
-
-  const { kind, version, granted } = parsed.data;
-
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0].trim() : undefined;
-
-  const cookie = request.headers.get("cookie") || "";
-  const match = cookie.match(/(?:^|; )anon_id=([^;]+)/);
-  const anon_id = match ? decodeURIComponent(match[1]) : undefined;
-
-  const authHeader = request.headers.get("authorization");
-  const bearerMatch = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : undefined;
-
-  let user_id: string | undefined;
-  if (bearerMatch) {
-    const payload = bearerMatch.split(".")[1];
-    if (payload) {
-      try {
-        const decoded = JSON.parse(
-          Buffer.from(payload, "base64url").toString("utf8")
-        );
-        user_id = decoded.sub;
-      } catch {
-        // ignore invalid token
-      }
-    }
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json(
-      { error: "Server misconfigured" },
-      { status: 500 }
+      { error: "Consent service is not configured" },
+      { status: 503 },
     );
   }
 
-  const insertBody: Record<string, unknown> = {
-    kind,
-    version,
-    granted,
-    ip: ip || null,
-    user_id: user_id || null,
-    anon_id: anon_id || null,
-  };
+  const authorization = request.headers.get("authorization");
+  let accessToken: string | undefined;
 
-  try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/consent_log`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify(insertBody),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return NextResponse.json(
-        { error: "Database insert failed", details: text },
-        { status: 500 }
-      );
+  if (authorization) {
+    const match = authorization.match(/^Bearer\s+(\S+)$/i);
+    if (!match) {
+      return NextResponse.json({ error: "Invalid authorization" }, { status: 401 });
     }
-  } catch (err) {
-    return NextResponse.json(
-      { error: "Database insert failed", details: String(err) },
-      { status: 500 }
-    );
+    accessToken = match[1];
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
+    ...(accessToken
+      ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+      : {}),
+  });
+
+  let userId: string | null = null;
+  if (accessToken) {
+    const { data, error } = await supabase.auth.getUser(accessToken);
+    if (error || !data.user) {
+      return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
+    }
+    userId = data.user.id;
+  }
+
+  const { error } = await supabase.from("consent_log").insert({
+    kind: parsed.data.kind,
+    version: parsed.data.version,
+    granted: parsed.data.granted,
+    user_id: userId,
+  });
+
+  if (error) {
+    // Do not expose database details or credentials to the caller.
+    return NextResponse.json({ error: "Could not record consent" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true }, { status: 201 });
 }
