@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Providers } from "./providers";
 import "./globals.css";
 import "../styles/tokens.css";
+import CookieConsent from "@/components/CookieConsent";
 
 export const metadata: Metadata = {
   title: "UQZERA",
@@ -27,6 +28,7 @@ export default async function RootLayout({
       </head>
       <body className="font-sans bg-surface text-on-surface antialiased">
         <Providers>{children}</Providers>
+        <CookieConsent />
       </body>
     </html>
   );

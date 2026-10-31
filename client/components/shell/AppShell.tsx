@@ -10,6 +10,7 @@ import IconBellOff from "../icons/IconBellOff";
 import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
 import AddContactModal from "../modals/AddContactModal";
+import Footer from "../Footer";
 
 const formatTime = (ts: number) => {
   const d = new Date(ts);
@@ -231,6 +232,8 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
           <p className="text-[10px] font-mono text-on-surface-variant">ID 0x4F2A_C91D</p>
         </div>
       </div>
+
+      <Footer />
 
       <AddContactModal
         open={showAddContact}
