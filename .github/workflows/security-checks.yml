@@ -1,0 +1,48 @@
+name: Security checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - security/phase-1-auth-hardening
+    paths:
+      - "client/**"
+      - "supabase/**"
+      - ".github/workflows/security-checks.yml"
+  push:
+    branches:
+      - security/phase-1-auth-hardening
+      - security/phase-2-consent-upload
+    paths:
+      - "client/**"
+      - "supabase/**"
+      - ".github/workflows/security-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  client-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Type-check client
+        working-directory: client
+        run: npm run typecheck
+
+      - name: Run client tests
+        working-directory: client
+        run: npm test -- --passWithNoTests
