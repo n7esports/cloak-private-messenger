@@ -115,8 +115,8 @@ export default function AddContactModal({
 
   const handleSaveContact = async () => {
     setError(null);
-    const trimmed = hexKey.trim().replace(/^cloak:/i, "");
-    if (!TAB_ALLOWED.test(trimmed) || trimmed.length !== 64) {
+    const trimmed = hexKey.trim().replace(/[\s\u200B-\u200D\uFEFF]/g, "").replace(/^cloak:/i, "");
+    if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) {
       setError("Enter a valid 64-character hex key.");
       return;
     }
