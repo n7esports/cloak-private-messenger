@@ -143,7 +143,7 @@ export interface ChatState {
   showToast: (toast: ToastNotification) => void;
   dismissToast: (toastId: string) => void;
   // Existing actions
-  acceptPendingRequest: (senderKey: string) => Promise<void>;
+  acceptPendingRequest: (senderKey: string, nickname?: string) => Promise<void>;
   dismissPendingRequest: (senderKey: string) => void;
   setRelayStatus: (status: RelayStatus) => void;
   setActiveChat: (chatId: string | null) => void;
@@ -758,7 +758,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       toasts: state.toasts.filter((t) => t.id !== toastId),
     })),
 
-  acceptPendingRequest: async (senderKey) => {
+  acceptPendingRequest: async (senderKey, nickname) => {
     const request = get().pendingRequests.find(
       (entry) => entry.senderEncryptionPubKey === senderKey,
     );
@@ -770,7 +770,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
     // Create the contact and ingest the parked message now that the user
     // has accepted it.
-    await get().addContact("Unnamed Contact", senderKey);
+    await get().addContact(nickname || "Unnamed Contact", senderKey);
     await get().receiveMessage(request.packet);
   },
 

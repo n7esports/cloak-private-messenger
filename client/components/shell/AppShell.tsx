@@ -12,6 +12,7 @@ import IconPlus from "../icons/IconPlus";
 import IconSearch from "../icons/IconSearch";
 import IconSettings from "../icons/IconSettings";
 import AddContactModal from "../modals/AddContactModal";
+import AcceptContactModal from "../modals/AcceptContactModal";
 import { useVaultStore } from "../../store/useVaultStore";
 
 const formatTime = (ts: number) => {
@@ -56,6 +57,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [acceptRequest, setAcceptRequest] = useState<{ senderKey: string; packet: unknown } | null>(null);
   const pendingRequests = useChatStore((s: ChatState) => s.pendingRequests);
   const acceptPendingRequest = useChatStore((s: ChatState) => s.acceptPendingRequest);
   const dismissPendingRequest = useChatStore((s: ChatState) => s.dismissPendingRequest);
@@ -186,7 +188,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
             <div key={req.senderEncryptionPubKey} className="mb-2 rounded-lg border border-hairline bg-surface-container p-3">
               <p className="text-xs text-on-surface">New chat request from {req.senderEncryptionPubKey.substring(0,8)}...</p>
               <div className="mt-2 flex gap-2">
-                <button onClick={() => acceptPendingRequest(req.senderEncryptionPubKey)} className="rounded bg-primary px-2 py-1 text-xs text-on-primary">Accept</button>
+                <button onClick={() => setAcceptRequest({ senderKey: req.senderEncryptionPubKey, packet: req.packet })} className="rounded bg-primary px-2 py-1 text-xs text-on-primary">Accept</button>
                 <button onClick={() => dismissPendingRequest(req.senderEncryptionPubKey)} className="rounded border border-hairline px-2 py-1 text-xs text-on-surface">Dismiss</button>
               </div>
             </div>
@@ -359,6 +361,12 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
       <AddContactModal
         open={showAddContact}
         onClose={() => setShowAddContact(false)}
+      />
+      <AcceptContactModal
+        open={!!acceptRequest}
+        senderEncryptionPubKey={acceptRequest?.senderKey || ""}
+        packet={acceptRequest?.packet || null}
+        onClose={() => setAcceptRequest(null)}
       />
 
     </aside>
