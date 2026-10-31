@@ -24,12 +24,12 @@ export default function BoxQRCode({ payload, size = 256 }: { payload: string; si
           return (
             <rect
               key={i}
-              x={c * cell + cell * 0.08}
-              y={r * cell + cell * 0.08}
-              width={cell * 0.84}
-              height={cell * 0.84}
-              rx={4}
-              ry={4}
+              x={c * cell + cell * 0.04}
+              y={r * cell + cell * 0.04}
+              width={cell * 0.92}
+              height={cell * 0.92}
+              rx={2}
+              ry={2}
               fill={EMERALD}
             />
           );
