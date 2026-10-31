@@ -256,6 +256,7 @@ export class TransportManager {
 
   async sendEnvelope(packet: SignedEnvelope): Promise<void> {
     const recipientPubKey = packet.envelope.recipientPubKey;
+    console.log("SENDING PACKET TO:", recipientPubKey, packet);
     const channel = await this.getBroadcastChannel(recipientPubKey);
     const result = await channel.send({
       type: "broadcast",
@@ -386,6 +387,7 @@ export class TransportManager {
       "broadcast",
       { event: "envelope" },
       (event: { payload?: BroadcastPayload }) => {
+        console.log("INCOMING PACKET RECEIVED:", event.payload);
         this.messageProcessing = this.messageProcessing
           .then(() => this.handleEnvelope(event.payload?.packet ?? event.payload))
           .catch((error: unknown) => {
