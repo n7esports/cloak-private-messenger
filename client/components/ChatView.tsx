@@ -6,9 +6,16 @@ import { useVaultStore } from "../store/useVaultStore";
 import MessageBubble from "./MessageBubble";
 import IconAttach from "./icons/IconAttach";
 import IconClock from "./icons/IconClock";
+import IconForward from "./icons/IconForward";
 import IconLock from "./icons/IconLock";
+import IconMoreVertical from "./icons/IconMoreVertical";
 import IconPhone from "./icons/IconPhone";
+import IconPin from "./icons/IconPin";
+import IconReply from "./icons/IconReply";
+import IconSearch from "./icons/IconSearch";
+import IconStar from "./icons/IconStar";
 import IconTrash from "./icons/IconTrash";
+import IconVideo from "./icons/IconVideo";
 import IconX from "./icons/IconX";
 import IconSend from "./icons/IconSend";
 
@@ -127,14 +134,17 @@ export function ChatView({
           <span className="text-[10px] text-on-surface-variant">Last seen {new Date(chat.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => {}} title="Call" className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:bg-surface-high">
-            <IconPhone size={16} />
+          <button className="p-2 hover:bg-surface-high rounded-md" title="Video call">
+            <IconVideo size={18} />
           </button>
-          <button onClick={handleClearChat} title="Clear Chat" className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:bg-surface-high">
-            <IconTrash size={16} />
+          <button className="p-2 hover:bg-surface-high rounded-md" title="Voice call">
+            <IconPhone size={18} />
           </button>
-          <button onClick={() => setActiveChat(null)} title="Close Chat" className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:bg-surface-high">
-            <IconX size={16} />
+          <button className="p-2 hover:bg-surface-high rounded-md" title="Search messages">
+            <IconSearch size={18} />
+          </button>
+          <button className="p-2 hover:bg-surface-high rounded-md" title="More options">
+            <IconMoreVertical size={18} />
           </button>
         </div>
       </header>

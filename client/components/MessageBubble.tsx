@@ -1,7 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
+import IconCopy from "./icons/IconCopy";
 import IconFile from "./icons/IconFile";
+import IconForward from "./icons/IconForward";
+import IconPin from "./icons/IconPin";
+import IconReply from "./icons/IconReply";
+import IconStar from "./icons/IconStar";
+import IconTrash from "./icons/IconTrash";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -14,34 +21,27 @@ function formatBytes(bytes: number): string {
 }
 
 export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
-  const chats = useChatStore((s) => s.chats);
-  const chat = chats.find((c) => c.id === message.chatId) ?? null;
-
-  const senderName = isMe
-    ? "You"
-    : (message.senderPubKey.slice(0, 8) || "Unknown");
+  const [showMenu, setShowMenu] = useState(false);
 
   const alignment = isMe ? "justify-end" : "justify-start";
   const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
-  const bubbleBg = isMe ? "bg-primary/10 border border-primary/30" : "bg-surface-container";
+  const bubbleBg = isMe ? "bg-primary/20" : "bg-surface-container";
 
   return (
-    <div className={`flex ${alignment} gap-2`}>
-      <div className={`relative max-w-[70%] rounded-2xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}>
-        {/* Metadata above bubble */}
-        <div className="mb-1 flex items-baseline gap-2 font-mono">
-          <span className="text-[11px] font-medium text-text-primary">{senderName}</span>
-          <span className="text-[10px] text-text-secondary">
-            {new Date(message.timestamp).toISOString().slice(0, 19).replace("T", " ")} UTC
-          </span>
-        </div>
-
+    <div className={`relative flex ${alignment} gap-2`}>
+      <div
+        className={`max-w-[75%] rounded-xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setShowMenu(true);
+        }}
+      >
         {/* Attachment */}
         {message.attachment && !message.attachment.mime?.startsWith("image/") && (
           <div className="mb-2 flex items-center gap-2 rounded-lg border border-border-default bg-surface/60 px-3 py-2">
             <IconFile size={18} />
             <span className="flex-1 truncate text-xs text-text-primary">{message.attachment.name}</span>
-            <span className="text-[10px] text-text-secondary">{formatBytes(message.attachment.size)}</span>
+            <span className="text-[10px] text-text-secondary">{(message.attachment.size / 1024).toFixed(0)} KB</span>
             <button className="rounded border border-border-default px-2 py-0.5 text-[10px] text-text-primary transition hover:bg-surface-high">
               Decrypt
             </button>
@@ -58,10 +58,39 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
           {message.content}
         </p>
 
-        {/* Crypto metadata */}
+        {/* Time */}
         <div className="mt-1 flex items-center justify-end">
-          <span className="font-mono text-[10px] text-text-secondary">SIG: 0x{message.id.slice(0, 16)}</span>
+          <span className="text-[10px] text-text-secondary">
+            {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
         </div>
+
+        {/* Context menu */}
+        {showMenu && (
+          <div className="absolute top-full mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconReply size={14} /> Reply
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconCopy size={14} /> Copy
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconForward size={14} /> Forward
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconPin size={14} /> Pin
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconStar size={14} /> Star
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconFlag size={14} /> Report
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-surface-high">
+              <IconTrash size={14} /> Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
