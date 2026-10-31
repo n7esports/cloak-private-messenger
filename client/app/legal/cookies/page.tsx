@@ -11,7 +11,7 @@ export default function CookiesPage() {
           Cookies
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          Cloak does not use tracking cookies. Only essential cookies required for app state and security are set, and they are never shared with third parties.
+          UQZERA does not use tracking cookies. Only essential cookies required for app state and security are set, and they are never shared with third parties.
         </p>
       </main>
   );

@@ -68,7 +68,7 @@ export function getInboxChannelName(publicKey: string): string {
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
-  return `cloak-inbox-${topicKey}`;
+  return `UQZERA-inbox-${topicKey}`;
 }
 
 function parseSignedEnvelope(value: unknown): SignedEnvelope | null {

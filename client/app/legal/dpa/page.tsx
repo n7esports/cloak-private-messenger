@@ -11,7 +11,7 @@ export default function DpaPage() {
           Data Processing Agreement
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          This DPA governs how Cloak processes personal data on behalf of enterprise customers. It defines processor obligations, audit rights, and security controls under GDPR and CCPA.
+          This DPA governs how UQZERA processes personal data on behalf of enterprise customers. It defines processor obligations, audit rights, and security controls under GDPR and CCPA.
         </p>
       </main>
   );

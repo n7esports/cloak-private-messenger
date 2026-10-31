@@ -54,7 +54,7 @@ export default function SetupRecoveryPage() {
     // Store mnemonic for recovery entry. In production, this would be
     // encrypted and persisted server-side or via secure storage.
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("cloak.recovery.v1", recovery.mnemonic);
+      window.localStorage.setItem("UQZERA.recovery.v1", recovery.mnemonic);
     }
     setDone(true);
   };

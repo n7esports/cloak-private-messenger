@@ -99,7 +99,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
           <span className="text-sm font-bold text-on-primary">C</span>
         </div>
         <span className="text-base font-semibold text-on-surface">
-          Cloak Private Messenger
+          UQZERA Messenger
         </span>
       </div>
 

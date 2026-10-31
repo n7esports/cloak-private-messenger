@@ -17,7 +17,7 @@ export default function UnlockRecoveryPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      storedRef.current = window.localStorage.getItem("cloak.recovery.v1");
+      storedRef.current = window.localStorage.getItem("UQZERA.recovery.v1");
     }
     return () => {
       disposeMnemonic(storedRef.current || "");

@@ -18,13 +18,13 @@ let serviceWorkerRegistrationPromise;
 let nativePushPluginsPromise;
 let nativeTokenWaiter;
 
-const NOTIFICATION_TITLE = 'Cloak';
+const NOTIFICATION_TITLE = 'UQZERA';
 const PRIVATE_NOTIFICATION_BODY = 'New encrypted message received';
 
 // List-Unsubscribe header helper: returns the RFC 8058 header value for any
 // outbound email. No email routes exist yet in this client, so this is a
 // utility — wire it into the email transport when that layer is built.
-export function listUnsubscribeHeader(method = 'POST', email = 'unsubscribe@cloak') {
+export function listUnsubscribeHeader(method = 'POST', email = 'unsubscribe@UQZERA') {
   return `<${method}:${email}>`;
 }
 

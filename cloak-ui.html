@@ -3,32 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cloak Private Messenger — UI</title>
+<title>UQZERA Messenger — UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   CLOAK PRIVATE MESSENGER — DESIGN SYSTEM
+   UQZERA Messenger — DESIGN SYSTEM
    Extracted from source: tailwind.config.ts + globals.css
    ============================================================ */
 
 :root {
   color-scheme: dark;
   /* Dark theme (default) */
-  --cloak-bg: 9 9 11;
-  --cloak-surface-1: 24 24 27;
-  --cloak-surface-2: 39 39 42;
-  --cloak-surface-3: 63 63 70;
-  --cloak-border: 63 63 70;
-  --cloak-accent: 16 185 129;
-  --cloak-accent-hover: 5 150 105;
-  --cloak-text: 250 250 250;
-  --cloak-muted: 161 161 170;
-  --cloak-dim: 82 82 91;
-  --cloak-danger: 239 68 68;
-  --cloak-success: 34 197 94;
-  --cloak-warning: 245 158 11;
+  --UQZERA-bg: 9 9 11;
+  --UQZERA-surface-1: 24 24 27;
+  --UQZERA-surface-2: 39 39 42;
+  --UQZERA-surface-3: 63 63 70;
+  --UQZERA-border: 63 63 70;
+  --UQZERA-accent: 16 185 129;
+  --UQZERA-accent-hover: 5 150 105;
+  --UQZERA-text: 250 250 250;
+  --UQZERA-muted: 161 161 170;
+  --UQZERA-dim: 82 82 91;
+  --UQZERA-danger: 239 68 68;
+  --UQZERA-success: 34 197 94;
+  --UQZERA-warning: 245 158 11;
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -64,19 +64,19 @@
 
 html[data-theme="light"] {
   color-scheme: light;
-  --cloak-bg: 240 244 248;
-  --cloak-surface-1: 255 255 255;
-  --cloak-surface-2: 241 245 249;
-  --cloak-surface-3: 226 232 240;
-  --cloak-border: 203 213 225;
-  --cloak-accent: 5 150 105;
-  --cloak-accent-hover: 4 120 87;
-  --cloak-text: 24 32 42;
-  --cloak-muted: 71 85 105;
-  --cloak-dim: 100 116 139;
-  --cloak-danger: 220 38 38;
-  --cloak-success: 22 163 74;
-  --cloak-warning: 217 119 6;
+  --UQZERA-bg: 240 244 248;
+  --UQZERA-surface-1: 255 255 255;
+  --UQZERA-surface-2: 241 245 249;
+  --UQZERA-surface-3: 226 232 240;
+  --UQZERA-border: 203 213 225;
+  --UQZERA-accent: 5 150 105;
+  --UQZERA-accent-hover: 4 120 87;
+  --UQZERA-text: 24 32 42;
+  --UQZERA-muted: 71 85 105;
+  --UQZERA-dim: 100 116 139;
+  --UQZERA-danger: 220 38 38;
+  --UQZERA-success: 22 163 74;
+  --UQZERA-warning: 217 119 6;
 }
 
 /* ---- Reset & Base ---- */
@@ -84,49 +84,49 @@ html[data-theme="light"] {
 html, body { width: 100%; height: 100dvh; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior: none; }
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: rgb(var(--cloak-bg));
-  color: rgb(var(--cloak-text));
+  background: rgb(var(--UQZERA-bg));
+  color: rgb(var(--UQZERA-text));
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; border: none; background: none; }
 a { color: inherit; text-decoration: none; }
-::selection { background: #6ee7b7; color: rgb(var(--cloak-bg)); }
+::selection { background: #6ee7b7; color: rgb(var(--UQZERA-bg)); }
 
 /* ---- Glassmorphism System ---- */
-.cloak-glass {
-  background: color-mix(in srgb, rgb(var(--cloak-surface-1)) 72%, transparent);
+.UQZERA-glass {
+  background: color-mix(in srgb, rgb(var(--UQZERA-surface-1)) 72%, transparent);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
-  border: 1px solid rgb(var(--cloak-border) / 0.35);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.35);
 }
-.cloak-glass-strong {
-  background: color-mix(in srgb, rgb(var(--cloak-surface-1)) 86%, transparent);
+.UQZERA-glass-strong {
+  background: color-mix(in srgb, rgb(var(--UQZERA-surface-1)) 86%, transparent);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgb(var(--cloak-border) / 0.45);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.45);
 }
-.cloak-glass-soft {
-  background: color-mix(in srgb, rgb(var(--cloak-surface-2)) 55%, transparent);
+.UQZERA-glass-soft {
+  background: color-mix(in srgb, rgb(var(--UQZERA-surface-2)) 55%, transparent);
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
 }
-.cloak-ambient {
+.UQZERA-ambient {
   background:
     radial-gradient(60% 50% at 12% 8%, rgba(16, 185, 129, 0.14), transparent 60%),
     radial-gradient(50% 45% at 88% 4%, rgba(16, 185, 129, 0.1), transparent 55%),
     radial-gradient(70% 60% at 50% 100%, rgba(16, 185, 129, 0.08), transparent 60%),
-    rgb(var(--cloak-bg));
+    rgb(var(--UQZERA-bg));
 }
 
 /* ---- Scrollbars ---- */
-.cloak-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--cloak-muted) / 0.35) transparent; }
-.cloak-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-.cloak-scroll::-webkit-scrollbar-track { background: transparent; }
-.cloak-scroll::-webkit-scrollbar-thumb { background: rgb(var(--cloak-muted) / 0.3); border-radius: 999px; }
-.cloak-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--cloak-muted) / 0.5); }
+.UQZERA-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--UQZERA-muted) / 0.35) transparent; }
+.UQZERA-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.UQZERA-scroll::-webkit-scrollbar-track { background: transparent; }
+.UQZERA-scroll::-webkit-scrollbar-thumb { background: rgb(var(--UQZERA-muted) / 0.3); border-radius: 999px; }
+.UQZERA-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--UQZERA-muted) / 0.5); }
 
 /* ---- Typography Helpers ---- */
 .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
@@ -169,19 +169,19 @@ a { color: inherit; text-decoration: none; }
 .hidden { display: none; }
 
 /* ---- Animations ---- */
-@keyframes cloak-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-@keyframes cloak-typing { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
-@keyframes cloak-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes cloak-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes cloak-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes cloak-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+@keyframes UQZERA-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes UQZERA-typing { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+@keyframes UQZERA-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes UQZERA-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes UQZERA-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes UQZERA-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
 
-.animate-fade-in { animation: cloak-fade-in 0.2s ease-out; }
-.animate-slide-up { animation: cloak-slide-up 0.3s var(--ease-cloak); }
-.animate-scale-in { animation: cloak-scale-in 0.2s var(--ease-cloak); }
-.animate-pulse-dot { animation: cloak-pulse 2s ease-in-out infinite; }
+.animate-fade-in { animation: UQZERA-fade-in 0.2s ease-out; }
+.animate-slide-up { animation: UQZERA-slide-up 0.3s var(--ease-UQZERA); }
+.animate-scale-in { animation: UQZERA-scale-in 0.2s var(--ease-UQZERA); }
+.animate-pulse-dot { animation: UQZERA-pulse 2s ease-in-out infinite; }
 
-.typing-dot { animation: cloak-typing 1.2s ease-in-out infinite; }
+.typing-dot { animation: UQZERA-typing 1.2s ease-in-out infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.15s; }
 .typing-dot:nth-child(3) { animation-delay: 0.3s; }
 
@@ -204,12 +204,12 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgb(var(--cloak-border) / 0.5);
-  background: rgb(var(--cloak-bg) / 0.95);
+  border-right: 1px solid rgb(var(--UQZERA-border) / 0.5);
+  background: rgb(var(--UQZERA-bg) / 0.95);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   z-index: 50;
-  transition: transform 0.3s var(--ease-cloak);
+  transition: transform 0.3s var(--ease-UQZERA);
 }
 .sidebar-backdrop {
   display: none;
@@ -237,8 +237,8 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--margin);
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-bg) / 0.85);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-bg) / 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 30;
@@ -265,9 +265,9 @@ a { color: inherit; text-decoration: none; }
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  border: 1px solid rgb(var(--cloak-accent) / 0.3);
-  background: rgb(var(--cloak-accent) / 0.1);
-  color: rgb(var(--cloak-accent));
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.3);
+  background: rgb(var(--UQZERA-accent) / 0.1);
+  color: rgb(var(--UQZERA-accent));
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -277,10 +277,10 @@ a { color: inherit; text-decoration: none; }
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .sidebar-logo-lock {
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   font-size: 14px;
 }
 
@@ -293,8 +293,8 @@ a { color: inherit; text-decoration: none; }
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
 }
 .sidebar-search-box input {
   flex: 1;
@@ -302,18 +302,18 @@ a { color: inherit; text-decoration: none; }
   border: none;
   outline: none;
   font-size: 13px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   min-width: 0;
 }
-.sidebar-search-box input::placeholder { color: rgb(var(--cloak-dim)); }
-.sidebar-search-icon { color: rgb(var(--cloak-dim)); font-size: 14px; flex-shrink: 0; }
+.sidebar-search-box input::placeholder { color: rgb(var(--UQZERA-dim)); }
+.sidebar-search-icon { color: rgb(var(--UQZERA-dim)); font-size: 14px; flex-shrink: 0; }
 
 .sidebar-status-card {
   margin: 0 1rem 0.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.3);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -323,11 +323,11 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-family: 'JetBrains Mono', monospace;
 }
 .sidebar-status-card .value {
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
   text-transform: uppercase;
@@ -337,7 +337,7 @@ a { color: inherit; text-decoration: none; }
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent));
   position: relative;
 }
 .status-dot::after {
@@ -345,8 +345,8 @@ a { color: inherit; text-decoration: none; }
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
-  animation: cloak-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  background: rgb(var(--UQZERA-accent));
+  animation: UQZERA-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 .sidebar-nav {
@@ -365,13 +365,13 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   transition: all 0.15s ease;
 }
-.sidebar-nav-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.sidebar-nav-item:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 .sidebar-nav-item.active {
-  background: rgb(var(--cloak-surface-1) / 0.7);
-  color: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-surface-1) / 0.7);
+  color: rgb(var(--UQZERA-accent));
   font-weight: 600;
 }
 .sidebar-nav-item .nav-left {
@@ -386,17 +386,17 @@ a { color: inherit; text-decoration: none; }
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  background: rgb(var(--cloak-surface-2) / 0.5);
-  color: rgb(var(--cloak-muted));
+  background: rgb(var(--UQZERA-surface-2) / 0.5);
+  color: rgb(var(--UQZERA-muted));
 }
 .sidebar-nav-item.active .nav-badge {
-  background: rgb(var(--cloak-accent) / 0.2);
-  color: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent) / 0.2);
+  color: rgb(var(--UQZERA-accent));
 }
 
 .sidebar-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid rgb(var(--cloak-border) / 0.3);
+  border-top: 1px solid rgb(var(--UQZERA-border) / 0.3);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -407,13 +407,13 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
   font-size: 13px;
   font-weight: 500;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   transition: background 0.15s ease;
 }
-.sidebar-browse-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+.sidebar-browse-btn:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); }
 .sidebar-profile {
   display: flex;
   align-items: center;
@@ -424,13 +424,13 @@ a { color: inherit; text-decoration: none; }
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05));
-  border: 1px solid rgb(var(--cloak-accent) / 0.4);
+  background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.3), rgb(var(--UQZERA-accent) / 0.05));
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.4);
   display: grid;
   place-items: center;
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   position: relative;
   flex-shrink: 0;
 }
@@ -442,14 +442,14 @@ a { color: inherit; text-decoration: none; }
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
-  border: 2px solid rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  border: 2px solid rgb(var(--UQZERA-bg));
 }
 .sidebar-profile-info { min-width: 0; flex: 1; }
 .sidebar-profile-name {
   font-size: 13px;
   font-weight: 500;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -457,7 +457,7 @@ a { color: inherit; text-decoration: none; }
 .sidebar-profile-key {
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -475,11 +475,11 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 16px;
   transition: all 0.15s ease;
 }
-.sidebar-icon-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.sidebar-icon-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 
 /* ============================================================
    HEADER COMPONENTS
@@ -495,25 +495,25 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 18px;
 }
-.header-menu-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.header-menu-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 .header-e2ee-badge {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
 }
-.header-e2ee-badge .shield-icon { color: rgb(var(--cloak-accent)); font-size: 13px; }
+.header-e2ee-badge .shield-icon { color: rgb(var(--UQZERA-accent)); font-size: 13px; }
 
 .header-right {
   display: flex;
@@ -526,37 +526,37 @@ a { color: inherit; text-decoration: none; }
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   border-radius: 8px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 11px;
   font-family: 'JetBrains Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   transition: all 0.15s ease;
 }
-.header-ephemeral-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
-.header-ephemeral-btn .timer-icon { color: rgb(var(--cloak-accent)); font-size: 14px; }
+.header-ephemeral-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
+.header-ephemeral-btn .timer-icon { color: rgb(var(--UQZERA-accent)); font-size: 14px; }
 .header-action-btn {
   width: 38px;
   height: 38px;
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 18px;
   transition: all 0.15s ease;
 }
-.header-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-accent)); }
+.header-action-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-accent)); }
 .header-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05));
-  border: 1px solid rgb(var(--cloak-accent) / 0.4);
+  background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.3), rgb(var(--UQZERA-accent) / 0.05));
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.4);
   display: grid;
   place-items: center;
   font-size: 12px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   position: relative;
 }
 .header-avatar::after {
@@ -567,8 +567,8 @@ a { color: inherit; text-decoration: none; }
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
-  border: 2px solid rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  border: 2px solid rgb(var(--UQZERA-bg));
 }
 
 /* ============================================================
@@ -579,15 +579,15 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-bg) / 0.5);
+  border-right: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-bg) / 0.5);
 }
 .chats-panel-header {
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.2);
 }
 .chats-panel-title-row {
   display: flex;
@@ -598,7 +598,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .chats-panel-new-btn {
   display: flex;
@@ -606,13 +606,13 @@ a { color: inherit; text-decoration: none; }
   gap: 0.35rem;
   padding: 0.4rem 0.75rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 12px;
   font-weight: 600;
   transition: all 0.15s ease;
 }
-.chats-panel-new-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.chats-panel-new-btn:hover { background: rgb(var(--UQZERA-accent-hover)); }
 .chats-panel-new-btn .plus-icon { font-size: 14px; }
 
 .chats-filter-tabs {
@@ -620,8 +620,8 @@ a { color: inherit; text-decoration: none; }
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
   overflow-x: auto;
 }
 .chats-filter-tab {
@@ -630,15 +630,15 @@ a { color: inherit; text-decoration: none; }
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   white-space: nowrap;
   transition: all 0.15s ease;
   text-align: center;
 }
-.chats-filter-tab:hover { color: rgb(var(--cloak-text)); }
+.chats-filter-tab:hover { color: rgb(var(--UQZERA-text)); }
 .chats-filter-tab.active {
-  background: rgb(var(--cloak-surface-2) / 0.7);
-  color: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-surface-2) / 0.7);
+  color: rgb(var(--UQZERA-accent));
   font-weight: 600;
 }
 
@@ -660,10 +660,10 @@ a { color: inherit; text-decoration: none; }
   transition: all 0.15s ease;
   border: 1px solid transparent;
 }
-.chat-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); }
+.chat-item:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); }
 .chat-item.active {
-  background: rgb(var(--cloak-surface-1) / 0.7);
-  border-color: rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.7);
+  border-color: rgb(var(--UQZERA-border) / 0.3);
 }
 .chat-item-avatar {
   width: 44px;
@@ -674,20 +674,20 @@ a { color: inherit; text-decoration: none; }
   font-size: 15px;
   font-weight: 600;
   flex-shrink: 0;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
 }
 .chat-item-info { flex: 1; min-width: 0; }
 .chat-item-name {
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .chat-item-preview {
   font-size: 12px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -703,14 +703,14 @@ a { color: inherit; text-decoration: none; }
 .chat-item-time {
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
-  color: rgb(var(--cloak-dim));
+  color: rgb(var(--UQZERA-dim));
 }
 .chat-item-unread {
   min-width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 10px;
   font-weight: 700;
   display: grid;
@@ -733,8 +733,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
-  background: rgb(var(--cloak-bg) / 0.85);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.2);
+  background: rgb(var(--UQZERA-bg) / 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   flex-shrink: 0;
@@ -745,28 +745,28 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 18px;
 }
-.chat-view-back:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.chat-view-back:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 .chat-view-avatar {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgb(var(--cloak-accent) / 0.3);
-  background: rgb(var(--cloak-accent) / 0.1);
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.3);
+  background: rgb(var(--UQZERA-accent) / 0.1);
   display: grid;
   place-items: center;
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   flex-shrink: 0;
 }
 .chat-view-info { flex: 1; min-width: 0; }
 .chat-view-name {
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -779,9 +779,9 @@ a { color: inherit; text-decoration: none; }
   gap: 0.3rem;
   margin-top: 1px;
 }
-.chat-view-status.encrypted { color: rgb(var(--cloak-accent)); }
+.chat-view-status.encrypted { color: rgb(var(--UQZERA-accent)); }
 .chat-view-status .lock-icon { font-size: 12px; }
-.chat-view-status .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: rgb(var(--cloak-accent)); display: inline-block; }
+.chat-view-status .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: rgb(var(--UQZERA-accent)); display: inline-block; }
 
 .chat-view-actions {
   display: flex;
@@ -794,11 +794,11 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 18px;
   transition: all 0.15s ease;
 }
-.chat-view-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.chat-view-action-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 
 /* ---- Messages Area ---- */
 .messages-area {
@@ -820,18 +820,18 @@ a { color: inherit; text-decoration: none; }
   content: '';
   flex: 1;
   height: 1px;
-  background: rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-border) / 0.3);
 }
 .messages-date-label {
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgb(var(--cloak-muted));
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  color: rgb(var(--UQZERA-muted));
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
 }
 
 /* ---- Message Bubble ---- */
@@ -852,31 +852,31 @@ a { color: inherit; text-decoration: none; }
   word-wrap: break-word;
 }
 .message-group.outgoing .message-bubble {
-  background: rgb(var(--cloak-accent) / 0.2);
+  background: rgb(var(--UQZERA-accent) / 0.2);
   border-bottom-right-radius: 6px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .message-group.incoming .message-bubble {
-  background: rgb(var(--cloak-surface-1) / 0.6);
+  background: rgb(var(--UQZERA-surface-1) / 0.6);
   border-bottom-left-radius: 6px;
-  color: rgb(var(--cloak-text));
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  color: rgb(var(--UQZERA-text));
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
 }
 .message-bubble .reply-preview {
   margin-bottom: 0.4rem;
   padding: 0.35rem 0.5rem;
   border-radius: 8px;
-  border-left: 2px solid rgb(var(--cloak-accent) / 0.6);
+  border-left: 2px solid rgb(var(--UQZERA-accent) / 0.6);
   background: rgba(0,0,0,0.2);
 }
 .message-bubble .reply-preview .reply-name {
   font-size: 11px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .message-bubble .reply-preview .reply-text {
   font-size: 11px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -888,10 +888,10 @@ a { color: inherit; text-decoration: none; }
   gap: 0.35rem;
   margin-top: 0.25rem;
   font-size: 10px;
-  color: rgb(--cloak-muted);
+  color: rgb(--UQZERA-muted);
   font-family: 'JetBrains Mono', monospace;
 }
-.message-meta .msg-timer { color: rgb(var(--cloak-accent)); }
+.message-meta .msg-timer { color: rgb(var(--UQZERA-accent)); }
 .message-meta .msg-timer .flame-icon { font-size: 10px; }
 .message-reactions {
   display: flex;
@@ -902,7 +902,7 @@ a { color: inherit; text-decoration: none; }
 .message-reaction {
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   background: rgba(0,0,0,0.25);
   font-size: 11px;
 }
@@ -912,7 +912,7 @@ a { color: inherit; text-decoration: none; }
   gap: 2px;
   font-size: 10px;
 }
-.message-status-ticks.read { color: rgb(var(--cloak-accent)); }
+.message-status-ticks.read { color: rgb(var(--UQZERA-accent)); }
 .message-status-ticks .tick-icon { font-size: 12px; }
 
 /* ---- Typing Indicator ---- */
@@ -922,15 +922,15 @@ a { color: inherit; text-decoration: none; }
   gap: 4px;
   padding: 0.5rem 0.75rem;
   border-radius: 18px;
-  background: rgb(var(--cloak-surface-1) / 0.6);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.6);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
   border-bottom-left-radius: 6px;
 }
 .typing-indicator .typing-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgb(var(--cloak-muted));
+  background: rgb(var(--UQZERA-muted));
 }
 
 /* ---- Message Input ---- */
@@ -962,9 +962,9 @@ a { color: inherit; text-decoration: none; }
   resize: none;
   font-size: 14px;
   line-height: 1.5;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
-.message-textarea::placeholder { color: rgb(var(--cloak-dim)); }
+.message-textarea::placeholder { color: rgb(var(--UQZERA-dim)); }
 .message-input-actions {
   display: flex;
   align-items: center;
@@ -977,27 +977,27 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 18px;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
-.msg-action-btn:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
-.msg-action-btn.active { color: rgb(var(--cloak-accent)); background: rgb(var(--cloak-accent) / 0.1); }
+.msg-action-btn:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
+.msg-action-btn.active { color: rgb(var(--UQZERA-accent)); background: rgb(var(--UQZERA-accent) / 0.1); }
 .msg-send-btn {
   width: 40px;
   height: 40px;
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 18px;
   transition: all 0.15s ease;
   flex-shrink: 0;
   margin-left: auto;
 }
-.msg-send-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.msg-send-btn:hover { background: rgb(var(--UQZERA-accent-hover)); }
 .msg-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ============================================================
@@ -1014,7 +1014,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  animation: cloak-fade-in 0.2s ease-out;
+  animation: UQZERA-fade-in 0.2s ease-out;
 }
 .modal-panel {
   width: 100%;
@@ -1024,7 +1024,7 @@ a { color: inherit; text-decoration: none; }
   border-radius: 20px;
   padding: 1.5rem;
   position: relative;
-  animation: cloak-scale-in 0.2s var(--ease-cloak);
+  animation: UQZERA-scale-in 0.2s var(--ease-UQZERA);
 }
 .modal-close {
   position: absolute;
@@ -1035,19 +1035,19 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 16px;
 }
-.modal-close:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.modal-close:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); color: rgb(var(--UQZERA-text)); }
 .modal-title {
   font-size: 18px;
   font-weight: 700;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   margin-bottom: 0.25rem;
 }
 .modal-subtitle {
   font-size: 13px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-bottom: 1.25rem;
 }
 
@@ -1057,8 +1057,8 @@ a { color: inherit; text-decoration: none; }
   gap: 2px;
   padding: 3px;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
   margin-bottom: 1.25rem;
 }
 .key-tab {
@@ -1067,13 +1067,13 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   text-align: center;
   transition: all 0.15s ease;
 }
 .key-tab.active {
-  background: rgb(var(--cloak-surface-2) / 0.7);
-  color: rgb(var(--cloak-text));
+  background: rgb(var(--UQZERA-surface-2) / 0.7);
+  color: rgb(var(--UQZERA-text));
   font-weight: 600;
 }
 .key-qr-placeholder {
@@ -1081,21 +1081,21 @@ a { color: inherit; text-decoration: none; }
   height: 180px;
   margin: 0 auto 1rem;
   border-radius: 16px;
-  background: rgb(var(--cloak-surface-1));
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1));
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   display: grid;
   place-items: center;
   font-size: 48px;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .key-hex-display {
   padding: 0.75rem 1rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   word-break: break-all;
   text-align: center;
   margin-bottom: 0.75rem;
@@ -1108,36 +1108,36 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   padding: 0.65rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   font-size: 13px;
   font-weight: 500;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   transition: all 0.15s ease;
 }
-.key-copy-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+.key-copy-btn:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); }
 
 /* ---- New Chat Modal ---- */
 .new-chat-input {
   width: 100%;
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
   font-size: 14px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   outline: none;
   margin-bottom: 0.75rem;
 }
-.new-chat-input:focus { border-color: rgb(var(--cloak-accent) / 0.4); }
-.new-chat-input::placeholder { color: rgb(var(--cloak-dim)); }
+.new-chat-input:focus { border-color: rgb(var(--UQZERA-accent) / 0.4); }
+.new-chat-input::placeholder { color: rgb(var(--UQZERA-dim)); }
 .new-chat-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-bottom: 0.35rem;
 }
 .new-chat-scan-btn {
@@ -1147,13 +1147,13 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   padding: 0.75rem;
   border-radius: 10px;
-  border: 1px dashed rgb(var(--cloak-accent) / 0.3);
-  background: rgb(var(--cloak-accent) / 0.05);
+  border: 1px dashed rgb(var(--UQZERA-accent) / 0.3);
+  background: rgb(var(--UQZERA-accent) / 0.05);
   font-size: 13px;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   transition: all 0.15s ease;
 }
-.new-chat-scan-btn:hover { background: rgb(var(--cloak-accent) / 0.1); }
+.new-chat-scan-btn:hover { background: rgb(var(--UQZERA-accent) / 0.1); }
 .new-chat-scan-btn .camera-icon { font-size: 18px; }
 
 /* ---- Security Modal ---- */
@@ -1166,7 +1166,7 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-bottom: 0.5rem;
 }
 .security-modal-row {
@@ -1175,14 +1175,14 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.4);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
   margin-bottom: 0.35rem;
   font-size: 13px;
 }
-.security-modal-row .row-label { color: rgb(var(--cloak-muted)); }
-.security-modal-row .row-value { color: rgb(var(--cloak-text)); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
-.security-modal-row .row-value.success { color: rgb(var(--cloak-accent)); }
+.security-modal-row .row-label { color: rgb(var(--UQZERA-muted)); }
+.security-modal-row .row-value { color: rgb(var(--UQZERA-text)); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.security-modal-row .row-value.success { color: rgb(var(--UQZERA-accent)); }
 
 /* ---- Settings View ---- */
 .settings-section {
@@ -1194,7 +1194,7 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-bottom: 0.5rem;
 }
 .settings-row {
@@ -1203,24 +1203,24 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding: 0.75rem 0.85rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.4);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
   margin-bottom: 0.35rem;
 }
-.settings-row .row-label { font-size: 13px; color: rgb(var(--cloak-text)); }
-.settings-row .row-desc { font-size: 11px; color: rgb(var(--cloak-muted)); margin-top: 2px; }
-.settings-row .row-value { font-size: 12px; color: rgb(var(--cloak-muted)); font-family: 'JetBrains Mono', monospace; }
+.settings-row .row-label { font-size: 13px; color: rgb(var(--UQZERA-text)); }
+.settings-row .row-desc { font-size: 11px; color: rgb(var(--UQZERA-muted)); margin-top: 2px; }
+.settings-row .row-value { font-size: 12px; color: rgb(var(--UQZERA-muted)); font-family: 'JetBrains Mono', monospace; }
 .settings-toggle {
   width: 40px;
   height: 22px;
   border-radius: 999px;
-  background: rgb(var(--cloak-surface-3) / 0.5);
+  background: rgb(var(--UQZERA-surface-3) / 0.5);
   position: relative;
   transition: background 0.2s ease;
   cursor: pointer;
   flex-shrink: 0;
 }
-.settings-toggle.active { background: rgb(var(--cloak-accent)); }
+.settings-toggle.active { background: rgb(var(--UQZERA-accent)); }
 .settings-toggle::after {
   content: '';
   position: absolute;
@@ -1261,24 +1261,24 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   margin-bottom: 0.35rem;
 }
 .channels-header-tag .pulse-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent));
 }
 .channels-header-title {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .channels-header-desc {
   font-size: 13px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-top: 0.25rem;
   max-width: 480px;
 }
@@ -1293,27 +1293,27 @@ a { color: inherit; text-decoration: none; }
   gap: 0.35rem;
   padding: 0.4rem 0.75rem;
   border-radius: 10px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
 }
-.channels-relay-pill .wifi-icon { color: rgb(var(--cloak-accent)); font-size: 14px; }
+.channels-relay-pill .wifi-icon { color: rgb(var(--UQZERA-accent)); font-size: 14px; }
 .channels-create-btn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.55rem 1rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 13px;
   font-weight: 600;
   box-shadow: 0 0 20px rgba(78, 222, 163, 0.25);
   transition: all 0.15s ease;
 }
-.channels-create-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.channels-create-btn:hover { background: rgb(var(--UQZERA-accent-hover)); }
 .channels-create-btn .plus-icon { font-size: 16px; }
 
 .channels-body {
@@ -1338,7 +1338,7 @@ a { color: inherit; text-decoration: none; }
 .channels-list-title {
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1346,30 +1346,30 @@ a { color: inherit; text-decoration: none; }
 .channels-list-count {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-surface-2) / 0.5);
+  background: rgb(var(--UQZERA-surface-2) / 0.5);
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .channels-filter-tabs {
   display: flex;
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.2);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.2);
 }
 .channels-filter-tab {
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   transition: all 0.15s ease;
 }
 .channels-filter-tab.active {
-  background: rgb(var(--cloak-surface-2) / 0.7);
-  color: rgb(var(--cloak-text));
+  background: rgb(var(--UQZERA-surface-2) / 0.7);
+  color: rgb(var(--UQZERA-text));
 }
 .channel-card {
   display: flex;
@@ -1377,15 +1377,15 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding: 0.85rem;
   border-radius: 12px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.channel-card:hover { background: rgb(var(--cloak-surface-1) / 0.7); }
+.channel-card:hover { background: rgb(var(--UQZERA-surface-1) / 0.7); }
 .channel-card.active {
-  background: rgb(var(--cloak-surface-2) / 0.5);
-  border-color: rgb(var(--cloak-accent) / 0.3);
+  background: rgb(var(--UQZERA-surface-2) / 0.5);
+  border-color: rgb(var(--UQZERA-accent) / 0.3);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .channel-card-left {
@@ -1401,23 +1401,23 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   place-items: center;
   font-size: 20px;
-  color: rgb(var(--cloak-accent));
-  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.2), rgb(var(--cloak-accent) / 0.05));
+  color: rgb(var(--UQZERA-accent));
+  background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.2), rgb(var(--UQZERA-accent) / 0.05));
   flex-shrink: 0;
 }
 .channel-card-info { min-width: 0; }
 .channel-card-name {
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   display: flex;
   align-items: center;
   gap: 0.35rem;
 }
-.channel-card-name .lock-icon { font-size: 13px; color: rgb(var(--cloak-accent)); }
+.channel-card-name .lock-icon { font-size: 13px; color: rgb(var(--UQZERA-accent)); }
 .channel-card-meta {
   font-size: 11px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -1433,23 +1433,23 @@ a { color: inherit; text-decoration: none; }
 .channel-card-time {
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
-  color: rgb(var(--cloak-dim));
+  color: rgb(var(--UQZERA-dim));
 }
 .channel-card-new {
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent) / 0.1);
+  background: rgb(var(--UQZERA-accent) / 0.1);
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   font-weight: 700;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 
 /* ---- Channel Detail Panel ---- */
 .channel-detail {
   border-radius: 20px;
-  border: 1px solid rgb(var(--cloak-border) / 0.4);
-  background: rgb(var(--cloak-surface-1) / 0.8);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.4);
+  background: rgb(var(--UQZERA-surface-1) / 0.8);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   overflow: hidden;
@@ -1458,7 +1458,7 @@ a { color: inherit; text-decoration: none; }
 }
 .channel-detail-header {
   padding: 1.25rem;
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1476,13 +1476,13 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   place-items: center;
   font-size: 26px;
-  color: rgb(var(--cloak-accent));
-  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.2), rgb(var(--cloak-accent) / 0.05));
+  color: rgb(var(--UQZERA-accent));
+  background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.2), rgb(var(--UQZERA-accent) / 0.05));
 }
 .channel-detail-name {
   font-size: 18px;
   font-weight: 700;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .channel-detail-verified {
   display: inline-flex;
@@ -1490,17 +1490,17 @@ a { color: inherit; text-decoration: none; }
   gap: 0.25rem;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent) / 0.15);
-  border: 1px solid rgb(var(--cloak-accent) / 0.2);
+  background: rgb(var(--UQZERA-accent) / 0.15);
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.2);
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   margin-top: 2px;
 }
 .channel-detail-meta {
   font-size: 12px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -1516,20 +1516,20 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 16px;
   transition: all 0.15s ease;
 }
-.channel-detail-action-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.channel-detail-action-btn:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); color: rgb(var(--UQZERA-text)); }
 
 .channel-subscribers-bar {
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.3);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
 }
 .channel-subscribers-avatars {
   display: flex;
@@ -1539,13 +1539,13 @@ a { color: inherit; text-decoration: none; }
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.1));
-  border: 2px solid rgb(var(--cloak-surface-1));
+  background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.3), rgb(var(--UQZERA-accent) / 0.1));
+  border: 2px solid rgb(var(--UQZERA-surface-1));
   display: grid;
   place-items: center;
   font-size: 10px;
   font-weight: 700;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   margin-left: -6px;
 }
 .channel-subscribers-avatars .sub-avatar:first-child { margin-left: 0; }
@@ -1553,13 +1553,13 @@ a { color: inherit; text-decoration: none; }
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgb(var(--cloak-surface-3) / 0.5);
-  border: 2px solid rgb(var(--cloak-surface-1));
+  background: rgb(var(--UQZERA-surface-3) / 0.5);
+  border: 2px solid rgb(var(--UQZERA-surface-1));
   display: grid;
   place-items: center;
   font-size: 9px;
   font-weight: 700;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   margin-left: -6px;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -1572,7 +1572,7 @@ a { color: inherit; text-decoration: none; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent));
 }
 
 .channel-broadcasts {
@@ -1586,8 +1586,8 @@ a { color: inherit; text-decoration: none; }
 .broadcast-card {
   padding: 1rem;
   border-radius: 14px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
 }
 .broadcast-header {
   display: flex;
@@ -1604,22 +1604,22 @@ a { color: inherit; text-decoration: none; }
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgb(var(--cloak-accent) / 0.2);
+  background: rgb(var(--UQZERA-accent) / 0.2);
   display: grid;
   place-items: center;
   font-size: 12px;
   font-weight: 700;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .broadcast-sender-name {
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .broadcast-sender-sig {
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .broadcast-hash {
   display: flex;
@@ -1627,16 +1627,16 @@ a { color: inherit; text-decoration: none; }
   gap: 0.25rem;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  background: rgb(var(--cloak-surface-2) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-2) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
-.broadcast-hash .shield-icon { color: rgb(var(--cloak-accent)); font-size: 12px; }
+.broadcast-hash .shield-icon { color: rgb(var(--UQZERA-accent)); font-size: 12px; }
 .broadcast-content {
   font-size: 14px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   line-height: 1.6;
 }
 .broadcast-footer {
@@ -1645,22 +1645,22 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding-top: 0.5rem;
   margin-top: 0.5rem;
-  border-top: 1px solid rgb(var(--cloak-border) / 0.2);
+  border-top: 1px solid rgb(var(--UQZERA-border) / 0.2);
   font-size: 10px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-family: 'JetBrains Mono', monospace;
 }
 .broadcast-footer .relay-info {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 
 .broadcast-composer {
   padding: 1rem 1.25rem;
-  border-top: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-2) / 0.3);
+  border-top: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-2) / 0.3);
 }
 .broadcast-composer-header {
   display: flex;
@@ -1671,21 +1671,21 @@ a { color: inherit; text-decoration: none; }
 .broadcast-composer-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   display: flex;
   align-items: center;
   gap: 0.35rem;
 }
-.broadcast-composer-title .broadcast-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
+.broadcast-composer-title .broadcast-icon { color: rgb(var(--UQZERA-accent)); font-size: 16px; }
 .broadcast-composer-role {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
 }
 .broadcast-composer-box {
   border-radius: 14px;
-  background: rgb(var(--cloak-surface-1) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   padding: 0.5rem;
 }
 .broadcast-textarea {
@@ -1695,17 +1695,17 @@ a { color: inherit; text-decoration: none; }
   outline: none;
   resize: none;
   font-size: 13px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   padding: 0.35rem;
   min-height: 60px;
 }
-.broadcast-textarea::placeholder { color: rgb(var(--cloak-dim)); }
+.broadcast-textarea::placeholder { color: rgb(var(--UQZERA-dim)); }
 .broadcast-composer-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 0.35rem;
-  border-top: 1px solid rgb(var(--cloak-border) / 0.2);
+  border-top: 1px solid rgb(var(--UQZERA-border) / 0.2);
 }
 .broadcast-composer-tools {
   display: flex;
@@ -1718,31 +1718,31 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 15px;
   transition: all 0.15s ease;
 }
-.broadcast-tool-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.broadcast-tool-btn:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); color: rgb(var(--UQZERA-text)); }
 .broadcast-send-btn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 12px;
   font-weight: 600;
   transition: all 0.15s ease;
 }
-.broadcast-send-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.broadcast-send-btn:hover { background: rgb(var(--UQZERA-accent-hover)); }
 
 /* ---- Mesh Health Widget ---- */
 .mesh-health-card {
   padding: 1rem;
   border-radius: 14px;
-  background: rgb(var(--cloak-surface-1) / 0.4);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
 }
 .mesh-health-header {
   display: flex;
@@ -1753,42 +1753,42 @@ a { color: inherit; text-decoration: none; }
 .mesh-health-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .mesh-health-value {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .mesh-health-bar {
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: rgb(var(--cloak-surface-3) / 0.3);
+  background: rgb(var(--UQZERA-surface-3) / 0.3);
   overflow: hidden;
   display: flex;
   margin-bottom: 0.5rem;
 }
 .mesh-health-bar .bar-primary {
   height: 100%;
-  background: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent));
   border-radius: 999px;
 }
 .mesh-health-bar .bar-secondary {
   height: 100%;
-  background: rgb(var(--cloak-accent) / 0.6);
+  background: rgb(var(--UQZERA-accent) / 0.6);
 }
 .mesh-health-bar .bar-tertiary {
   height: 100%;
-  background: rgb(var(--cloak-border));
+  background: rgb(var(--UQZERA-border));
 }
 .mesh-health-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 10px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -1802,8 +1802,8 @@ a { color: inherit; text-decoration: none; }
 .info-card {
   padding: 1rem;
   border-radius: 14px;
-  background: rgb(var(--cloak-surface-1) / 0.4);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
@@ -1812,8 +1812,8 @@ a { color: inherit; text-decoration: none; }
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: rgb(var(--cloak-accent) / 0.1);
-  color: rgb(var(--cloak-accent));
+  background: rgb(var(--UQZERA-accent) / 0.1);
+  color: rgb(var(--UQZERA-accent));
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -1822,12 +1822,12 @@ a { color: inherit; text-decoration: none; }
 .info-card-title {
   font-size: 13px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   margin-bottom: 0.2rem;
 }
 .info-card-desc {
   font-size: 11px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   line-height: 1.5;
 }
 
@@ -1843,7 +1843,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   flex-direction: column;
   gap: 1px;
-  animation: cloak-scale-in 0.15s var(--ease-cloak);
+  animation: UQZERA-scale-in 0.15s var(--ease-UQZERA);
 }
 .context-menu-item {
   display: flex;
@@ -1852,13 +1852,13 @@ a { color: inherit; text-decoration: none; }
   padding: 0.55rem 0.7rem;
   border-radius: 10px;
   font-size: 13px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   transition: background 0.1s ease;
   text-align: left;
   width: 100%;
 }
-.context-menu-item:hover { background: rgb(var(--cloak-surface-1) / 0.5); }
-.context-menu-item.danger { color: rgb(var(--cloak-danger)); }
+.context-menu-item:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); }
+.context-menu-item.danger { color: rgb(var(--UQZERA-danger)); }
 .context-menu-item .menu-icon { font-size: 16px; }
 .context-menu-item .menu-chevron { margin-left: auto; font-size: 14px; opacity: 0.5; }
 
@@ -1871,11 +1871,11 @@ a { color: inherit; text-decoration: none; }
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   border-radius: 8px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 14px;
   transition: all 0.15s ease;
 }
-.theme-toggle:hover { background: rgb(var(--cloak-surface-1) / 0.5); color: rgb(var(--cloak-text)); }
+.theme-toggle:hover { background: rgb(var(--UQZERA-surface-1) / 0.5); color: rgb(var(--UQZERA-text)); }
 
 /* ============================================================
    TOAST
@@ -1896,14 +1896,14 @@ a { color: inherit; text-decoration: none; }
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
-  color: rgb(var(--cloak-text));
-  animation: cloak-slide-up 0.3s var(--ease-cloak);
+  color: rgb(var(--UQZERA-text));
+  animation: UQZERA-slide-up 0.3s var(--ease-UQZERA);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
-.toast .toast-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
+.toast .toast-icon { color: rgb(var(--UQZERA-accent)); font-size: 16px; }
 
 /* ============================================================
    MOBILE RESPONSIVE
@@ -1943,7 +1943,7 @@ a { color: inherit; text-decoration: none; }
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: rgb(var(--cloak-bg));
+    background: rgb(var(--UQZERA-bg));
   }
   .chat-view.visible {
     display: flex;
@@ -1999,18 +1999,18 @@ a { color: inherit; text-decoration: none; }
 }
 .empty-state-icon {
   font-size: 48px;
-  color: rgb(var(--cloak-dim));
+  color: rgb(var(--UQZERA-dim));
   margin-bottom: 0.75rem;
 }
 .empty-state-title {
   font-size: 16px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   margin-bottom: 0.25rem;
 }
 .empty-state-desc {
   font-size: 13px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   max-width: 300px;
 }
 
@@ -2023,24 +2023,24 @@ a { color: inherit; text-decoration: none; }
   gap: 0.5rem;
   padding: 0.4rem 0.65rem;
   border-radius: 8px;
-  background: rgb(var(--cloak-surface-2) / 0.5);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-2) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   font-size: 12px;
 }
-.attachment-chip .file-icon { color: rgb(var(--cloak-accent)); font-size: 16px; }
-.attachment-chip .file-name { color: rgb(var(--cloak-text)); }
-.attachment-chip .file-size { color: rgb(var(--cloak-muted)); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.attachment-chip .file-icon { color: rgb(var(--UQZERA-accent)); font-size: 16px; }
+.attachment-chip .file-name { color: rgb(var(--UQZERA-text)); }
+.attachment-chip .file-size { color: rgb(var(--UQZERA-muted)); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
 .attachment-chip .remove-btn {
   width: 20px;
   height: 20px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 12px;
   margin-left: auto;
 }
-.attachment-chip .remove-btn:hover { background: rgb(var(--cloak-danger) / 0.2); color: rgb(var(--cloak-danger)); }
+.attachment-chip .remove-btn:hover { background: rgb(var(--UQZERA-danger) / 0.2); color: rgb(var(--UQZERA-danger)); }
 
 .emoji-picker {
   position: absolute;
@@ -2061,7 +2061,7 @@ a { color: inherit; text-decoration: none; }
   text-align: center;
   transition: background 0.1s ease;
 }
-.emoji-picker .emoji-btn:hover { background: rgb(var(--cloak-surface-2) / 0.5); }
+.emoji-picker .emoji-btn:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); }
 
 .selection-bar {
   display: flex;
@@ -2069,14 +2069,14 @@ a { color: inherit; text-decoration: none; }
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 12px;
-  background: rgb(var(--cloak-accent) / 0.1);
-  border: 1px solid rgb(var(--cloak-accent) / 0.2);
+  background: rgb(var(--UQZERA-accent) / 0.1);
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.2);
   font-size: 13px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
 }
 .selection-bar .sel-count {
   font-weight: 600;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
 }
 .selection-bar .sel-action {
   width: 32px;
@@ -2084,10 +2084,10 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   font-size: 15px;
 }
-.selection-bar .sel-action:hover { background: rgb(var(--cloak-surface-2) / 0.5); color: rgb(var(--cloak-text)); }
+.selection-bar .sel-action:hover { background: rgb(var(--UQZERA-surface-2) / 0.5); color: rgb(var(--UQZERA-text)); }
 .selection-bar .sel-close {
   margin-left: auto;
 }
@@ -2101,7 +2101,7 @@ a { color: inherit; text-decoration: none; }
 }
 .notes-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgb(var(--cloak-border) / 0.2);
+  border-bottom: 1px solid rgb(var(--UQZERA-border) / 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2109,12 +2109,12 @@ a { color: inherit; text-decoration: none; }
 .notes-title {
   font-size: 18px;
   font-weight: 700;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
-.notes-title .notes-icon { color: rgb(var(--cloak-accent)); font-size: 20px; }
+.notes-title .notes-icon { color: rgb(var(--UQZERA-accent)); font-size: 20px; }
 .notes-list {
   flex: 1;
   overflow-y: auto;
@@ -2126,21 +2126,21 @@ a { color: inherit; text-decoration: none; }
 .note-card {
   padding: 1rem;
   border-radius: 14px;
-  background: rgb(var(--cloak-surface-1) / 0.4);
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.4);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.note-card:hover { background: rgb(var(--cloak-surface-1) / 0.7); }
+.note-card:hover { background: rgb(var(--UQZERA-surface-1) / 0.7); }
 .note-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   margin-bottom: 0.25rem;
 }
 .note-card-preview {
   font-size: 12px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2150,7 +2150,7 @@ a { color: inherit; text-decoration: none; }
 .note-card-time {
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
-  color: rgb(var(--cloak-dim));
+  color: rgb(var(--UQZERA-dim));
   margin-top: 0.5rem;
 }
 
@@ -2163,30 +2163,30 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-bg));
   padding: 2rem;
 }
 .lock-icon-wrapper {
   width: 80px;
   height: 80px;
   border-radius: 24px;
-  background: rgb(var(--cloak-accent) / 0.1);
-  border: 1px solid rgb(var(--cloak-accent) / 0.3);
+  background: rgb(var(--UQZERA-accent) / 0.1);
+  border: 1px solid rgb(var(--UQZERA-accent) / 0.3);
   display: grid;
   place-items: center;
   font-size: 36px;
-  color: rgb(var(--cloak-accent));
+  color: rgb(var(--UQZERA-accent));
   margin-bottom: 1.5rem;
 }
 .lock-title {
   font-size: 24px;
   font-weight: 700;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   margin-bottom: 0.5rem;
 }
 .lock-subtitle {
   font-size: 14px;
-  color: rgb(var(--cloak-muted));
+  color: rgb(var(--UQZERA-muted));
   margin-bottom: 2rem;
   text-align: center;
 }
@@ -2195,28 +2195,28 @@ a { color: inherit; text-decoration: none; }
   max-width: 300px;
   padding: 0.85rem 1rem;
   border-radius: 12px;
-  border: 1px solid rgb(var(--cloak-border) / 0.3);
-  background: rgb(var(--cloak-surface-1) / 0.5);
+  border: 1px solid rgb(var(--UQZERA-border) / 0.3);
+  background: rgb(var(--UQZERA-surface-1) / 0.5);
   font-size: 16px;
-  color: rgb(var(--cloak-text));
+  color: rgb(var(--UQZERA-text));
   outline: none;
   text-align: center;
   letter-spacing: 0.2em;
   margin-bottom: 1rem;
 }
-.lock-input:focus { border-color: rgb(var(--cloak-accent) / 0.4); }
+.lock-input:focus { border-color: rgb(var(--UQZERA-accent) / 0.4); }
 .lock-btn {
   width: 100%;
   max-width: 300px;
   padding: 0.85rem;
   border-radius: 12px;
-  background: rgb(var(--cloak-accent));
-  color: rgb(var(--cloak-bg));
+  background: rgb(var(--UQZERA-accent));
+  color: rgb(var(--UQZERA-bg));
   font-size: 15px;
   font-weight: 600;
   transition: all 0.15s ease;
 }
-.lock-btn:hover { background: rgb(var(--cloak-accent-hover)); }
+.lock-btn:hover { background: rgb(var(--UQZERA-accent-hover)); }
 
 /* ---- Responsive utility ---- */
 @media (min-width: 769px) {
@@ -2248,7 +2248,7 @@ a { color: inherit; text-decoration: none; }
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="flex items-center gap-1">
-          <span class="sidebar-logo-text">Cloak</span>
+          <span class="sidebar-logo-text">UQZERA</span>
           <svg class="sidebar-logo-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
       </div>
@@ -2289,7 +2289,7 @@ a { color: inherit; text-decoration: none; }
         <span class="status-dot"></span>
         Relay Connected
       </span>
-      <span class="value" style="color: rgb(var(--cloak-accent));">23ms</span>
+      <span class="value" style="color: rgb(var(--UQZERA-accent));">23ms</span>
     </div>
 
     <!-- Navigation -->
@@ -2582,7 +2582,7 @@ a { color: inherit; text-decoration: none; }
 
         <!-- Message Input -->
         <div class="message-input-area">
-          <div class="message-input-box cloak-glass">
+          <div class="message-input-box UQZERA-glass">
             <div class="message-input-row">
               <textarea class="message-textarea" placeholder="Write an encrypted message..." rows="1"></textarea>
             </div>
@@ -2607,7 +2607,7 @@ a { color: inherit; text-decoration: none; }
       <!-- ============================================================
            SCREEN: CHANNELS
            ============================================================ -->
-      <div id="screen-channels" class="channels-view cloak-ambient" style="display: none;">
+      <div id="screen-channels" class="channels-view UQZERA-ambient" style="display: none;">
         <div class="channels-header">
           <div class="channels-header-left">
             <div class="channels-header-tag">
@@ -2657,7 +2657,7 @@ a { color: inherit; text-decoration: none; }
                   <div class="channel-card-meta">
                     <span>2.4k members</span>
                     <span>·</span>
-                    <span style="color: rgb(var(--cloak-accent));">Threat level: LOW</span>
+                    <span style="color: rgb(var(--UQZERA-accent));">Threat level: LOW</span>
                   </div>
                 </div>
               </div>
@@ -2680,7 +2680,7 @@ a { color: inherit; text-decoration: none; }
                   <div class="channel-card-meta">
                     <span>847 members</span>
                     <span>·</span>
-                    <span style="color: rgb(var(--cloak-accent));">Key rotation active</span>
+                    <span style="color: rgb(var(--UQZERA-accent));">Key rotation active</span>
                   </div>
                 </div>
               </div>
@@ -2702,7 +2702,7 @@ a { color: inherit; text-decoration: none; }
                   <div class="channel-card-meta">
                     <span>1.2k members</span>
                     <span>·</span>
-                    <span style="color: rgb(var(--cloak-accent));">6/6 nodes synced</span>
+                    <span style="color: rgb(var(--UQZERA-accent));">6/6 nodes synced</span>
                   </div>
                 </div>
               </div>
@@ -2747,7 +2747,7 @@ a { color: inherit; text-decoration: none; }
                     <span>·</span>
                     <span>Broadcast-only thread</span>
                     <span>·</span>
-                    <span style="color: rgb(var(--cloak-accent)); font-family: 'JetBrains Mono', monospace;">ID: 0x7f3a...e91b</span>
+                    <span style="color: rgb(var(--UQZERA-accent)); font-family: 'JetBrains Mono', monospace;">ID: 0x7f3a...e91b</span>
                   </div>
                 </div>
               </div>
@@ -2774,7 +2774,7 @@ a { color: inherit; text-decoration: none; }
               </div>
               <div class="channel-ephemeral-tag">
                 <span class="pulse-dot animate-pulse-dot"></span>
-                Ephemeral Cache: <strong style="color: rgb(var(--cloak-text)); font-family: 'JetBrains Mono', monospace;">23h Remaining</strong>
+                Ephemeral Cache: <strong style="color: rgb(var(--UQZERA-text)); font-family: 'JetBrains Mono', monospace;">23h Remaining</strong>
               </div>
             </div>
 
@@ -2857,8 +2857,8 @@ a { color: inherit; text-decoration: none; }
                     <button class="broadcast-tool-btn" title="Burn on Read">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </button>
-                    <span style="width: 1px; height: 20px; background: rgb(var(--cloak-border) / 0.3); margin: 0 0.25rem;"></span>
-                    <span class="text-label" style="color: rgb(var(--cloak-accent));">GPG AUTO-SIGN ACTIVE</span>
+                    <span style="width: 1px; height: 20px; background: rgb(var(--UQZERA-border) / 0.3); margin: 0 0.25rem;"></span>
+                    <span class="text-label" style="color: rgb(var(--UQZERA-accent));">GPG AUTO-SIGN ACTIVE</span>
                   </div>
                   <button class="broadcast-send-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -2916,7 +2916,7 @@ a { color: inherit; text-decoration: none; }
 
 <!-- Key Exchange Modal -->
 <div id="modal-keyExchange" class="modal-backdrop" style="display: none;" onclick="hideModal('keyExchange')">
-  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+  <div class="modal-panel UQZERA-glass-strong" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="hideModal('keyExchange')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2939,7 +2939,7 @@ a { color: inherit; text-decoration: none; }
 
 <!-- New Chat Modal -->
 <div id="modal-newChat" class="modal-backdrop" style="display: none;" onclick="hideModal('newChat')">
-  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+  <div class="modal-panel UQZERA-glass-strong" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="hideModal('newChat')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2958,7 +2958,7 @@ a { color: inherit; text-decoration: none; }
 
 <!-- Security Modal -->
 <div id="modal-security" class="modal-backdrop" style="display: none;" onclick="hideModal('security')">
-  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+  <div class="modal-panel UQZERA-glass-strong" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="hideModal('security')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -3007,21 +3007,21 @@ a { color: inherit; text-decoration: none; }
 
 <!-- Call Modal -->
 <div id="modal-call" class="modal-backdrop" style="display: none;" onclick="hideModal('call')">
-  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()" style="max-width: 360px; text-align: center;">
+  <div class="modal-panel UQZERA-glass-strong" onclick="event.stopPropagation()" style="max-width: 360px; text-align: center;">
     <button class="modal-close" onclick="hideModal('call')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgb(var(--cloak-accent) / 0.3), rgb(var(--cloak-accent) / 0.05)); border: 1px solid rgb(var(--cloak-accent) / 0.4); display: grid; place-items: center; margin: 0 auto 1rem; font-size: 24px; font-weight: 700; color: rgb(var(--cloak-accent));">A</div>
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgb(var(--UQZERA-accent) / 0.3), rgb(var(--UQZERA-accent) / 0.05)); border: 1px solid rgb(var(--UQZERA-accent) / 0.4); display: grid; place-items: center; margin: 0 auto 1rem; font-size: 24px; font-weight: 700; color: rgb(var(--UQZERA-accent));">A</div>
     <h2 class="modal-title">Alice</h2>
     <p class="modal-subtitle">End-to-end encrypted call</p>
     <div class="flex items-center justify-center gap-3" style="margin-top: 1.5rem;">
-      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-surface-2) / 0.5);">
+      <button class="chat-view-action-btn" style="background: rgb(var(--UQZERA-surface-2) / 0.5);">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       </button>
-      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-danger) / 0.2); color: rgb(var(--cloak-danger));" onclick="hideModal('call')">
+      <button class="chat-view-action-btn" style="background: rgb(var(--UQZERA-danger) / 0.2); color: rgb(var(--UQZERA-danger));" onclick="hideModal('call')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/></svg>
       </button>
-      <button class="chat-view-action-btn" style="background: rgb(var(--cloak-surface-2) / 0.5);">
+      <button class="chat-view-action-btn" style="background: rgb(var(--UQZERA-surface-2) / 0.5);">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </button>
     </div>
@@ -3030,53 +3030,53 @@ a { color: inherit; text-decoration: none; }
 
 <!-- Create Channel Modal -->
 <div id="modal-createChannel" class="modal-backdrop" style="display: none;" onclick="hideModal('createChannel')">
-  <div class="modal-panel cloak-glass-strong" onclick="event.stopPropagation()">
+  <div class="modal-panel UQZERA-glass-strong" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="hideModal('createChannel')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <h2 class="modal-title">Create New Channel</h2>
     <p class="modal-subtitle">Deploy an isolated topic feed across peer relays</p>
     <div class="new-chat-label">Channel Handle</div>
-    <div class="flex items-center gap-2" style="padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid rgb(var(--cloak-border) / 0.3); background: rgb(var(--cloak-surface-1) / 0.5); margin-bottom: 0.75rem;">
-      <span style="color: rgb(var(--cloak-accent)); font-family: 'JetBrains Mono', monospace;">#</span>
+    <div class="flex items-center gap-2" style="padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid rgb(var(--UQZERA-border) / 0.3); background: rgb(var(--UQZERA-surface-1) / 0.5); margin-bottom: 0.75rem;">
+      <span style="color: rgb(var(--UQZERA-accent)); font-family: 'JetBrains Mono', monospace;">#</span>
       <input class="new-chat-input" style="border: none; background: none; padding: 0; margin: 0;" type="text" placeholder="e.g. quantum-keys-updates" />
     </div>
     <div class="new-chat-label">Channel Type</div>
     <div class="grid grid-cols-2 gap-2" style="margin-bottom: 0.75rem;">
-      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--cloak-surface-1) / 0.5); border-color: rgb(var(--cloak-accent) / 0.4);">
+      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--UQZERA-surface-1) / 0.5); border-color: rgb(var(--UQZERA-accent) / 0.4);">
         <div class="flex items-center justify-between mb-1">
           <span style="font-size: 13px; font-weight: 600;">Broadcast</span>
-          <input type="radio" name="ch-type" checked style="accent-color: rgb(var(--cloak-accent));" />
+          <input type="radio" name="ch-type" checked style="accent-color: rgb(var(--UQZERA-accent));" />
         </div>
-        <span style="font-size: 11px; color: rgb(var(--cloak-muted));">Only approved signers can dispatch.</span>
+        <span style="font-size: 11px; color: rgb(var(--UQZERA-muted));">Only approved signers can dispatch.</span>
       </label>
-      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--cloak-surface-1) / 0.3); border-color: rgb(var(--cloak-border) / 0.3);">
+      <label class="flex flex-col p-3 rounded-xl cursor-pointer border" style="background: rgb(var(--UQZERA-surface-1) / 0.3); border-color: rgb(var(--UQZERA-border) / 0.3);">
         <div class="flex items-center justify-between mb-1">
           <span style="font-size: 13px; font-weight: 600;">Multi-Peer</span>
-          <input type="radio" name="ch-type" style="accent-color: rgb(var(--cloak-accent));" />
+          <input type="radio" name="ch-type" style="accent-color: rgb(var(--UQZERA-accent));" />
         </div>
-        <span style="font-size: 11px; color: rgb(var(--cloak-muted));">All verified keyholders can converse.</span>
+        <span style="font-size: 11px; color: rgb(var(--UQZERA-muted));">All verified keyholders can converse.</span>
       </label>
     </div>
-    <div class="flex items-center justify-between p-3 rounded-xl border" style="background: rgb(var(--cloak-surface-1) / 0.3); border-color: rgb(var(--cloak-border) / 0.3); margin-bottom: 1rem;">
+    <div class="flex items-center justify-between p-3 rounded-xl border" style="background: rgb(var(--UQZERA-surface-1) / 0.3); border-color: rgb(var(--UQZERA-border) / 0.3); margin-bottom: 1rem;">
       <div class="flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(var(--cloak-accent));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(var(--UQZERA-accent));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <div>
           <div style="font-size: 13px; font-weight: 600;">Default Ephemeral TTL</div>
-          <div style="font-size: 11px; color: rgb(var(--cloak-muted));">Purge messages after 24 hours</div>
+          <div style="font-size: 11px; color: rgb(var(--UQZERA-muted));">Purge messages after 24 hours</div>
         </div>
       </div>
-      <input type="checkbox" checked style="accent-color: rgb(var(--cloak-accent)); width: 18px; height: 18px;" />
+      <input type="checkbox" checked style="accent-color: rgb(var(--UQZERA-accent)); width: 18px; height: 18px;" />
     </div>
     <div class="flex items-center justify-end gap-2">
-      <button onclick="hideModal('createChannel')" class="px-4 py-2 rounded-full text-sm font-medium" style="color: rgb(var(--cloak-muted));">Cancel</button>
-      <button class="px-5 py-2 rounded-full text-sm font-semibold" style="background: rgb(var(--cloak-accent)); color: rgb(var(--cloak-bg));">Generate Channel Keypair</button>
+      <button onclick="hideModal('createChannel')" class="px-4 py-2 rounded-full text-sm font-medium" style="color: rgb(var(--UQZERA-muted));">Cancel</button>
+      <button class="px-5 py-2 rounded-full text-sm font-semibold" style="background: rgb(var(--UQZERA-accent)); color: rgb(var(--UQZERA-bg));">Generate Channel Keypair</button>
     </div>
   </div>
 </div>
 
 <!-- Context Menu -->
-<div id="contextMenu" class="context-menu cloak-glass-strong" style="display: none; top: 60px; right: 16px;">
+<div id="contextMenu" class="context-menu UQZERA-glass-strong" style="display: none; top: 60px; right: 16px;">
   <button class="context-menu-item">
     <svg class="menu-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     Contact info
@@ -3138,7 +3138,7 @@ function toggleTheme() {
   const html = document.documentElement;
   const isDark = html.getAttribute('data-theme') !== 'light';
   html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  localStorage.setItem('cloak-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('UQZERA-theme', isDark ? 'light' : 'dark');
 
   const sun = document.getElementById('themeIconSun');
   const moon = document.getElementById('themeIconMoon');
@@ -3150,7 +3150,7 @@ function toggleTheme() {
 
 // Restore theme
 (function() {
-  const saved = localStorage.getItem('cloak-theme');
+  const saved = localStorage.getItem('UQZERA-theme');
   if (saved) {
     document.documentElement.setAttribute('data-theme', saved);
     const sun = document.getElementById('themeIconSun');
@@ -3273,7 +3273,7 @@ function showToast(message) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
   const toast = document.createElement('div');
-  toast.className = 'toast cloak-glass-strong';
+  toast.className = 'toast UQZERA-glass-strong';
   toast.innerHTML = '<svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg> ' + message;
   container.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);

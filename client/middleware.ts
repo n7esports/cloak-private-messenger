@@ -39,12 +39,12 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
     <nav class="nav" aria-label="Main navigation">
       <div class="nav-brand">
         <div class="nav-brand-icon">C</div>
-        <div class="nav-brand-text">Cloak</div>
+        <div class="nav-brand-text">UQZERA</div>
       </div>
     </nav>
     <div class="main">
       <header class="header" role="banner">
-        <div style="font-size: 14px; font-weight: 600; color: var(--on-surface);">Cloak Messenger</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--on-surface);">UQZERA Messenger</div>
       </header>
       <main class="content" role="main">
         <div class="card">
@@ -53,7 +53,7 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
         </div>
       </main>
       <footer class="footer" role="contentinfo">
-        <p>Cloak Private Messenger. E2EE. No logs.</p>
+        <p>UQZERA Messenger. E2EE. No logs.</p>
       </footer>
     </div>
   </div>
@@ -90,12 +90,12 @@ const FORBIDDEN_HTML = `<!DOCTYPE html>
     <nav class="nav" aria-label="Main navigation">
       <div class="nav-brand">
         <div class="nav-brand-icon">C</div>
-        <div class="nav-brand-text">Cloak</div>
+        <div class="nav-brand-text">UQZERA</div>
       </div>
     </nav>
     <div class="main">
       <header class="header" role="banner">
-        <div style="font-size: 14px; font-weight: 600; color: var(--on-surface);">Cloak Messenger</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--on-surface);">UQZERA Messenger</div>
       </header>
       <main class="content" role="main">
         <div class="card">
@@ -104,7 +104,7 @@ const FORBIDDEN_HTML = `<!DOCTYPE html>
         </div>
       </main>
       <footer class="footer" role="contentinfo">
-        <p>Cloak Private Messenger. E2EE. No logs.</p>
+        <p>UQZERA Messenger. E2EE. No logs.</p>
       </footer>
     </div>
   </div>

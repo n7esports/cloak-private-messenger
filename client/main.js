@@ -51,7 +51,7 @@ function createWindow(port) {
     width: 1200,
     height: 800,
     backgroundColor: '#09090b',
-    title: 'Cloak Private Messenger',
+    title: 'UQZERA Messenger',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true

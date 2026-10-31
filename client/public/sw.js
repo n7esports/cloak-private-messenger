@@ -1,4 +1,4 @@
-// Cloak service worker.
+// UQZERA service worker.
 //
 // Strategy:
 //  - WebSocket upgrades are never touched (the relay is a live socket).
@@ -7,7 +7,7 @@
 //    the app opens offline. Nothing here ever stores message content: it only
 //    caches the app shell (HTML/JS/CSS), which is public by definition.
 
-const SHELL_CACHE = 'cloak-shell-v1';
+const SHELL_CACHE = 'UQZERA-shell-v1';
 const SHELL_ASSETS = ['/', '/manifest.json', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
       .then((names) =>
         Promise.all(
           names
-            .filter((name) => name.startsWith('cloak-shell-') && name !== SHELL_CACHE)
+            .filter((name) => name.startsWith('UQZERA-shell-') && name !== SHELL_CACHE)
             .map((name) => caches.delete(name))
         )
       )
@@ -100,7 +100,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   event.waitUntil(
-    self.registration.showNotification('Cloak', {
+    self.registration.showNotification('UQZERA', {
       body: 'New encrypted message received',
       icon: '/icon-192.png',
       badge: '/icon-192.png',

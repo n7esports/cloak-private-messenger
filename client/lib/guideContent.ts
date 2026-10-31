@@ -41,7 +41,7 @@ export type GuideSection = {
 };
 
 export const guideIntro =
-  "Hi, I'm your Cloak guide. There is no sign-up, no passphrase and no account — the app opens straight into your encrypted chats. Everything below is grouped so you can find a feature fast.";
+  "Hi, I'm your UQZERA guide. There is no sign-up, no passphrase and no account — the app opens straight into your encrypted chats. Everything below is grouped so you can find a feature fast.";
 
 export const guideSections: GuideSection[] = [
   {
@@ -57,7 +57,7 @@ export const guideSections: GuideSection[] = [
       {
         icon: IconQR,
         title: "Exchange keys & add contacts",
-        body: "Show your own QR / public key, or scan a contact's code to add them. Cloak has no username directory — the key is the identity.",
+        body: "Show your own QR / public key, or scan a contact's code to add them. UQZERA has no username directory — the key is the identity.",
         action: { label: "Open key exchange", intent: "key-exchange" },
       },
       {
@@ -75,7 +75,7 @@ export const guideSections: GuideSection[] = [
       {
         icon: IconLock,
         title: "Opens without a passphrase",
-        body: "There is no login screen. Cloak creates a random device key the first time you open it and unlocks your vault silently, so your chats stay encrypted at rest.",
+        body: "There is no login screen. UQZERA creates a random device key the first time you open it and unlocks your vault silently, so your chats stay encrypted at rest.",
         action: { label: "Lock now", href: "/lock" },
       },
       {
@@ -86,7 +86,7 @@ export const guideSections: GuideSection[] = [
       {
         icon: IconDevice,
         title: "One device, one vault",
-        body: "Conversations live on this device only. Opening Cloak elsewhere starts a fresh vault — there is no account to sign in to.",
+        body: "Conversations live on this device only. Opening UQZERA elsewhere starts a fresh vault — there is no account to sign in to.",
       },
     ],
   },

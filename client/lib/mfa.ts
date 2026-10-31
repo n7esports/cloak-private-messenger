@@ -45,7 +45,7 @@ export function generateTOTPSecret(): string {
 
 export async function getTOTPURI(secret: string, label: string): Promise<string> {
   const encoded = encodeURIComponent(label);
-  return `otpauth://totp/${encoded}?secret=${secret}&issuer=${encodeURIComponent('Cloak')}&digits=6&period=30`;
+  return `otpauth://totp/${encoded}?secret=${secret}&issuer=${encodeURIComponent('UQZERA')}&digits=6&period=30`;
 }
 
 export async function verifyTOTP(secret: string, token: string): Promise<boolean> {

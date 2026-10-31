@@ -11,7 +11,7 @@ export default function LicensesPage() {
           Licenses
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          Cloak includes open-source components. This page lists each dependency, its license type, and a link to the upstream project for attribution.
+          UQZERA includes open-source components. This page lists each dependency, its license type, and a link to the upstream project for attribution.
         </p>
       </main>
   );

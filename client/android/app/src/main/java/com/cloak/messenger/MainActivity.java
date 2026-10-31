@@ -1,4 +1,4 @@
-package com.cloak.messenger;
+package com.UQZERA.messenger;
 
 import com.getcapacitor.BridgeActivity;
 

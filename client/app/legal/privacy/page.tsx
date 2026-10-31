@@ -11,7 +11,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          Cloak is built around end-to-end encryption. We cannot read your messages, contacts, or media. This policy explains what minimal data we process to run the relay and app delivery, and how you can request deletion.
+          UQZERA is built around end-to-end encryption. We cannot read your messages, contacts, or media. This policy explains what minimal data we process to run the relay and app delivery, and how you can request deletion.
         </p>
       </main>
   );

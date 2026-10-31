@@ -145,7 +145,7 @@ export default function PasscodeModal({
             </svg>
           </span>
           <h1 className="text-xl font-semibold" id="passcode-title">
-            {configured ? 'Unlock Cloak' : 'Secure your vault'}
+            {configured ? 'Unlock UQZERA' : 'Secure your vault'}
           </h1>
           <p className="mt-2 text-sm leading-5 text-zinc-400">
             {configured

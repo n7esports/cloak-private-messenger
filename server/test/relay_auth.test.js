@@ -4,10 +4,10 @@ import assert from "node:assert/strict";
 // The bug reproduces when a token has the same JS code-unit length as the
 // configured RELAY_TOKEN but a different UTF-8 byte length. Set the token FIRST
 // so the module reads it before it is imported.
-process.env.CLOAK_RELAY_TOKEN = "\u4E00"; // 1 code unit, 3 UTF-8 bytes
+process.env.UQZERA_RELAY_TOKEN = "\u4E00"; // 1 code unit, 3 UTF-8 bytes
 
 const { isAuthorizedRelayRequest } = await import("../src/index.js");
-const configured = (process.env.CLOAK_RELAY_TOKEN ?? "").trim();
+const configured = (process.env.UQZERA_RELAY_TOKEN ?? "").trim();
 
 test("isAuthorizedRelayRequest: compare UTF-8 byte lengths, return false (no throw)", () => {
   const token = "\u00E9"; // 1 code unit, 2 UTF-8 bytes

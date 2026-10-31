@@ -11,7 +11,7 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          By using Cloak, you agree not to misuse the service or attempt to break its encryption guarantees. These terms cover acceptable use, liability limits, and dispute resolution.
+          By using UQZERA, you agree not to misuse the service or attempt to break its encryption guarantees. These terms cover acceptable use, liability limits, and dispute resolution.
         </p>
       </main>
   );

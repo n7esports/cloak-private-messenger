@@ -20,7 +20,7 @@ import {
   type VaultRecord,
 } from "../lib/vault";
 
-const LOCK_FLAG = "cloak.locked";
+const LOCK_FLAG = "UQZERA.locked";
 
 interface VaultState {
   isUnlocked: boolean;
@@ -2134,7 +2134,7 @@ export default function LockPage() {
       <div className="flex h-screen w-full items-center justify-center bg-obsidian">
         <div className="glass-panel w-full max-w-sm px-8 py-10">
           <h1 className="font-serif text-2xl font-semibold tracking-tight text-zinc-100">
-            Cloak
+            UQZERA
           </h1>
           <p className="mt-2 text-sm text-zinc-400">Enter your passcode to unlock.</p>
           {sessionRestoreError && (

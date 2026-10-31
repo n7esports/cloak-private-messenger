@@ -1,4 +1,4 @@
-# Cloak Private Messenger - Prompt Execution Log
+# UQZERA Messenger - Prompt Execution Log
 
 ## System Architecture Prompt
 Used for Claude 3.5 Sonnet to scaffold backend relay queue protocols.

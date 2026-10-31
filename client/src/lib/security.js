@@ -1,9 +1,9 @@
-const PASSCODE_STORAGE_KEY = 'cloak.security.passcodes.v1';
-const FAILURE_STORAGE_KEY = 'cloak.security.failures.v1';
-const SESSION_ACTIVE_KEY = 'cloak.security.session-active.v1';
-const SESSION_ACTIVITY_KEY = 'cloak.security.last-activity.v1';
-const SESSION_STATE_KEY = 'cloak.security.session-state.v1';
-const SESSION_CRYPTO_DATABASE = 'cloak-session-crypto';
+const PASSCODE_STORAGE_KEY = 'UQZERA.security.passcodes.v1';
+const FAILURE_STORAGE_KEY = 'UQZERA.security.failures.v1';
+const SESSION_ACTIVE_KEY = 'UQZERA.security.session-active.v1';
+const SESSION_ACTIVITY_KEY = 'UQZERA.security.last-activity.v1';
+const SESSION_STATE_KEY = 'UQZERA.security.session-state.v1';
+const SESSION_CRYPTO_DATABASE = 'UQZERA-session-crypto';
 const SESSION_CRYPTO_STORE = 'keys';
 const SESSION_CRYPTO_KEY = 'session-state';
 export const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
@@ -13,10 +13,10 @@ const MAX_FAILED_ATTEMPTS = 5;
 const INITIAL_LOCKOUT_MS = 30000;
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
 const LEGACY_PASSCODE_METADATA_KEYS = [
-  'cloak_passcode_config',
-  'cloak_passcode_salt',
-  'cloak_decoy_config',
-  'cloak_decoy_salt',
+  'UQZERA_passcode_config',
+  'UQZERA_passcode_salt',
+  'UQZERA_decoy_config',
+  'UQZERA_decoy_salt',
 ];
 const sensitiveStateCleanups = new Set();
 let wipeGeneration = 0;
@@ -496,7 +496,7 @@ function clearPasscodeMetadata(storage) {
   try {
     for (const key of Object.keys(storage)) {
       if (
-        /(?:cloak[._-].*(?:passcode|salt|decoy)|(?:passcode|decoy|salt).*cloak)/i.test(
+        /(?:UQZERA[._-].*(?:passcode|salt|decoy)|(?:passcode|decoy|salt).*UQZERA)/i.test(
           key
         )
       ) {

@@ -13,7 +13,7 @@ import {
   type VaultRecord,
 } from "../lib/vault";
 
-const LOCK_FLAG = "cloak.locked";
+const LOCK_FLAG = "UQZERA.locked";
 
 interface VaultState {
   isUnlocked: boolean;

@@ -1,6 +1,6 @@
-# @cloak/crypto-engine
+# @UQZERA/crypto-engine
 
-Zero-dependency Web Crypto primitives for **Cloak Private Messenger**.
+Zero-dependency Web Crypto primitives for **UQZERA Messenger**.
 
 - **Client room keys:** 256-bit keys imported directly as non-extractable AES keys
 - **Payload cipher:** **AES-256-GCM** with a fresh 96-bit IV per message
@@ -28,5 +28,5 @@ const roomKey = await crypto.subtle.importKey(
   ['encrypt', 'decrypt']
 );
 
-const envelope = await encryptPayload(roomKey, 'hello, cloak');
+const envelope = await encryptPayload(roomKey, 'hello, UQZERA');
 const plaintext = await decryptPayload(roomKey, envelope);

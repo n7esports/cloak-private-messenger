@@ -1,5 +1,5 @@
 /**
- * Smoke tests for the Cloak crypto engine.
+ * Smoke tests for the UQZERA crypto engine.
  * Run with:  node --test crypto-engine/test/
  */
 import { test } from 'node:test';
@@ -30,10 +30,10 @@ test('Alice ↔ Bob derive the same AES key and exchange a message', async () =>
   const aliceKey = await deriveSharedSecret(alice.privateKey, await importPublicKey(bobPub));
   const bobKey = await deriveSharedSecret(bob.privateKey, await importPublicKey(alicePub));
 
-  const envelope = await encryptPayload(aliceKey, 'Cloak is end-to-end encrypted.');
+  const envelope = await encryptPayload(aliceKey, 'UQZERA is end-to-end encrypted.');
   const recovered = await decryptPayload(bobKey, envelope);
 
-  assert.equal(recovered, 'Cloak is end-to-end encrypted.');
+  assert.equal(recovered, 'UQZERA is end-to-end encrypted.');
 });
 
 test('Every message uses a fresh IV', async () => {

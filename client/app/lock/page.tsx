@@ -36,7 +36,7 @@ export default function LockPage() {
  <div className="flex h-screen w-full items-center justify-center bg-surface">
  <div className="bg-surface-container border border-hairline w-full max-w-sm px-8 py-10">
  <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
- Cloak
+ UQZERA
  </h1>
  <p className="mt-2 text-sm text-on-surface-variant">Enter your passcode to unlock.</p>
  {sessionRestoreError && (

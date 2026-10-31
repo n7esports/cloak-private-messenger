@@ -276,7 +276,7 @@ export const INITIAL_ELENA_MESSAGES: Message[] = [
     id: 'm14',
     sender: 'me',
     senderName: 'Cipher Zero',
-    text: 'Listening on socket wss://cloak-vault-eu-3.onion. Key derivation active.',
+    text: 'Listening on socket wss://UQZERA-vault-eu-3.onion. Key derivation active.',
     timestamp: '10:56 AM',
     status: 'delivered',
   },

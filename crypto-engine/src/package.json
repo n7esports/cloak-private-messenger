@@ -1,7 +1,7 @@
 {
-  "name": "@cloak/crypto-engine",
+  "name": "@UQZERA/crypto-engine",
   "version": "1.0.0",
-  "description": "Core client-side ECDH + AES-GCM encryption engine for Cloak Private Messenger.",
+  "description": "Core client-side ECDH + AES-GCM encryption engine for UQZERA Messenger.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -26,7 +26,7 @@
     "ecdh",
     "aes-gcm",
     "webcrypto",
-    "cloak",
+    "UQZERA",
     "e2ee"
   ],
   "license": "MIT"

@@ -11,7 +11,7 @@ export default function DataRequestPage() {
           Data Request
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          Because Cloak stores end-to-end encrypted data, account exports are limited. Use this form to request metadata deletion, data portability summaries, or legal disclosures.
+          Because UQZERA stores end-to-end encrypted data, account exports are limited. Use this form to request metadata deletion, data portability summaries, or legal disclosures.
         </p>
       </main>
   );

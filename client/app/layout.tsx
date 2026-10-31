@@ -5,7 +5,7 @@ import "./globals.css";
 import "../styles/tokens.css";
 
 export const metadata: Metadata = {
-  title: "Cloak",
+  title: "UQZERA",
   description: "Ephemeral encrypted messenger",
 };
 

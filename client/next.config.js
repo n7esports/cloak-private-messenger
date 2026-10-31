@@ -13,7 +13,7 @@ module.exports = (phase) => ({
     ignoreBuildErrors: true,
   },
   distDir:
-    process.env.CLOAK_BUILD_OUTPUT ||
+    process.env.UQZERA_BUILD_OUTPUT ||
     (phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next'),
   webpack(config, { isServer }) {
     if (!isServer) {

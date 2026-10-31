@@ -25,11 +25,11 @@ const MAX_ROUTES_PER_CONNECTION = 64;
 const WS_PING_INTERVAL_MS = 30_000;
 const WS_PING_TIMEOUT_MS = 10_000;
 
-// Optional relay auth token (C4). When CLOAK_RELAY_TOKEN is set, every publish,
+// Optional relay auth token (C4). When UQZERA_RELAY_TOKEN is set, every publish,
 // subscribe, and receipt must carry a matching token. Without it the relay is
 // anonymous — same-trust endpoints only — which is why rate limiting and the
 // connection cap are enforced regardless.
-const RELAY_TOKEN = process.env.CLOAK_RELAY_TOKEN?.trim() || null;
+const RELAY_TOKEN = process.env.UQZERA_RELAY_TOKEN?.trim() || null;
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
@@ -39,7 +39,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ];
 const allowedOrigins = new Set([
   ...DEFAULT_ALLOWED_ORIGINS,
-  ...(process.env.CLOAK_ALLOWED_ORIGINS ?? "")
+  ...(process.env.UQZERA_ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
@@ -63,8 +63,8 @@ let liveConnections = 0;
 
 // Structured logging (M3): append-only JSONL of security-relevant events so
 // abuse can be detected without ever recording message content.
-const logStream = process.env.CLOAK_RELAY_LOG
-  ? (await import("node:fs")).createWriteStream(process.env.CLOAK_RELAY_LOG, {
+const logStream = process.env.UQZERA_RELAY_LOG
+  ? (await import("node:fs")).createWriteStream(process.env.UQZERA_RELAY_LOG, {
       flags: "a",
     })
   : null;
@@ -76,7 +76,7 @@ function securityLog(event, details = {}) {
     ...details,
   });
   if (logStream) logStream.write(`${line}\n`);
-  console.log(`[cloak-relay] ${line}`);
+  console.log(`[UQZERA-relay] ${line}`);
 }
 
 function queueEntryBytes(entry) {
@@ -396,11 +396,11 @@ function parsePositiveInt(value) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-const MAX_CONNECTIONS = parsePositiveInt(process.env.CLOAK_MAX_CONNECTIONS) ?? DEFAULT_MAX_CONNECTIONS;
-const RELAY_RATE_LIMIT = parsePositiveInt(process.env.CLOAK_RELAY_RATE_LIMIT) ?? DEFAULT_RELAY_RATE_LIMIT;
-const RELAY_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_RATE_WINDOW_MS) ?? DEFAULT_RELAY_RATE_WINDOW_MS;
-const RELAY_HTTP_RATE_LIMIT = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_LIMIT) ?? RELAY_RATE_LIMIT;
-const RELAY_HTTP_RATE_WINDOW_MS = parsePositiveInt(process.env.CLOAK_RELAY_HTTP_RATE_WINDOW_MS) ?? RELAY_RATE_WINDOW_MS;
+const MAX_CONNECTIONS = parsePositiveInt(process.env.UQZERA_MAX_CONNECTIONS) ?? DEFAULT_MAX_CONNECTIONS;
+const RELAY_RATE_LIMIT = parsePositiveInt(process.env.UQZERA_RELAY_RATE_LIMIT) ?? DEFAULT_RELAY_RATE_LIMIT;
+const RELAY_RATE_WINDOW_MS = parsePositiveInt(process.env.UQZERA_RELAY_RATE_WINDOW_MS) ?? DEFAULT_RELAY_RATE_WINDOW_MS;
+const RELAY_HTTP_RATE_LIMIT = parsePositiveInt(process.env.UQZERA_RELAY_HTTP_RATE_LIMIT) ?? RELAY_RATE_LIMIT;
+const RELAY_HTTP_RATE_WINDOW_MS = parsePositiveInt(process.env.UQZERA_RELAY_HTTP_RATE_WINDOW_MS) ?? RELAY_RATE_WINDOW_MS;
 
 const httpServer = createServer(async (request, response) => {
   const origin = request.headers.origin;
@@ -569,8 +569,8 @@ wss.on("connection", (socket, request) => {
   });
   socket.on("close", () => {
     clearInterval(pingTimer);
-    if (socket._cloakClosed) return;
-    socket._cloakClosed = true;
+    if (socket._UQZERAClosed) return;
+    socket._UQZERAClosed = true;
     liveConnections -= 1;
     for (const route of connectedRoutes) {
       const connected = subscribers.get(route);
@@ -580,8 +580,8 @@ wss.on("connection", (socket, request) => {
   });
   socket.on("error", () => {
     clearInterval(pingTimer);
-    if (socket._cloakClosed) return;
-    socket._cloakClosed = true;
+    if (socket._UQZERAClosed) return;
+    socket._UQZERAClosed = true;
     liveConnections -= 1;
   });
 });

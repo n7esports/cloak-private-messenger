@@ -143,7 +143,7 @@ export default function InviteModal({
         <div className="mx-auto my-5 grid aspect-square w-full max-w-[256px] place-items-center rounded-2xl bg-white p-3">
           {qrCode ? (
             <Image
-              alt="QR code for Cloak room access"
+              alt="QR code for UQZERA room access"
               className="h-full w-full rounded-lg"
               height={232}
               src={qrCode}

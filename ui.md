@@ -1,8 +1,8 @@
 Act as a Principal Full-Stack Engineer and AI Systems Architect specializing in Google Stitch UI Prototyping, Next.js, and WebRTC/Cryptography workflows.
 
-Perform a full-code audit of the Cloak repository (`client/` and `server/`), extract every functional feature, and automatically generate two deliverables:
+Perform a full-code audit of the UQZERA repository (`client/` and `server/`), extract every functional feature, and automatically generate two deliverables:
 1. A consolidated, standalone Google Stitch AI prompt designed to generate a 100% pixel-perfect, fully interactive Stitch prototype across all screens.
-2. An automated client-side component-stitching suite (`client/src/components/prototype/`) that binds all Cloak state stores (`useChatStore`), simulated relay WebSockets, and UI views into an instant, zero-backend, fully clickable demo for stakeholder previewing.
+2. An automated client-side component-stitching suite (`client/src/components/prototype/`) that binds all UQZERA state stores (`useChatStore`), simulated relay WebSockets, and UI views into an instant, zero-backend, fully clickable demo for stakeholder previewing.
 
 ---
 
@@ -29,7 +29,7 @@ Construct a structured, copy-pasteable prompt optimized for Google Stitch (Gemin
 ---
 
 ### Phase 3: Automated Client-Side Mock Prototype Setup
-Create a standalone prototype wrapper in `client/src/components/prototype/PrototypeRunner.tsx` that stitches the entire Cloak UI together without requiring an active backend or relay server:
+Create a standalone prototype wrapper in `client/src/components/prototype/PrototypeRunner.tsx` that stitches the entire UQZERA UI together without requiring an active backend or relay server:
 1. **Mock Relay Engine (`client/src/lib/prototype/mockRelay.ts`):**
    - Provide pre-populated mock contacts (`Alice (Key Exchange Verified)`, `Bob (Private Vault)`) with predefined valid P-256 key pairs.
    - Simulate incoming encrypted websocket packets, typing indicators, and message delivery receipts (`Read`, `Delivered`).

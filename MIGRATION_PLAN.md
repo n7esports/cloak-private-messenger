@@ -1,7 +1,7 @@
-# Cloak Private Messenger — Design System Migration Plan
+# UQZERA Messenger — Design System Migration Plan
 
-**Source:** `/tmp/cloak-migration/src/` (Vite + React 19 + Tailwind 4)  
-**Target:** `/home/wassay/Documents/cloak-private-messenger/client/` (Next.js 14 + Tailwind 3)  
+**Source:** `/tmp/UQZERA-migration/src/` (Vite + React 19 + Tailwind 4)  
+**Target:** `/home/wassay/Documents/UQZERA-private-messenger/client/` (Next.js 14 + Tailwind 3)  
 **Date:** 2026-10-14
 
 ---
@@ -136,7 +136,7 @@ And add Material Symbols via `<link>` in the `<head>` or `_document.tsx`.
 
 ### 3.2 Type System Mapping
 
-**Source types** (`/tmp/cloak-migration/src/types/index.ts`):
+**Source types** (`/tmp/UQZERA-migration/src/types/index.ts`):
 
 | Source Type | Target Equivalent |
 |---|---|
@@ -152,7 +152,7 @@ And add Material Symbols via `<link>` in the `<head>` or `_document.tsx`.
 
 ### 3.3 Data Mapping
 
-**Source data** (`/tmp/cloak-migration/src/data/initialData.ts`):
+**Source data** (`/tmp/UQZERA-migration/src/data/initialData.ts`):
 
 | Source Export | Target |
 |---|---|
@@ -351,7 +351,7 @@ Add the CSS custom properties from Section 1.1–1.3 to `:root`, add the typogra
 | 7.3 | Verify `p-space-*`, `g-space-*`, `gap-space-*` spacing classes work | All components |
 | 7.4 | Test mobile responsive behavior (sidebar drawer, backdrop) | `Sidebar.tsx`, `Header.tsx` |
 | 7.5 | Test dark/light theme toggle | `Sidebar.tsx` |
-| 7.6 | Remove old `cloak-*` CSS classes that are no longer needed | `globals.css` |
+| 7.6 | Remove old `UQZERA-*` CSS classes that are no longer needed | `globals.css` |
 
 ---
 

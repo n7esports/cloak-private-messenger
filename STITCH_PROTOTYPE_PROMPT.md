@@ -1,4 +1,4 @@
-# Stitch Prototype Prompt: Cloak Private Messenger
+# Stitch Prototype Prompt: UQZERA Messenger
 
 > **Copy-paste the entire prompt below into Google Stitch (Gemini 2.5 Pro mode) to generate a fully interactive, responsive preview application.**
 
@@ -6,7 +6,7 @@
 
 ## Prompt for Google Stitch
 
-Build a complete, fully interactive responsive preview application for **Cloak Private Messenger** — a privacy-first encrypted messaging app. This is a high-fidelity prototype with 5 distinct screens, glassmorphic design, and full interactivity. Every button, modal, toggle, and interaction must work.
+Build a complete, fully interactive responsive preview application for **UQZERA Messenger** — a privacy-first encrypted messaging app. This is a high-fidelity prototype with 5 distinct screens, glassmorphic design, and full interactivity. Every button, modal, toggle, and interaction must work.
 
 ---
 
@@ -123,7 +123,7 @@ The application is a single-page prototype with 5 screens accessible via sidebar
 - Main content area showing the conversation list
 
 **Sidebar Contents (top to bottom):**
-1. **App Header** — "Cloak" wordmark with LockClosedIcon in emerald, theme toggle button (Sun/Moon), settings gear icon
+1. **App Header** — "UQZERA" wordmark with LockClosedIcon in emerald, theme toggle button (Sun/Moon), settings gear icon
 2. **Search Bar** — Rounded input with MagnifyingGlassIcon, placeholder "Search conversations...", glass-soft background
 3. **Device Vault Badge** — Small pill/badge with ShieldCheckIcon, text "Device Vault: 3 devices", emerald accent border, glass-soft background
 4. **Relay Connected Pill** — Green dot indicator (pulsing animation), text "Relay Connected", subtext "Latency: 23ms", glass-soft background with emerald border

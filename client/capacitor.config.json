@@ -1,6 +1,6 @@
 {
-  "appId": "com.cloak.messenger",
-  "appName": "Cloak",
+  "appId": "com.UQZERA.messenger",
+  "appName": "UQZERA",
   "webDir": ".next",
   "plugins": {
     "StatusBar": {

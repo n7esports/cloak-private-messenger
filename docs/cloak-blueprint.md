@@ -1,3 +1,3 @@
-pandoc ~/Documents/cloak-private-messenger/docs/cloak-blueprint.md \
-  -o ~/Documents/cloak-private-messenger/docs/cloak-blueprint.pdf \
+pandoc ~/Documents/UQZERA-private-messenger/docs/UQZERA-blueprint.md \
+  -o ~/Documents/UQZERA-private-messenger/docs/UQZERA-blueprint.pdf \
   --pdf-engine=weasyprint

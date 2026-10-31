@@ -287,7 +287,7 @@ describe("Supabase ephemeral relay transport", () => {
 
   it("creates stable URL-safe inbox channel names from public keys", () => {
     const name = getInboxChannelName(ownPublicKey);
-    expect(name).toMatch(/^cloak-inbox-[A-Za-z0-9_-]+$/);
+    expect(name).toMatch(/^UQZERA-inbox-[A-Za-z0-9_-]+$/);
     expect(getInboxChannelName(ownPublicKey)).toBe(name);
     expect(() => getInboxChannelName("not-a-key")).toThrow(
       "Invalid base64-encoded cryptographic data.",

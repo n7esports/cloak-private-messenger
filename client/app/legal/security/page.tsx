@@ -11,7 +11,7 @@ export default function SecurityPage() {
           Security
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
-          Cloak applies end-to-end encryption, signed builds, and network hardening to protect your data. Learn about our audit process, bug bounty, and incident response commitments.
+          UQZERA applies end-to-end encryption, signed builds, and network hardening to protect your data. Learn about our audit process, bug bounty, and incident response commitments.
         </p>
       </main>
   );

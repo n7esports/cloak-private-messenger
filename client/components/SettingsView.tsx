@@ -24,7 +24,7 @@ function DataExportButton() {
    const url = URL.createObjectURL(blob);
    const a = document.createElement("a");
    a.href = url;
-   a.download = `cloak-export-${Date.now()}.json`;
+   a.download = `UQZERA-export-${Date.now()}.json`;
    a.click();
    URL.revokeObjectURL(url);
    showToast({ id: crypto.randomUUID(), message: "Export downloaded", type: "success" });

@@ -34,7 +34,7 @@ describe("crypto primitives", () => {
   it("encrypts and decrypts a payload between two identities", async () => {
     const sender = await generateIdentity();
     const recipient = await generateIdentity();
-    const plaintext = new TextEncoder().encode("Cloak encrypted payload");
+    const plaintext = new TextEncoder().encode("UQZERA encrypted payload");
 
     const encrypted = await encryptPayload(
       plaintext,

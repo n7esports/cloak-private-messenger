@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://cloak-private-messenger.vercel.app";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://uqzera.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [

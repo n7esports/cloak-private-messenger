@@ -25,7 +25,7 @@ export async function GET() {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Content-Disposition": "attachment; filename=cloak-export.json",
+          "Content-Disposition": "attachment; filename=UQZERA-export.json",
         },
       }
     );

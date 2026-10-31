@@ -116,7 +116,7 @@ function rethrowVaultStorageError(error: unknown): never {
   throw error;
 }
 
-class CloakDatabase extends Dexie {
+class UQZERADatabase extends Dexie {
   vault!: Table<VaultRecord, VaultRecord["id"]>;
   chats!: Table<EncryptedChatRecord, string>;
   messages!: Table<EncryptedMessageRecord, string>;
@@ -126,7 +126,7 @@ class CloakDatabase extends Dexie {
   flags!: Table<FlagRecord, string>;
 
   constructor() {
-    super("CloakDatabase");
+    super("UQZERADatabase");
     this.version(1).stores({
       vault: "id",
       chats: "id, updatedAt",
@@ -153,7 +153,7 @@ class CloakDatabase extends Dexie {
   }
 }
 
-export const database = new CloakDatabase();
+export const database = new UQZERADatabase();
 
 export async function getDB(): Promise<typeof database> {
   await database.open();
