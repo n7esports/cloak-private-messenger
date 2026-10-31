@@ -10,6 +10,8 @@ import IconPin from "./icons/IconPin";
 import IconReply from "./icons/IconReply";
 import IconStar from "./icons/IconStar";
 import IconTrash from "./icons/IconTrash";
+import IconCheck from "./icons/IconCheck";
+import IconCheckDouble from "./icons/IconCheckDouble";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -61,6 +63,13 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
 
         {/* Time */}
         <div className="mt-1 flex items-center justify-end gap-2">
+          {isMe && (
+            <span>
+              {message.status === "read" && <IconCheckDouble size={14} className="text-primary" />}
+              {message.status === "delivered" && <IconCheckDouble size={14} className="text-text-secondary" />}
+              {message.status === "sent" && <IconCheck size={14} className="text-text-secondary" />}
+            </span>
+          )}
           <span className="text-[10px] text-text-secondary">
             {isMe ? "You" : message.senderPubKey.slice(0, 8)}
           </span>

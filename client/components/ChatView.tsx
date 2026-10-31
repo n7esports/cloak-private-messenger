@@ -37,6 +37,7 @@ export function ChatView({
   const ephemeralTtl = useChatStore((s) => s.ephemeralTtl);
   const setEphemeralTtl = useChatStore((s) => s.setEphemeralTtl);
   const isPeerTyping = useChatStore((s) => (chatId ? !!s.peerTypingByChat[chatId] : false));
+  const broadcastTyping = useChatStore((s) => s.broadcastTyping);
   const lockVault = useVaultStore((s) => s.lockVault);
 
   const [content, setContent] = useState("");
@@ -73,6 +74,7 @@ export function ChatView({
     const text = content.trim();
     if (!text && !pendingAttachment) return;
     setContent("");
+    if (chatId) broadcastTyping(chatId, false);
     try {
       await sendMessage(
         text,
@@ -99,6 +101,17 @@ export function ChatView({
     const next = presets[(idx + 1) % presets.length];
     setEphemeralTtl(next || null);
   };
+
+  const handleTyping = () => {
+    if (!chatId) return;
+    broadcastTyping(chatId, true);
+  };
+
+  useEffect(() => {
+    if (!content && chatId) {
+      broadcastTyping(chatId, false);
+    }
+  }, [content, chatId, broadcastTyping]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,7 +201,14 @@ export function ChatView({
 
       {/* Typing indicator */}
       {isPeerTyping && (
-        <div className="px-4 pb-1 text-[10px] text-text-secondary">Peer is typing…</div>
+        <div className="px-4 pb-1 flex items-center gap-1">
+          <span className="text-[10px] text-text-secondary">Peer is typing</span>
+          <span className="flex gap-0.5">
+            <span className="w-1 h-1 rounded-full bg-text-secondary animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1 h-1 rounded-full bg-text-secondary animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-1 h-1 rounded-full bg-text-secondary animate-bounce" style={{ animationDelay: "300ms" }} />
+          </span>
+        </div>
       )}
 
       {/* Composer */}
@@ -240,7 +260,7 @@ export function ChatView({
             </button>
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => { setContent(e.target.value); handleTyping(); }}
               placeholder="Write encrypted message..."
               rows={1}
               onKeyDown={(e) => {
