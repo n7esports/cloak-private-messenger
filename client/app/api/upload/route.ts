@@ -57,8 +57,8 @@ async function matchesDeclaredMime(file: File): Promise<boolean> {
   }
 
   try {
-    const text = await file.text();
-    new TextEncoder().encode(text);
+    const bytes = await file.arrayBuffer();
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     return !text.includes("\u0000") && !/[\u0001-\u0008\u000b\u000c\u000e-\u001f]/.test(text);
   } catch {
     return false;
@@ -99,11 +99,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const hmacSecret = process.env.UPLOAD_HMAC_SECRET;
-  if (!hmacSecret || new TextEncoder().encode(hmacSecret).byteLength < 32) {
-    return NextResponse.json({ error: "Upload signing is not configured" }, { status: 503 });
-  }
-
+  // UPLOAD_HMAC_SECRET is reserved for signing accepted uploads once a real
+  // malware-scanning service is integrated. Never issue a signature before scanning.
   // No real malware scanner is configured in this deployment. Fail closed:
   // do not return a data URL, signature, or any accepted/stored upload.
   return NextResponse.json(
