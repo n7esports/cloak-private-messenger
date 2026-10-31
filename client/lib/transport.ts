@@ -263,6 +263,7 @@ export class TransportManager {
       event: "envelope",
       payload: { packet },
     });
+    console.log("SEND RESULT:", result);
     if (result !== "ok") {
       const error = new Error(`Supabase envelope broadcast failed (${result}).`);
       this.handleConnectionFailure(error);
@@ -453,6 +454,7 @@ export class TransportManager {
       }, ACK_TIMEOUT_MS);
 
       channel.subscribe((status: string, error?: Error) => {
+      console.log("SUPABASE STATUS:", status, error);
         if (!isBroadcastStatus(status)) return;
         if (status === "SUBSCRIBED") {
           if (this.stopped || this.inboxChannel !== channel) return;
@@ -547,6 +549,7 @@ export class TransportManager {
           reject(new Error("Timed out subscribing to the recipient inbox."));
         }, ACK_TIMEOUT_MS);
         channel.subscribe((status: string, error?: Error) => {
+      console.log("SUPABASE STATUS:", status, error);
           if (!isBroadcastStatus(status)) return;
           if (status === "SUBSCRIBED") {
             if (settled) return;
