@@ -13,16 +13,16 @@ export default function IconKey({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.5}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
       {...props}
     >
       <circle cx="7.5" cy="17.5" r="3.5" />
-      <path d="M15 13l6-2.5" />
-      <path d="M18 10.5l2-2" />
-      <path d="M20 7.5l2-2" />
+      <line x1="10" y1="15" x2="20" y2="5" />
+      <line x1="17" y1="8" x2="19" y2="10" />
+      <line x1="14" y1="11" x2="16" y2="13" />
     </svg>
   );
 }
