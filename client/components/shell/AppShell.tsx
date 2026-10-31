@@ -10,7 +10,6 @@ import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
 import IconSearch from "../icons/IconSearch";
 import AddContactModal from "../modals/AddContactModal";
-import Footer from "../Footer";
 
 const formatTime = (ts: number) => {
   const d = new Date(ts);
@@ -294,7 +293,6 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
         onClose={() => setShowAddContact(false)}
       />
 
-      <Footer />
     </aside>
   );
 }
