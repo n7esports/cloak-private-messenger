@@ -171,19 +171,20 @@ export function middleware(request: NextRequest) {
       ].join("; ")
     : "";
 
-  const headers = new Headers();
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("Referrer-Policy", "no-referrer");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
 
-  // Expose the nonce so server components can embed it in <script nonce={...}>
-  if (isProduction) {
-    headers.set("Content-Security-Policy", cspDirectives);
-    headers.set("x-nonce", nonce);
-  }
-
-  return NextResponse.next({ headers });
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+  response.headers.set("Content-Security-Policy", cspDirectives);
+  response.headers.set("x-nonce", nonce);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 }
 
 export const config = {
