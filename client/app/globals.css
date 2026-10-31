@@ -77,4 +77,27 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
+
+  [data-theme="darker"] {
+    --bg-base: #080a10;
+    --bg-panel: #0e1117;
+    --bg-card: #11141b;
+    --bg-elevated: #161a22;
+    --bg-input: #0b0d13;
+    --bg-hover: #1a1f28;
+    --border-subtle: #1e232b;
+    --border-default: #2a303a;
+    --border-strong: #3f4854;
+    --border-separator: #1a1e26;
+  }
+
+  [data-font-size="sm"] {
+    font-size: 12px;
+  }
+  [data-font-size="md"] {
+    font-size: 14px;
+  }
+  [data-font-size="lg"] {
+    font-size: 16px;
+  }
 }

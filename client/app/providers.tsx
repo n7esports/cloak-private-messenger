@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useVaultStore } from "../store/useVaultStore";
 import { useChatStore } from "../store/useChatStore";
 
@@ -23,9 +23,9 @@ function VaultInitializer({
 }) {
  const initializeVault = useVaultStore((s) => s.initializeVault);
 
- useState(() => {
- initializeVault().then(onReady).catch(() => onReady());
- });
+ useEffect(() => {
+   initializeVault().then(onReady).catch(() => onReady());
+ }, [initializeVault, onReady]);
 
  return <>{children}</>;
 }
