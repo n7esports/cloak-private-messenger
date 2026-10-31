@@ -1564,6 +1564,7 @@ registerMemoryKeyCleanup(() => {
     globalSearch: "",
     vaultModalOpen: false,
     sidebarOpen: false,
+    replyTo: null,
   });
 });
 

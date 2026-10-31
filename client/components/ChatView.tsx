@@ -38,6 +38,8 @@ export function ChatView({
   const setEphemeralTtl = useChatStore((s) => s.setEphemeralTtl);
   const isPeerTyping = useChatStore((s) => (chatId ? !!s.peerTypingByChat[chatId] : false));
   const broadcastTyping = useChatStore((s) => s.broadcastTyping);
+  const replyTo = useChatStore((s) => s.replyTo);
+  const setReplyTo = useChatStore((s) => s.setReplyTo);
   const lockVault = useVaultStore((s) => s.lockVault);
 
   const [content, setContent] = useState("");
@@ -82,9 +84,11 @@ export function ChatView({
         ephemeralTtl ?? undefined,
         pendingAttachment
           ? { name: pendingAttachment.name, mime: pendingAttachment.mime, size: pendingAttachment.size, data: pendingAttachment.dataUrl }
-          : undefined
+          : undefined,
+        replyTo ?? undefined
       );
       setPendingAttachment(null);
+      setReplyTo(null);
     } catch (err) {
       showToast({ id: crypto.randomUUID(), message: `Send failed: ${err}`, type: "warning" });
     }
@@ -213,6 +217,18 @@ export function ChatView({
 
       {/* Composer */}
       <div className="flex-shrink-0 border-t border-border-default bg-surface">
+        {/* Reply preview */}
+        {replyTo && (
+          <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
+            <IconReply size={14} />
+            <span className="flex-1 truncate text-xs text-text-secondary">
+              Replying to {replyTo.alias}: {replyTo.excerpt}
+            </span>
+            <button onClick={() => setReplyTo(null)} className="rounded p-1 hover:bg-surface-high">
+              <IconX size={14} />
+            </button>
+          </div>
+        )}
         {/* Attachment preview */}
         {pendingAttachment && (
           <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
