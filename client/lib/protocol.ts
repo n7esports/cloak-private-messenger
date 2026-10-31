@@ -51,9 +51,9 @@ export function isValidReplyRef(
 export const MAX_ATTACHMENT_BYTES = 700 * 1024;
 
 const ATTACHMENT_DATA_URL = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+);base64,[A-Za-z0-9+/]+={0,2}$/i;
-const INLINE_IMAGE_MIME_RE = /^image\/(?:png|jpeg|webp|gif|svg\+xml)$/i;
+const INLINE_IMAGE_MIME_RE = /^image\/(?:png|jpeg|webp)$/i;
 const INLINE_IMAGE_DATA_URL =
-  /^data:image\/(?:png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$/i;
+  /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/i;
 
 export function isDataUrl(url: string): boolean {
   return INLINE_IMAGE_DATA_URL.test(url);
