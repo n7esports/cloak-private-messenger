@@ -282,28 +282,27 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
           <span>Channels</span>
         </button>
 
-        <Link
-          href="/settings"
-          className="flex items-center gap-2 px-4 py-3 text-sm transition-colors"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-        >
-          <IconSettings size={18} />
-          <span>Settings</span>
-        </Link>
-
-        <button
-          onClick={onOpenIdentity}
-          aria-label="My Identity"
-          className="flex items-center gap-3 px-4 py-2 text-left transition hover:bg-surface"
-        >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary">
-            {initials(userAlias)}
-          </div>
-          <span className="text-sm font-medium text-on-surface">{userAlias || "Set alias"}</span>
-        </button>
-
+        <div className="flex items-center justify-between px-4 py-2">
+          <button
+            onClick={onOpenIdentity}
+            aria-label="My Identity"
+            className="flex items-center gap-3 text-left transition hover:bg-surface"
+          >
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary">
+              {initials(userAlias)}
+            </div>
+            <span className="text-sm font-medium text-on-surface">{userAlias || "Set alias"}</span>
+          </button>
+          <Link
+            href="/settings"
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <IconSettings size={18} />
+          </Link>
+        </div>
         <div className="px-4 pb-3">
           <p className="text-[10px] font-mono text-on-surface-variant">ID 0x4F2A_C91D</p>
         </div>

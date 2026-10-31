@@ -8,6 +8,7 @@ import { initCrypto } from "../../lib/crypto";
 import { encodeBytes } from "../../lib/protocol";
 import IconKey from "../icons/IconKey";
 import IconCopy from "../icons/IconCopy";
+import BoxQRCode from "../icons/BoxQRCode";
 
 const TAB_ALLOWED = /^[0-9a-fA-F]+$/;
 
@@ -210,22 +211,8 @@ export default function AddContactModal({
             <div className="flex flex-col items-center gap-4">
               {/* QR with center IconKey */}
               <div className="relative rounded-xl border border-hairline bg-surface-container p-3">
-                {identity && (
-                  <div className="relative">
-                    <canvas
-                      ref={canvasRef}
-                      className="block h-48 w-48 rounded-lg"
-                      style={{ imageRendering: "pixelated" }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/90">
-                        <IconKey
-                          size={20}
-                          className="text-primary"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                {myCodeKey && (
+                  <BoxQRCode payload={`cloak:${myCodeKey}`} size={192} />
                 )}
               </div>
 
