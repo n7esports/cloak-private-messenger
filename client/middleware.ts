@@ -123,6 +123,18 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const nonce = generateNonce();
 
+  // Require a valid signed application session before rendering private chat pages.
+  if (path === "/chats" || path.startsWith("/chats/")) {
+    const token = request.cookies.get(sessionCookie.name)?.value;
+    const session = await verifySessionToken(token);
+    if (!session) {
+      const signInUrl = request.nextUrl.clone();
+      signInUrl.pathname = "/auth/sign-in";
+      signInUrl.search = "";
+      return NextResponse.redirect(signInUrl);
+    }
+  }
+
   // Allow crawler and static metadata files without CSP/nonce
   const userAgent = request.headers.get("user-agent") || "";
   const isCrawler = /bot|crawler|spider|crawling/i.test(userAgent);
