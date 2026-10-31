@@ -22,12 +22,12 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     : (message.senderPubKey.slice(0, 8) || "Unknown");
 
   const alignment = isMe ? "justify-end" : "justify-start";
-  const bubbleBg = isMe ? "bg-primary/10" : "bg-surface-container";
-  const bubbleBorder = isMe ? "border border-accent-emerald" : "border border-border-default";
+  const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
+  const bubbleBg = isMe ? "bg-primary/10 border border-primary/30" : "bg-surface-container";
 
   return (
     <div className={`flex ${alignment} gap-2`}>
-      <div className={`relative max-w-[80%] rounded-2xl p-3 ${bubbleBg} ${bubbleBorder}`}>
+      <div className={`relative max-w-[70%] rounded-2xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}>
         {/* Metadata above bubble */}
         <div className="mb-1 flex items-baseline gap-2 font-mono">
           <span className="text-[11px] font-medium text-text-primary">{senderName}</span>
