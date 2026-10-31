@@ -92,6 +92,11 @@ export function MyIdentityModal({
 
   const handleSignOut = useCallback(async () => {
     try {
+      await fetch("/api/auth/signout", { method: "POST" });
+    } catch {
+      // Continue local sign-out even if the network is unavailable.
+    }
+    try {
       await wipeVaultDatabase();
     } catch {
       // best-effort wipe; continue to lock regardless
