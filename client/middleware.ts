@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { sessionCookie, verifySessionToken } from "@/lib/session";
 
 const CSS_VARS = `:root {
   --surface: #0f131c;
@@ -118,9 +119,21 @@ function generateNonce(): string {
 
 const isProduction = process.env.NODE_ENV === "production";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const nonce = generateNonce();
+
+  // Require a valid signed application session before rendering private chat pages.
+  if (path === "/chats" || path.startsWith("/chats/")) {
+    const token = request.cookies.get(sessionCookie.name)?.value;
+    const session = await verifySessionToken(token);
+    if (!session) {
+      const signInUrl = request.nextUrl.clone();
+      signInUrl.pathname = "/auth/sign-in";
+      signInUrl.search = "";
+      return NextResponse.redirect(signInUrl);
+    }
+  }
 
   // Allow crawler and static metadata files without CSP/nonce
   const userAgent = request.headers.get("user-agent") || "";
@@ -193,6 +206,7 @@ export function middleware(request: NextRequest) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
 }
 
 export const config = {
