@@ -66,9 +66,8 @@ export function isInlineRenderableImage(mime: string): boolean {
 function isSafeAttachmentDataUrl(mime: string, data: string): boolean {
   const match = ATTACHMENT_DATA_URL.exec(data);
   if (!match || match[1].toLowerCase() !== mime.toLowerCase()) return false;
-  if (isInlineRenderableImage(mime)) return isDataUrl(data);
-  return !/^(?:text\/html|application\/xhtml\+xml|application\/javascript)$/i.test(
-    mime,
+  return ["image/png", "image/jpeg", "image/webp", "text/plain"].includes(
+    mime.toLowerCase(),
   );
 }
 
