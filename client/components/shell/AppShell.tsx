@@ -4,11 +4,11 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { useChatStore, type ChatState, type ChatSummary } from "../../store/useChatStore";
 import IconChat from "../icons/IconChat";
 import IconChannel from "../icons/IconChannel";
-import IconSettings from "../icons/IconSettings";
 import IconTrash from "../icons/IconTrash";
 import IconBellOff from "../icons/IconBellOff";
 import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
+import IconSearch from "../icons/IconSearch";
 import AddContactModal from "../modals/AddContactModal";
 import Footer from "../Footer";
 
@@ -54,6 +54,9 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userAlias, setUserAlias] = useState("");
 
   useEffect(() => {
     function handleClick() {
@@ -70,6 +73,11 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
       document.removeEventListener("click", handleClick);
       document.removeEventListener("contextmenu", handleContextMenu);
     };
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("cloak.identity.alias");
+    if (stored) setUserAlias(stored);
   }, []);
 
   const handleContextMenu = (e: React.MouseEvent, chat: ChatSummary) => {
@@ -95,17 +103,59 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   return (
     <aside className="flex h-screen w-80 flex-col border-r border-hairline bg-surface-container">
       {/* Logo / brand */}
-      <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
-          <span className="text-sm font-bold text-on-primary">C</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#dfe2ee"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
         </div>
-        <span className="text-base font-semibold text-on-surface">
-          UQZERA Messenger
-        </span>
+        <span className="text-base font-semibold text-on-surface">UQZERA</span>
+      </div>
+
+      {/* Divider after logo */}
+      <div className="mx-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
+      {/* Search bar */}
+      <div className="px-4 pb-2">
+        <div
+          className="flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors"
+          style={{
+            backgroundColor: "#181c24",
+            borderColor: searchFocused ? "#10B981" : "rgba(255,255,255,0.08)",
+          }}
+        >
+          <IconSearch
+            size={16}
+            style={{ color: searchFocused ? "#10B981" : "#bbcabf", flexShrink: 0 }}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholder="Search chats, messages..."
+            className="w-full bg-transparent text-sm outline-none"
+            style={{ color: searchFocused ? "#10B981" : "#bbcabf" }}
+          />
+        </div>
       </div>
 
       {/* Chats nav */}
-      <div className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-on-surface">
+      <div
+        className="flex items-center justify-between px-4 py-2 text-sm font-semibold cursor-pointer transition-colors"
+        style={{ color: "var(--text-primary)" }}
+      >
         <div className="flex items-center gap-2">
           <IconChat size={18} />
           <span>Chats</span>
@@ -113,17 +163,14 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
         <button
           onClick={() => setShowAddContact(true)}
           aria-label="Add contact"
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-on-surface transition hover:bg-surface"
+          className="flex h-7 w-7 items-center justify-center rounded-lg transition"
+          style={{ color: "#dfe2ee" }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
         >
           <IconPlus size={16} />
         </button>
       </div>
-
-      {/* Channels button - moved above chat list */}
-      <button className="flex items-center gap-2 px-4 py-3 text-sm text-on-surface hover:bg-surface">
-        <IconChannel size={18} />
-        <span>Channels</span>
-      </button>
 
       {/* Scrollable chat list */}
       <div className="flex-1 overflow-y-auto">
@@ -135,7 +182,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
           sorted.map((chat) => {
             const preview =
               chat.kind === "notes"
-                ? "📝 Private Notes"
+                ? "Private Notes"
                 : chat.alias;
             return (
               <div
@@ -147,7 +194,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
                   onClick={() => setActiveChat(chat.id)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
                     activeChatId === chat.id
-                      ? "bg-surface-high"
+                      ? "bg-[#059669]"
                       : "hover:bg-surface"
                   }`}
                 >
@@ -211,23 +258,32 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
         )}
       </div>
 
+      {/* Divider above bottom section */}
+      <div className="mx-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
       {/* Bottom fixed area */}
       <div className="flex flex-col border-t border-hairline">
-        <div className="flex items-center justify-between px-4 py-2">
-          <button
-            onClick={onOpenIdentity}
-            aria-label="My Identity"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary transition hover:bg-primary/90"
-          >
-            ?
-          </button>
-          <button
-            aria-label="Settings"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-high text-on-surface transition hover:bg-surface"
-          >
-            <IconSettings size={18} />
-          </button>
-        </div>
+        <button
+          className="flex items-center gap-2 px-4 py-3 text-sm transition-colors"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#181c24")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+        >
+          <IconChannel size={18} />
+          <span>Channels</span>
+        </button>
+
+        <button
+          onClick={onOpenIdentity}
+          aria-label="My Identity"
+          className="flex items-center gap-3 px-4 py-2 text-left transition hover:bg-surface"
+        >
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary">
+            {initials(userAlias)}
+          </div>
+          <span className="text-sm font-medium text-on-surface">{userAlias || "Set alias"}</span>
+        </button>
+
         <div className="px-4 pb-3">
           <p className="text-[10px] font-mono text-on-surface-variant">ID 0x4F2A_C91D</p>
         </div>

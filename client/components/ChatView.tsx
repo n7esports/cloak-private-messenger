@@ -159,7 +159,7 @@ export function ChatView({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3 pb-24">
         {messages.length === 0 && (
           <p className="py-8 text-center text-sm text-outline">No messages yet. Say hello.</p>
         )}
@@ -181,74 +181,77 @@ export function ChatView({
         <div className="px-4 pb-1 text-[10px] text-text-secondary">Peer is typing…</div>
       )}
 
-      {/* Attachment preview */}
-      {pendingAttachment && (
-        <div className="flex items-center gap-2 border-t border-border-default bg-surface/40 px-4 py-2">
-          <IconAttach size={14} />
-          <span className="flex-1 truncate text-xs text-text-secondary">{pendingAttachment.name}</span>
-          <span className="text-[10px] text-text-secondary">{(pendingAttachment.size / 1024).toFixed(0)} KB</span>
-          <button onClick={() => setPendingAttachment(null)} className="rounded p-1 hover:bg-surface-high">
-            <IconX size={14} />
-          </button>
-        </div>
-      )}
-
       {/* Composer */}
-      <div className="border-t border-border-default bg-surface/40 p-4">
-        <div className="flex items-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,text/plain"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            title="Attach file"
-            className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary disabled:opacity-50"
-          >
-            <IconAttach size={16} />
-          </button>
-          <button
-            onClick={cycleEphemeralTtl}
-            title="Ephemeral TTL"
-            className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
-          >
-            <IconClock size={16} />
-          </button>
-          <button
-            title="Voice message"
-            className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" y1="19" x2="12" y2="22" />
-            </svg>
-          </button>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Write encrypted message..."
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            className="flex-1 resize-none rounded-xl border border-border-default bg-surface-container px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary outline-none focus:border-primary"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!content.trim() && !pendingAttachment}
-            className="rounded-lg bg-primary p-2 text-xs font-medium text-on-primary transition hover:bg-primary/90 disabled:opacity-40"
-          >
-            <IconSend size={16} />
-            <span className="sr-only">Encrypt & Send</span>
-          </button>
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border-default bg-surface">
+        {/* Attachment preview */}
+        {pendingAttachment && (
+          <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
+            <IconAttach size={14} />
+            <span className="flex-1 truncate text-xs text-text-secondary">{pendingAttachment.name}</span>
+            <span className="text-[10px] text-text-secondary">{(pendingAttachment.size / 1024).toFixed(0)} KB</span>
+            <button onClick={() => setPendingAttachment(null)} className="rounded p-1 hover:bg-surface-high">
+              <IconX size={14} />
+            </button>
+          </div>
+        )}
+        <div className="p-4">
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,text/plain"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              title="Attach file"
+              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary disabled:opacity-50"
+            >
+              <IconAttach size={16} />
+            </button>
+            <button
+              onClick={cycleEphemeralTtl}
+              title="Ephemeral TTL"
+              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
+            >
+              <IconClock size={16} />
+            </button>
+            <button
+              title="Voice message"
+              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+              </svg>
+            </button>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write encrypted message..."
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              className="flex-1 resize-none rounded-xl border border-border-default bg-surface-container px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary outline-none focus:border-primary"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!content.trim() && !pendingAttachment}
+              className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-on-primary transition hover:bg-primary/90 disabled:opacity-40"
+            >
+              <span className="flex items-center gap-1.5">
+                <IconSend size={16} />
+                Encrypt & Send
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

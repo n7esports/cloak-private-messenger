@@ -22,14 +22,14 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     : (message.senderPubKey.slice(0, 8) || "Unknown");
 
   const alignment = isMe ? "justify-end" : "justify-start";
-  const bubbleBg = isMe ? "bg-chat-sent" : "bg-chat-received";
-  const bubbleBorder = "border-border-default";
+  const bubbleBg = isMe ? "bg-primary/10" : "bg-surface-container";
+  const bubbleBorder = isMe ? "border border-accent-emerald" : "border border-border-default";
 
   return (
-    <div className={`flex ${alignment} gap-1`}>
-      <div className={`relative max-w-[80%] rounded-2xl px-4 py-2.5 border ${bubbleBg} ${bubbleBorder}`}>
+    <div className={`flex ${alignment} gap-2`}>
+      <div className={`relative max-w-[80%] rounded-2xl p-3 ${bubbleBg} ${bubbleBorder}`}>
         {/* Metadata above bubble */}
-        <div className="mb-1 flex items-baseline gap-2">
+        <div className="mb-1 flex items-baseline gap-2 font-mono">
           <span className="text-[11px] font-medium text-text-primary">{senderName}</span>
           <span className="text-[10px] text-text-secondary">
             {new Date(message.timestamp).toISOString().slice(0, 19).replace("T", " ")} UTC
@@ -59,9 +59,8 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         </p>
 
         {/* Crypto metadata */}
-        <div className="mt-1 flex items-center justify-end gap-2">
+        <div className="mt-1 flex items-center justify-end">
           <span className="font-mono text-[10px] text-text-secondary">SIG: 0x{message.id.slice(0, 16)}</span>
-          <span className="font-mono text-[10px] text-text-secondary">CIPHER: AES-GCM-256</span>
         </div>
       </div>
     </div>
