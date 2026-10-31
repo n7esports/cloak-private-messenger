@@ -130,10 +130,12 @@ export interface ChatState {
   // Modal state
   vaultModalOpen: boolean;
   sidebarOpen: boolean;
+  replyTo: MessageReplyRef | null;
   setSidebarOpen: (open: boolean) => void;
   setEphemeralTtl: (ttl: number | null) => void;
   setGlobalSearch: (search: string) => void;
   setVaultModalOpen: (open: boolean) => void;
+  setReplyTo: (reply: MessageReplyRef | null) => void;
   // Phase 2: New actions
   addChannel: (channel: Channel) => void;
   removeDevice: (deviceId: string) => void;
@@ -693,10 +695,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // Modal state
   vaultModalOpen: false,
   sidebarOpen: false,
+  replyTo: null,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setEphemeralTtl: (ttl) => set({ ephemeralTtl: ttl }),
   setGlobalSearch: (search) => set({ globalSearch: search }),
   setVaultModalOpen: (open) => set({ vaultModalOpen: open }),
+  setReplyTo: (reply) => set({ replyTo: reply }),
 
   // Phase 2: New actions
   addChannel: (channel) =>
@@ -723,6 +727,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       globalSearch: "",
       vaultModalOpen: false,
       sidebarOpen: false,
+      replyTo: null,
       typingByChat: {},
       peerTypingByChat: {},
       peerTypingAtByChat: {},
