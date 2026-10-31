@@ -37,7 +37,7 @@ export async function downloadEncryptedVaultExport(): Promise<void> {
   anchor.href = url;
   anchor.download = `UQZERA-encrypted-export-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 export async function deleteLocalVaultData(): Promise<void> {
