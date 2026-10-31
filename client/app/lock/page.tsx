@@ -20,11 +20,11 @@ export default function LockPage() {
 
  if (!sessionRestored) {
  return (
- <div className="flex h-screen w-full items-center justify-center bg-surface">
- <div className="bg-surface-container border border-hairline flex flex-col items-center gap-3 px-8 py-6">
+ <div className="flex h-screen w-full items-center justify-center bg-base">
+ <div className="bg-panel border border-default flex flex-col items-center gap-3 px-8 py-6">
  <div className="h-2 w-2 rounded-full bg-primary " />
- <p className="font-mono text-xs uppercase tracking-widest text-on-surface-variant">
- Restoring session
+ <p className="font-mono text-xs uppercase tracking-widest text-secondary">
+   Restoring session
  </p>
  </div>
  </div>
@@ -33,18 +33,18 @@ export default function LockPage() {
 
  if (!isUnlocked) {
  return (
- <div className="flex h-screen w-full items-center justify-center bg-surface">
- <div className="bg-surface-container border border-hairline w-full max-w-sm px-8 py-10">
- <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+ <div className="flex h-screen w-full items-center justify-center bg-base">
+ <div className="bg-panel border border-default w-full max-w-sm px-8 py-10">
+ <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
  UQZERA
  </h1>
- <p className="mt-2 text-sm text-on-surface-variant">Enter your passcode to unlock.</p>
+ <p className="mt-2 text-sm text-secondary">Enter your passcode to unlock.</p>
  {sessionRestoreError && (
  <p className="mt-2 text-sm text-error">{sessionRestoreError}</p>
  )}
  <button
  onClick={() => unlockVault()}
- className="mt-6 w-full rounded-xl bg-surface-highest py-3 text-sm font-medium text-outline-variant transition hover:bg-surface-highest"
+ className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
  >
  Unlock
  </button>

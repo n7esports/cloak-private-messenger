@@ -61,17 +61,17 @@ export default function SetupRecoveryPage() {
 
   if (done) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-surface">
-        <div className="bg-surface-container border border-hairline w-full max-w-sm px-8 py-10">
-          <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+      <div className="flex h-screen w-full items-center justify-center bg-base">
+        <div className="bg-panel border border-default w-full max-w-sm px-8 py-10">
+          <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
             Recovery saved
           </h1>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <p className="mt-2 text-sm text-secondary">
             Your recovery phrase has been stored. Keep it safe.
           </p>
           <button
             onClick={() => router.replace("/chats")}
-            className="mt-6 w-full rounded-xl bg-surface-highest py-3 text-sm font-medium text-outline-variant transition hover:bg-surface-high"
+            className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
           >
             Continue
           </button>
@@ -82,10 +82,10 @@ export default function SetupRecoveryPage() {
 
   if (!recovery) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-surface">
-        <div className="bg-surface-container border border-hairline flex flex-col items-center gap-3 px-8 py-6">
+      <div className="flex h-screen w-full items-center justify-center bg-base">
+        <div className="bg-panel border border-default flex flex-col items-center gap-3 px-8 py-6">
           <div className="h-2 w-2 rounded-full bg-primary" />
-          <p className="font-mono text-xs uppercase tracking-widest text-on-surface-variant">
+          <p className="font-mono text-xs uppercase tracking-widest text-secondary">
             Generating recovery phrase
           </p>
         </div>
@@ -96,28 +96,28 @@ export default function SetupRecoveryPage() {
   const words = recovery.mnemonic.split(/\s+/);
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-surface">
-      <div className="bg-surface-container border border-hairline w-full max-w-lg px-8 py-10">
-        <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+    <div className="flex h-screen w-full items-center justify-center bg-base">
+      <div className="bg-panel border border-default w-full max-w-lg px-8 py-10">
+        <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
           Recovery phrase
         </h1>
-        <p className="mt-2 text-sm text-on-surface-variant">
+        <p className="mt-2 text-sm text-secondary">
           Write down these 24 words in order and keep them somewhere safe.
         </p>
 
-        <div className="mt-6 grid grid-cols-3 gap-2 rounded-xl bg-surface-high p-4">
+        <div className="mt-6 grid grid-cols-3 gap-2 rounded-xl bg-elevated p-4">
           {words.map((word, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 rounded-lg bg-surface-container px-3 py-2"
+              className="flex items-center gap-2 rounded-lg bg-panel px-3 py-2"
             >
               <span className="text-xs text-outline">{i + 1}</span>
-              <span className="font-mono text-sm text-on-surface">{word}</span>
+              <span className="font-mono text-sm text-primary">{word}</span>
             </div>
           ))}
         </div>
 
-        <p className="mt-6 text-sm text-on-surface-variant">
+        <p className="mt-6 text-sm text-secondary">
           Confirm words {MNEMONIC_CHALLENGE_POSITIONS.join(", ")}:
         </p>
         <div className="mt-3 flex flex-col gap-3">
@@ -130,7 +130,7 @@ export default function SetupRecoveryPage() {
                 onChange={(e) =>
                   setAnswers((prev) => ({ ...prev, [pos]: e.target.value }))
                 }
-                className="flex-1 rounded-xl border border-hairline bg-surface px-4 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                className="flex-1 rounded-xl border border-default bg-input px-4 py-2 text-sm text-primary outline-none focus:border-default"
                 autoComplete="off"
               />
             </div>
@@ -141,7 +141,7 @@ export default function SetupRecoveryPage() {
 
         <button
           onClick={handleVerify}
-          className="mt-6 w-full rounded-xl bg-surface-highest py-3 text-sm font-medium text-outline-variant transition hover:bg-surface-high"
+          className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
         >
           Verify and save
         </button>

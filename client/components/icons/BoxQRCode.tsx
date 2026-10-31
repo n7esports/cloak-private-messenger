@@ -23,6 +23,13 @@ export default function BoxQRCode({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const obsidian = getComputedStyle(document.documentElement)
+      .getPropertyValue("--surface")
+      .trim();
+    const emerald = getComputedStyle(document.documentElement)
+      .getPropertyValue("--primary")
+      .trim();
+
     const qr = QRCode.create(payload, { errorCorrectionLevel: "H", margin: 2 } as any);
     const modules = qr.modules.data;
     const qrSize = qr.modules.size;
@@ -34,7 +41,7 @@ export default function BoxQRCode({
     const areaSize = size - padding * 2;
     const cellSize = areaSize / qrSize;
 
-    ctx.fillStyle = OBSIDIAN;
+    ctx.fillStyle = obsidian;
     ctx.fillRect(0, 0, size, size);
 
     const iconSize = size * 0.22;
@@ -43,7 +50,7 @@ export default function BoxQRCode({
     const iconTop = (size - iconSize) / 2;
     const iconBottom = iconTop + iconSize;
 
-    ctx.fillStyle = EMERALD;
+    ctx.fillStyle = emerald;
 
     for (let row = 0; row < qrSize; row++) {
       for (let col = 0; col < qrSize; col++) {

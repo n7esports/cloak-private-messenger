@@ -6,11 +6,11 @@ export const metadata: Metadata = {
 
 export default function StatusPage() {
   return (
-    <main id="main" className="p-6">
-        <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+    <main id="main" className="bg-base p-6">
+        <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
           Status
         </h1>
-        <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">
+        <p className="mt-3 max-w-2xl text-sm text-secondary">
           Real-time availability and incident history for UQZERA relays and APIs are published here so you can verify service health without contacting support.
         </p>
       </main>

@@ -46,17 +46,17 @@ export default function UnlockRecoveryPage() {
 
   if (done) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-surface">
-        <div className="bg-surface-container border border-hairline w-full max-w-sm px-8 py-10">
-          <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+      <div className="flex h-screen w-full items-center justify-center bg-base">
+        <div className="bg-panel border border-default w-full max-w-sm px-8 py-10">
+          <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
             Verified
           </h1>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <p className="mt-2 text-sm text-secondary">
             Recovery phrase confirmed.
           </p>
           <button
             onClick={() => router.replace("/lock")}
-            className="mt-6 w-full rounded-xl bg-surface-highest py-3 text-sm font-medium text-outline-variant transition hover:bg-surface-high"
+            className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
           >
             Continue
           </button>
@@ -66,12 +66,12 @@ export default function UnlockRecoveryPage() {
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-surface">
-      <div className="bg-surface-container border border-hairline w-full max-w-sm px-8 py-10">
-        <h1 className="font-sans text-2xl font-semibold tracking-tight text-on-surface">
+    <div className="flex h-screen w-full items-center justify-center bg-base">
+      <div className="bg-panel border border-default w-full max-w-sm px-8 py-10">
+        <h1 className="font-sans text-2xl font-semibold tracking-tight text-primary">
           Recovery
         </h1>
-        <p className="mt-2 text-sm text-on-surface-variant">
+        <p className="mt-2 text-sm text-secondary">
           Enter words {MNEMONIC_CHALLENGE_POSITIONS.join(", ")} from your recovery phrase.
         </p>
 
@@ -85,7 +85,7 @@ export default function UnlockRecoveryPage() {
                 onChange={(e) =>
                   setAnswers((prev) => ({ ...prev, [pos]: e.target.value }))
                 }
-                className="flex-1 rounded-xl border border-hairline bg-surface px-4 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                className="flex-1 rounded-xl border border-default bg-input px-4 py-2 text-sm text-primary outline-none focus:border-default"
                 autoComplete="off"
               />
             </div>
@@ -96,7 +96,7 @@ export default function UnlockRecoveryPage() {
 
         <button
           onClick={handleVerify}
-          className="mt-6 w-full rounded-xl bg-surface-highest py-3 text-sm font-medium text-outline-variant transition hover:bg-surface-high"
+          className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
         >
           Verify
         </button>

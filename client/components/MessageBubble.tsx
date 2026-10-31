@@ -22,27 +22,27 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     : (message.senderPubKey.slice(0, 8) || "Unknown");
 
   const alignment = isMe ? "justify-end" : "justify-start";
-  const bubbleBg = isMe ? "bg-primary/10" : "bg-surface-container";
-  const bubbleBorder = isMe ? "border-emerald-500" : "border-hairline";
+  const bubbleBg = isMe ? "bg-chat-sent" : "bg-chat-received";
+  const bubbleBorder = "border-border-default";
 
   return (
     <div className={`flex ${alignment} gap-1`}>
       <div className={`relative max-w-[80%] rounded-2xl px-4 py-2.5 border ${bubbleBg} ${bubbleBorder}`}>
         {/* Metadata above bubble */}
         <div className="mb-1 flex items-baseline gap-2">
-          <span className="text-[11px] font-medium text-on-surface">{senderName}</span>
-          <span className="text-[10px] text-on-surface-variant">
+          <span className="text-[11px] font-medium text-text-primary">{senderName}</span>
+          <span className="text-[10px] text-text-secondary">
             {new Date(message.timestamp).toISOString().slice(0, 19).replace("T", " ")} UTC
           </span>
         </div>
 
         {/* Attachment */}
         {message.attachment && !message.attachment.mime?.startsWith("image/") && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-hairline bg-surface/60 px-3 py-2">
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-border-default bg-surface/60 px-3 py-2">
             <IconFile size={18} />
-            <span className="flex-1 truncate text-xs text-on-surface">{message.attachment.name}</span>
-            <span className="text-[10px] text-on-surface-variant">{formatBytes(message.attachment.size)}</span>
-            <button className="rounded border border-hairline px-2 py-0.5 text-[10px] text-on-surface transition hover:bg-surface-high">
+            <span className="flex-1 truncate text-xs text-text-primary">{message.attachment.name}</span>
+            <span className="text-[10px] text-text-secondary">{formatBytes(message.attachment.size)}</span>
+            <button className="rounded border border-border-default px-2 py-0.5 text-[10px] text-text-primary transition hover:bg-surface-high">
               Decrypt
             </button>
           </div>
@@ -54,14 +54,14 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         )}
 
         {/* Content */}
-        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words text-on-surface">
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words text-text-primary">
           {message.content}
         </p>
 
         {/* Crypto metadata */}
         <div className="mt-1 flex items-center justify-end gap-2">
-          <span className="font-mono text-[10px] text-on-surface-variant">SIG: 0x{message.id.slice(0, 16)}</span>
-          <span className="font-mono text-[10px] text-on-surface-variant">CIPHER: AES-GCM-256</span>
+          <span className="font-mono text-[10px] text-text-secondary">SIG: 0x{message.id.slice(0, 16)}</span>
+          <span className="font-mono text-[10px] text-text-secondary">CIPHER: AES-GCM-256</span>
         </div>
       </div>
     </div>

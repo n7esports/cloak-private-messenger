@@ -48,22 +48,22 @@ const ICONS = [
 
 export default function DevIconsPage() {
   return (
-    <div className="min-h-screen bg-surface p-8">
-      <h1 className="mb-6 font-sans text-xl font-semibold text-on-surface">
+    <div className="min-h-screen bg-base p-8">
+      <h1 className="mb-6 font-sans text-xl font-semibold text-primary">
         Icon Set ({ICONS.length})
       </h1>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {ICONS.map((Icon, idx) => (
           <div
             key={idx}
-            className="flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container p-4"
+            className="flex flex-col items-center gap-2 rounded-xl border border-subtle bg-panel p-4"
           >
             <Icon size={24} className="text-primary" />
             <span className="font-mono text-[10px] text-outline">
               {Icon.name.replace("Icon", "")}
             </span>
-            <Icon size={16} className="text-on-surface-variant" />
-            <Icon size={48} className="text-on-surface-variant" />
+            <Icon size={16} className="text-secondary" />
+            <Icon size={48} className="text-secondary" />
           </div>
         ))}
       </div>

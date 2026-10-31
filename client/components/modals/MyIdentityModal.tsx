@@ -7,9 +7,6 @@ import IconKey from "../icons/IconKey";
 import IconCopy from "../icons/IconCopy";
 import BoxQRCode from "../icons/BoxQRCode";
 
-const OBSIDIAN = "#0f131c";
-const EMERALD = "#10B981";
-
 const ALIAS_STORAGE_KEY = "cloak.identity.alias";
 
 export function MyIdentityModal({
