@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
 import IconCopy from "./icons/IconCopy";
 import IconFile from "./icons/IconFile";
+import IconFlag from "./icons/IconFlag";
 import IconForward from "./icons/IconForward";
 import IconPin from "./icons/IconPin";
 import IconReply from "./icons/IconReply";
@@ -25,12 +26,12 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
 
   const alignment = isMe ? "justify-end" : "justify-start";
   const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
-  const bubbleBg = isMe ? "bg-primary/20" : "bg-surface-container";
+  const bubbleBg = isMe ? "bg-primary/20 text-on-surface" : "bg-surface-container";
 
   return (
     <div className={`relative flex ${alignment} gap-2`}>
       <div
-        className={`max-w-[75%] rounded-xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}
+        className={`max-w-[75%] rounded-2xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}
         onContextMenu={(e) => {
           e.preventDefault();
           setShowMenu(true);
@@ -59,9 +60,12 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         </p>
 
         {/* Time */}
-        <div className="mt-1 flex items-center justify-end">
+        <div className="mt-1 flex items-center justify-end gap-2">
           <span className="text-[10px] text-text-secondary">
-            {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {message.senderName}
+          </span>
+          <span className="text-[10px] text-text-secondary">
+            {new Date(message.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
           </span>
         </div>
 
