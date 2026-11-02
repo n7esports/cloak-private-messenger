@@ -388,7 +388,7 @@ export class TransportManager {
       "broadcast",
       { event: "envelope" },
       (event: { payload?: BroadcastPayload }) => {
-        console.log("INCOMING PACKET RECEIVED:", event.payload);
+        console.log("REALTIME PAYLOAD RECEIVED:", event.payload);
         this.messageProcessing = this.messageProcessing
           .then(() => this.handleEnvelope(event.payload?.packet ?? event.payload))
           .catch((error: unknown) => {
