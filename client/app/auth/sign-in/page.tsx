@@ -19,7 +19,7 @@ export default function SignInPage() {
       pin: (form.elements.namedItem("pin") as HTMLInputElement).value,
     };
     try {
-      const res = await fetch("/api/auth/sign-in", {
+      const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
