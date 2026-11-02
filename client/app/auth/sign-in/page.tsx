@@ -25,8 +25,12 @@ export default function SignInPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error || "Invalid credentials");
+        if (res.status === 500) {
+          setError("Server error, check terminal");
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error || "Invalid credentials");
+        }
         setLoading(false);
         return;
       }

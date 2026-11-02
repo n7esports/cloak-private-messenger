@@ -17,6 +17,9 @@ export async function POST(request: Request) {
   const hash = await bcrypt.hash(pin, 10);
   // Insert the full row, but only ever return safe columns to the client (F-01).
   const { data, error } = await admin.from("users").insert({ alias, pin_hash: hash }).select("id, alias, profile_name, created_at").single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error("SIGNUP ERROR:", error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   return NextResponse.json({ user: data }, { status: 200 });
 }
