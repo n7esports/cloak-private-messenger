@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
 const CSS_VARS = `:root {
   --surface: #0f131c;
@@ -116,11 +117,40 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
+// Loose End 1 (F-02): verify the signed session cookie issued by /api/auth/signin.
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get("uqzera_session")?.value;
+  if (!token) return false;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) return false; // fail closed if misconfigured
+  try {
+    await jwtVerify(token, new TextEncoder().encode(secret), {
+      issuer: "uqzera",
+      audience: "uqzera-web",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const nonce = generateNonce();
+
+  // Loose End 1 (F-02): protect authenticated routes; redirect unauthenticated users to sign-in.
+  if (path.startsWith("/chats")) {
+    if (!(await hasValidSession(request))) {
+      const redirectUrl = new URL("/auth/sign-in", request.url);
+      const response = NextResponse.redirect(redirectUrl);
+      response.headers.set("X-Content-Type-Options", "nosniff");
+      response.headers.set("X-Frame-Options", "DENY");
+      response.headers.set("Referrer-Policy", "no-referrer");
+      return response;
+    }
+  }
 
   // Allow crawler and static metadata files without CSP/nonce
   const userAgent = request.headers.get("user-agent") || "";
