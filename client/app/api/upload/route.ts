@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { jwtVerify } from "jose";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -33,28 +33,30 @@ async function sign(payload: string): Promise<string> {
   return Buffer.from(sig).toString("hex");
 }
 
+// Loose End 3: verify the app's HttpOnly session cookie (same jose verification
+// logic as middleware.ts) instead of a Supabase Auth Bearer token.
+async function hasValidSession(request: Request): Promise<boolean> {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const match = cookieHeader.match(/(?:^|;\s*)uqzera_session=([^;]+)/);
+  const token = match ? decodeURIComponent(match[1]) : undefined;
+  if (!token) return false;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) return false; // fail closed if misconfigured
+  try {
+    await jwtVerify(token, new TextEncoder().encode(secret), {
+      issuer: "uqzera",
+      audience: "uqzera-web",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // F-06 fix: require a valid authenticated session before accepting uploads.
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const token = authHeader.slice("Bearer ".length).trim();
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      // Fail closed: cannot verify the session without Supabase config.
-      return NextResponse.json({ error: "Upload service unavailable" }, { status: 503 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
+    if (!(await hasValidSession(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
