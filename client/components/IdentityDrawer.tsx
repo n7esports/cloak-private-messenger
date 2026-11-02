@@ -1,9 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useVaultStore } from "../store/useVaultStore";
 import { encodeBytes } from "../lib/protocol";
 import BoxQRCode from "./icons/BoxQRCode";
+
+async function sha256Fingerprint(base64Key: string): Promise<string> {
+  // Decode the base64 public key back to its raw bytes so we hash the actual
+  // key material (not the base64 text), then SHA-256 it via Web Crypto.
+  const binary = atob(base64Key);
+  const raw = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    raw[i] = binary.charCodeAt(i);
+  }
+  const digest = await crypto.subtle.digest("SHA-256", raw);
+  const hex = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  // Group into 4-char chunks for out-of-band visual comparison.
+  return (hex.match(/.{4}/g) ?? []).join(":");
+}
 
 export function IdentityDrawer({
   open,
@@ -19,9 +35,24 @@ export function IdentityDrawer({
     return encodeBytes(identity.encryptionPublicKey);
   }, [identity]);
 
-  const fingerprint = useMemo(() => {
-    if (!publicKey) return "";
-    return publicKey;
+  const [fingerprint, setFingerprint] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!publicKey) {
+      setFingerprint("");
+      return;
+    }
+    sha256Fingerprint(publicKey)
+      .then((fp) => {
+        if (!cancelled) setFingerprint(fp);
+      })
+      .catch(() => {
+        if (!cancelled) setFingerprint("");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [publicKey]);
 
   if (!open) return null;
