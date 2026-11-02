@@ -89,6 +89,9 @@ export default function LinkedDevices({
               {!d.isCurrent && (
                 <button
                   onClick={() => {
+                    // F-13: local-only revocation — the device key/session is removed
+                    // from this client's state, but the server has no idea yet.
+                    console.warn("TODO: Implement server-side revocation");
                     removeDevice(d.id);
                     showToast({
                       id: crypto.randomUUID(),
