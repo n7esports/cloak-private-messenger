@@ -21,6 +21,9 @@ const DEFAULT_MAX_CONNECTIONS = 500;
 const DEFAULT_RELAY_RATE_LIMIT = 60;
 const DEFAULT_RELAY_RATE_WINDOW_MS = 10_000;
 const RELAY_RATE_MAX_ENTRIES = 10_000;
+// Per-IP limiter for the relay endpoints: max 30 requests per minute.
+const IP_RATE_LIMIT = 30;
+const IP_RATE_WINDOW_MS = 60_000;
 const MAX_ROUTES_PER_CONNECTION = 64;
 const WS_PING_INTERVAL_MS = 30_000;
 const WS_PING_TIMEOUT_MS = 10_000;
@@ -122,6 +125,31 @@ function consumeRelayRateAllowance(key, limit, windowMs) {
   }
   entry.count += 1;
   return { allowed: entry.count <= limit, retryAfterMs: Math.max(0, entry.resetAt - now) };
+}
+
+// Basic in-memory per-IP rate limiter (sliding window): max 30 requests per
+// minute. Once an entry hits its cap it is blocked until the window resets;
+// entries are pruned lazily and the map is size-capped so a spoofing flood
+// cannot exhaust memory through the limiter itself.
+const ipRequestLog = new Map();
+
+function checkIpRateLimit(ip, limit = IP_RATE_LIMIT, windowMs = IP_RATE_WINDOW_MS) {
+  const now = Date.now();
+  let record = ipRequestLog.get(ip);
+  if (!record || now >= record.resetAt) {
+    record = { count: 0, resetAt: now + windowMs };
+    ipRequestLog.set(ip, record);
+  }
+  if (record.count >= limit) {
+    return { allowed: false, retryAfterMs: Math.max(0, record.resetAt - now) };
+  }
+  record.count += 1;
+  if (ipRequestLog.size > RELAY_RATE_MAX_ENTRIES) {
+    for (const [key, entry] of ipRequestLog) {
+      if (now >= entry.resetAt) ipRequestLog.delete(key);
+    }
+  }
+  return { allowed: true, retryAfterMs: 0 };
 }
 
 function send(socket, value) {
@@ -421,12 +449,9 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
-  // Per-IP rate limit on the relay POST endpoint (C4/H2).
-  const rate = consumeRelayRateAllowance(
-    `http:${clientIp}`,
-    RELAY_HTTP_RATE_LIMIT,
-    RELAY_HTTP_RATE_WINDOW_MS,
-  );
+  // Per-IP rate limit on the relay POST endpoint (C4/H2), backed by the
+  // basic in-memory limiter: max 30 requests/minute/IP -> 429 Too Many Requests.
+  const rate = checkIpRateLimit(`http:${clientIp}`);
   if (!rate.allowed) {
     securityLog("rate_limited", { clientIp, transport: "http" });
     response.writeHead(429, { "retry-after": String(Math.ceil(rate.retryAfterMs / 1000)) }).end();
@@ -535,6 +560,12 @@ wss.on("connection", (socket, request) => {
   };
 
   socket.on("message", (message) => {
+    // Per-IP rate limit on relay traffic: max 30 requests/minute/IP.
+    if (!checkIpRateLimit(`ws:${clientIp}`).allowed) {
+      securityLog("rate_limited", { clientIp, transport: "websocket_ip_limit" });
+      send(socket, { status: "error", message: "Too many relay requests" });
+      return;
+    }
     if (!allowMessage()) {
       securityLog("rate_limited", { clientIp, transport: "websocket" });
       send(socket, { status: "error", message: "Too many relay requests" });
