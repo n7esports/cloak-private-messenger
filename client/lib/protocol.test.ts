@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateIdentity, initCrypto } from "./crypto";
+import { deriveVaultKey, generateIdentity, initCrypto } from "./crypto";
 import {
   buildEnvelope,
   buildSignedReceipt,
@@ -426,5 +426,81 @@ describe("signed delivery receipts", () => {
     expect(
       await verifySignedReceipt({ ...receipt, messageId: "other" }),
     ).toBe(false);
+  });
+});
+
+describe("ratchet directional chain keys (F-10 regression)", () => {
+  it("derives distinct send and receive chain keys for a new session", async () => {
+    const sodium = await initCrypto();
+    const alice = await generateIdentity();
+    const bob = await generateIdentity();
+    const session = await createRatchetSession(
+      alice.encryptionPublicKey,
+      alice.encryptionPrivateKey,
+      bob.encryptionPublicKey,
+    );
+    // F-10 fix guard: before the fix both directions were derived from the
+    // same context string, making sendChainKey === receiveChainKey. They must
+    // never be equal, otherwise leaking one direction's chain key decrypts
+    // the other direction's traffic.
+    expect(session.sendChainKey).not.toEqual(session.receiveChainKey);
+    // Sanity: each is a full-length key and the peer derives mirrored chains.
+    expect(session.sendChainKey).toHaveLength(sodium.crypto_secretbox_KEYBYTES);
+    expect(session.receiveChainKey).toHaveLength(sodium.crypto_secretbox_KEYBYTES);
+    const peer = await createRatchetSession(
+      bob.encryptionPublicKey,
+      bob.encryptionPrivateKey,
+      alice.encryptionPublicKey,
+    );
+    expect(peer.sendChainKey).toEqual(session.receiveChainKey);
+    expect(peer.receiveChainKey).toEqual(session.sendChainKey);
+    // First message keys in each direction must also differ.
+    const sent = await rotateSessionKey(session, "send");
+    const received = await rotateSessionKey(
+      await createRatchetSession(
+        alice.encryptionPublicKey,
+        alice.encryptionPrivateKey,
+        bob.encryptionPublicKey,
+      ),
+      "receive",
+    );
+    expect(sent.messageKey).not.toEqual(
+      (await rotateSessionKey(peer, "send")).messageKey,
+    );
+    sent.messageKey.fill(0);
+    received.messageKey.fill(0);
+  });
+});
+
+describe("passphrase entropy (vault key derivation)", () => {
+  it("produces distinct 256-bit keys for distinct passphrases and salts", async () => {
+    const sodium = await initCrypto();
+    const saltA = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+    const saltB = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+    const highEntropy = "corRECT-horse-battery-staple!9xQ";
+    const lowEntropy = "123456";
+
+    const keyHighA = await deriveVaultKey(highEntropy, saltA);
+    const keyLowA = await deriveVaultKey(lowEntropy, saltA);
+    const keyHighB = await deriveVaultKey(highEntropy, saltB);
+    const keyHighA2 = await deriveVaultKey(highEntropy, saltA);
+
+    // Deterministic for the same (passphrase, salt) pair — required for unlock.
+    expect(keyHighA2).toEqual(keyHighA);
+    // Different passphrase -> different key (avalanche).
+    expect(keyLowA).not.toEqual(keyHighA);
+    // Different salt -> different key even for the same passphrase.
+    expect(keyHighB).not.toEqual(keyHighA);
+    // Output is always a full 256-bit key regardless of input entropy.
+    expect(keyHighA).toHaveLength(sodium.crypto_secretbox_KEYBYTES);
+    // Two random high-entropy passphrases collide with negligible probability.
+    const other = sodium.to_base64(sodium.randombytes_buf(32));
+    const keyOther = await deriveVaultKey(other, saltA);
+    expect(keyOther).not.toEqual(keyHighA);
+    keyHighA.fill(0);
+    keyHighA2.fill(0);
+    keyHighB.fill(0);
+    keyLowA.fill(0);
+    keyOther.fill(0);
   });
 });

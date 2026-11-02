@@ -53,6 +53,10 @@ const allowedOrigins = new Set([
 // 32-byte length and canonical round-trip are enforced in validPublicKey
 // itself; this gates character set and shape only.
 const PUBLIC_KEY_RE = /^[A-Za-z0-9+/]{43}=$/;
+// NEW-11: base64url form of a 32-byte key — same alphabet as queue ids but
+// exactly 43 chars with no '=' padding (32 bytes -> 43 full chars + 1 leftover
+// nibble, which base64url encodes without the trailing '=').
+const PUBLIC_KEY_URL_RE = /^[A-Za-z0-9_-]{43}$/;
 // Queue ids are minted here as randomBytes(16).toString("base64url"):
 // base64url alphabet, no padding, exactly 22 chars.
 const QUEUE_ID_RE = /^[A-Za-z0-9_-]{22}$/;
@@ -62,6 +66,11 @@ const routes = new Map();
 const subscribers = new Map();
 const relayRateLimits = new Map();
 let queuedBytes = 0;
+// F-19/F-21: the legacy queue API (create/push/pull, `queues` map) is counted
+// against the same server-wide MAX_QUEUED_BYTES budget as the /relay route's
+// per-recipient queues. Without this, a caller could exhaust memory through
+// the legacy path even though pushRoute() was budget-checked.
+let legacyQueuedBytes = 0;
 let liveConnections = 0;
 
 // Structured logging (M3): append-only JSONL of security-relevant events so
@@ -167,12 +176,21 @@ function isAllowedOrigin(origin) {
 }
 
 function validPublicKey(value) {
-  return (
-    typeof value === "string" &&
-    PUBLIC_KEY_RE.test(value) &&
-    Buffer.from(value, "base64").length === 32 &&
-    Buffer.from(value, "base64").toString("base64") === value
-  );
+  // NEW-11: accept both standard Base64 (client lib sodium `to_base64`, padded
+  // with '=') and Base64URL (no padding, '-_/+' substitutions), since callers
+  // outside the browser may encode keys in either alphabet. Canonical
+  // round-trip on the matching alphabet is still enforced so malleable
+  // encodings are rejected.
+  if (typeof value !== "string") return false;
+  if (PUBLIC_KEY_RE.test(value)) {
+    const decoded = Buffer.from(value, "base64");
+    return decoded.length === 32 && decoded.toString("base64") === value;
+  }
+  if (PUBLIC_KEY_URL_RE.test(value)) {
+    const decoded = Buffer.from(value, "base64url");
+    return decoded.length === 32 && decoded.toString("base64url") === value;
+  }
+  return false;
 }
 
 function validPacket(packet) {
@@ -374,7 +392,17 @@ function processRelayRequest(request, respond, socket = null) {
       respond({ status: "error", message: "Queue not found or full", id: request.id });
       return true;
     }
-    pending.push({ payload: request.payload, createdAt: Date.now() });
+    // F-19/F-21: enforce the same global queued-bytes budget the /relay route
+    // uses. Entry bytes are measured like queueEntryBytes() so both paths draw
+    // from an equivalent accounting of the server-wide memory limit.
+    const entryBytes = queueEntryBytes({ id: request.queueId, message: request.payload });
+    if (legacyQueuedBytes + entryBytes > MAX_QUEUED_BYTES) {
+      securityLog("legacy_queue_budget_exhausted", { queueId: request.queueId });
+      respond({ status: "error", message: "Server queue memory budget exhausted", id: request.id });
+      return true;
+    }
+    legacyQueuedBytes += entryBytes;
+    pending.push({ payload: request.payload, createdAt: Date.now(), entryBytes });
     respond({ status: "ok", action: "push", queueId: request.queueId, id: request.id });
     return true;
   }
@@ -390,6 +418,9 @@ function processRelayRequest(request, respond, socket = null) {
       return true;
     }
     const messages = pending.map((entry) => entry.payload);
+    // F-19/F-21: release the pulled entries' bytes back to the global budget.
+    for (const entry of pending) legacyQueuedBytes -= entry.entryBytes ?? 0;
+    if (legacyQueuedBytes < 0) legacyQueuedBytes = 0;
     queues.delete(request.queueId);
     respond({ status: "ok", action: "pull", queueId: request.queueId, messages, id: request.id });
     return true;
@@ -413,7 +444,14 @@ function pruneExpiredMessages() {
 function pruneExpiredQueues() {
   const cutoff = Date.now() - MESSAGE_TTL_MS;
   for (const [queueId, pending] of queues) {
-    const kept = pending.filter((entry) => entry.createdAt > cutoff);
+    // F-19/F-21: expired legacy entries release their bytes back to the global
+    // budget, mirroring removeQueuedBytes() for the /relay route queues.
+    const kept = [];
+    for (const entry of pending) {
+      if (entry.createdAt > cutoff) kept.push(entry);
+      else legacyQueuedBytes -= entry.entryBytes ?? 0;
+    }
+    if (legacyQueuedBytes < 0) legacyQueuedBytes = 0;
     if (kept.length === 0) queues.delete(queueId);
     else if (kept.length !== pending.length) queues.set(queueId, kept);
   }

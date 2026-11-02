@@ -24,7 +24,16 @@ export async function POST(request: Request) {
   const admin = createClient(supabaseUrl, serviceKey);
   // Fetch pin_hash for comparison only; never return it to the client (F-01).
   const { data, error } = await admin.from("users").select("id, alias, profile_name, created_at, pin_hash").eq("alias", alias).single();
-  if (error || !data) return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+  // F-07 fix: alias-enumeration timing side-channel. Previously bcrypt.compare
+  // ran ONLY when the alias existed, so a nonexistent alias returned far
+  // faster than a wrong PIN on a real one, letting attackers enumerate
+  // registered aliases. Always run one bcrypt comparison against a fixed dummy
+  // hash so response time is constant regardless of whether the user exists.
+  const DUMMY_PIN_HASH = "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+  if (error || !data) {
+    await bcrypt.compare(typeof pin === "string" ? pin : "", DUMMY_PIN_HASH);
+    return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+  }
   const ok = await bcrypt.compare(pin, data.pin_hash);
   if (!ok) return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
   const secret = getSessionSecret();

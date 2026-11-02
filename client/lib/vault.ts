@@ -446,6 +446,53 @@ export async function decryptIdentityWithVaultKey(
   }
 }
 
+// F-10/F-11 (client-side replacement for the deleted /api/data/export route):
+// exports the local vault as an encrypted-at-rest JSON blob. Rows are read
+// directly from IndexedDB in the browser — never through a server route, which
+// could not access per-device IndexedDB anyway. The output contains only the
+// already-encrypted vault rows (ciphertext + nonce); no plaintext is produced.
+export async function exportVaultData(): Promise<Blob> {
+  await database.open();
+  const [chats, messages, sessions, notes, outbox] = await Promise.all([
+    database.chats.toArray(),
+    database.messages.toArray(),
+    database.sessions.toArray(),
+    database.notes.toArray(),
+    database.outbox.toArray(),
+  ]);
+  return new Blob(
+    [
+      JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        chats,
+        messages,
+        sessions,
+        notes,
+        outbox,
+      }),
+    ],
+    { type: "application/json" },
+  );
+}
+
+// F-10/F-11 (client-side replacement for the deleted /api/data/delete route):
+// wipes all local vault data. Requires an explicit confirmation token to
+// prevent accidental calls, mirroring the old API contract but executed
+// entirely on-device.
+export async function deleteAllVaultData(confirm: string): Promise<void> {
+  if (confirm !== "DELETE_ALL_DATA") {
+    throw new Error("Missing confirmation. Pass 'DELETE_ALL_DATA'.");
+  }
+  await database.open();
+  await Promise.all([
+    database.chats.clear(),
+    database.messages.clear(),
+    database.sessions.clear(),
+    database.notes.clear(),
+    database.outbox.clear(),
+  ]);
+}
+
 export async function wipeVaultDatabase(): Promise<void> {
   const errors: unknown[] = [];
   if (typeof indexedDB === "undefined") {
