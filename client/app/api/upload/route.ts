@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -17,9 +18,13 @@ async function virusScanStub(_data: ArrayBuffer): Promise<boolean> {
 }
 
 async function sign(payload: string): Promise<string> {
+  const secret = process.env.UPLOAD_HMAC_SECRET;
+  if (!secret) {
+    throw new Error("UPLOAD_HMAC_SECRET is not configured");
+  }
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode("upload-secret"),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -30,6 +35,29 @@ async function sign(payload: string): Promise<string> {
 
 export async function POST(request: Request) {
   try {
+    // F-06 fix: require a valid authenticated session before accepting uploads.
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      // Fail closed: cannot verify the session without Supabase config.
+      return NextResponse.json({ error: "Upload service unavailable" }, { status: 503 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const form = await request.formData();
     const file = form.get("file") as File | null;
     if (!file) {
