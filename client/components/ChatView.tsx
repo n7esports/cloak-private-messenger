@@ -40,6 +40,9 @@ export function ChatView({
   const broadcastTyping = useChatStore((s) => s.broadcastTyping);
   const replyTo = useChatStore((s) => s.replyTo);
   const setReplyTo = useChatStore((s) => s.setReplyTo);
+  const editingMessageId = useChatStore((s) => s.editingMessageId);
+  const setEditingMessageId = useChatStore((s) => s.setEditingMessageId);
+  const updateMessage = useChatStore((s) => s.updateMessage);
   const lockVault = useVaultStore((s) => s.lockVault);
 
   const [content, setContent] = useState("");
@@ -50,6 +53,18 @@ export function ChatView({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const chat = chatId ? chats.find((c) => c.id === chatId) ?? null : null;
+
+  const editingMessage = editingMessageId
+    ? messages.find((m) => m.id === editingMessageId) ?? null
+    : null;
+
+  useEffect(() => {
+    if (editingMessage) {
+      setContent(editingMessage.content);
+    } else {
+      setContent("");
+    }
+  }, [editingMessageId]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,23 +91,33 @@ export function ChatView({
   const handleSend = async () => {
     const text = content.trim();
     if (!text && !pendingAttachment) return;
-    setContent("");
-    if (chatId) broadcastTyping(chatId, false);
     try {
-      await sendMessage(
-        text,
-        "text",
-        ephemeralTtl ?? undefined,
-        pendingAttachment
-          ? { name: pendingAttachment.name, mime: pendingAttachment.mime, size: pendingAttachment.size, data: pendingAttachment.dataUrl }
-          : undefined,
-        replyTo ?? undefined
-      );
+      if (editingMessageId) {
+        await updateMessage(editingMessageId, { content: text, edited: true });
+        setEditingMessageId(null);
+      } else {
+        await sendMessage(
+          text,
+          "text",
+          ephemeralTtl ?? undefined,
+          pendingAttachment
+            ? { name: pendingAttachment.name, mime: pendingAttachment.mime, size: pendingAttachment.size, data: pendingAttachment.dataUrl }
+            : undefined,
+          replyTo ?? undefined
+        );
+      }
+      setContent("");
       setPendingAttachment(null);
       setReplyTo(null);
+      if (chatId) broadcastTyping(chatId, false);
     } catch (err) {
       showToast({ id: crypto.randomUUID(), message: `Send failed: ${err}`, type: "warning" });
     }
+  };
+
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setContent("");
   };
 
   useEffect(() => {
@@ -226,7 +251,7 @@ export function ChatView({
       {/* Composer */}
       <div className="flex-shrink-0 w-full border-t border-border-default bg-surface">
         {/* Reply preview */}
-        {replyTo && (
+        {replyTo && !editingMessageId && (
           <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
             <IconReply size={14} />
             <span className="flex-1 truncate text-xs text-text-secondary">
@@ -237,8 +262,20 @@ export function ChatView({
             </button>
           </div>
         )}
+        {/* Edit preview */}
+        {editingMessageId && (
+          <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
+            <IconForward size={14} />
+            <span className="flex-1 truncate text-xs text-text-secondary">
+              Editing message
+            </span>
+            <button onClick={cancelEdit} className="rounded p-1 hover:bg-surface-high">
+              <IconX size={14} />
+            </button>
+          </div>
+        )}
         {/* Attachment preview */}
-        {pendingAttachment && (
+        {pendingAttachment && !editingMessageId && (
           <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">
             <IconAttach size={14} />
             <span className="flex-1 truncate text-xs text-text-secondary">{pendingAttachment.name}</span>
@@ -286,7 +323,7 @@ export function ChatView({
               ref={textareaRef}
               value={content}
               onChange={(e) => { setContent(e.target.value); handleTyping(); }}
-              placeholder="Write encrypted message..."
+              placeholder={editingMessageId ? "Edit message..." : "Write encrypted message..."}
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -299,12 +336,12 @@ export function ChatView({
             />
             <button
               onClick={handleSend}
-              disabled={!content.trim() && !pendingAttachment}
+              disabled={!content.trim() && !pendingAttachment && !editingMessageId}
               className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-on-primary transition hover:bg-primary/90 disabled:opacity-40"
             >
               <span className="flex items-center gap-1.5">
                 <IconSend size={16} />
-                Encrypt & Send
+                {editingMessageId ? "Save" : "Encrypt & Send"}
               </span>
             </button>
           </div>

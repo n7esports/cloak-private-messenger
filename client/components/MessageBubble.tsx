@@ -26,10 +26,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
 export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -42,6 +45,7 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
       const target = e.target as HTMLElement | null;
       if (target && !target.closest("[data-menu]") && menuRef.current && !menuRef.current.contains(target)) {
         setShowMenu(false);
+        setShowReactions(false);
       }
     };
     document.addEventListener("mousedown", handleOutside);
@@ -55,6 +59,47 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
   const alignment = isMe ? "justify-end" : "justify-start";
   const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
   const bubbleBg = isMe ? "bg-primary/20 text-on-surface" : "bg-surface-container";
+
+  const canEdit =
+    isMe &&
+    message.type === "text" &&
+    Date.now() - message.timestamp < 15 * 60 * 1000;
+
+  const startReply = () => {
+    useChatStore.getState().setReplyTo({
+      id: message.id,
+      alias: message.senderPubKey.slice(0, 8),
+      excerpt: message.content.slice(0, 100),
+    });
+    setShowMenu(false);
+  };
+
+  const startEdit = () => {
+    useChatStore.getState().setEditingMessageId(message.id);
+    useChatStore.getState().setReplyTo(null);
+    setShowMenu(false);
+  };
+
+  const addReaction = (emoji: string) => {
+    const current = useChatStore.getState();
+    const msg = current.messagesMap[message.chatId]?.find((m) => m.id === message.id);
+    if (!msg) return;
+    const reactions = [...(msg.reactions ?? [])];
+    const idx = reactions.indexOf(emoji);
+    if (idx >= 0) {
+      reactions.splice(idx, 1);
+    } else {
+      reactions.push(emoji);
+    }
+    current.updateMessage(message.id, { reactions });
+    setShowReactions(false);
+    setShowMenu(false);
+  };
+
+  const reactionCounts = new Map<string, number>();
+  for (const r of message.reactions ?? []) {
+    reactionCounts.set(r, (reactionCounts.get(r) || 0) + 1);
+  }
 
   return (
     <div
@@ -109,14 +154,8 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
               <path d="m6 9 6 6 6-6" />
             </svg>
           </button>
-          {showMenu && (
-            <div className="absolute right-0 mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
-              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Reply</button>
-              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Copy</button>
-              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Delete</button>
-            </div>
-          )}
         </div>
+
         {/* Reply preview */}
         {message.replyTo && (
           <div className="mb-2 rounded-lg border border-hairline bg-surface/60 px-3 py-2">
@@ -150,7 +189,22 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         {/* Content */}
         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words text-text-primary">
           {message.content}
+          {message.edited && <span className="ml-1 text-[10px] text-text-secondary">(edited)</span>}
         </p>
+
+        {/* Reactions */}
+        {reactionCounts.size > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {Array.from(reactionCounts.entries()).map(([emoji, count]) => (
+              <span
+                key={emoji}
+                className="rounded-full border border-hairline bg-surface px-1.5 py-0.5 text-[10px] text-text-secondary"
+              >
+                {emoji} {count}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Time */}
         <div className="mt-1 flex items-center justify-end gap-2">
@@ -170,29 +224,38 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         </div>
 
         {/* Context menu */}
-        {showMenu && (
+        {showMenu && !showReactions && (
           <div className="absolute top-full mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+            <button onClick={startReply} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
               <IconReply size={14} /> Reply
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconCopy size={14} /> Copy
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconForward size={14} /> Forward
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconPin size={14} /> Pin
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconStar size={14} /> Star
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconFlag size={14} /> Report
+            {canEdit && (
+              <button onClick={startEdit} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+                <IconCopy size={14} /> Edit
+              </button>
+            )}
+            <button onClick={() => setShowReactions(true)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconStar size={14} /> React
             </button>
             <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-surface-high">
               <IconTrash size={14} /> Delete
             </button>
+          </div>
+        )}
+
+        {showReactions && (
+          <div className="absolute top-full mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
+            <div className="flex justify-around px-2 py-2">
+              {REACTION_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => addReaction(emoji)}
+                  className="rounded p-1 text-sm hover:bg-surface-high"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

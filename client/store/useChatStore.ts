@@ -93,6 +93,7 @@ export interface ChatMessage {
   pinned?: boolean;
   reactions?: string[];
   replyTo?: MessageReplyRef;
+  edited?: boolean;
 }
 
 /**
@@ -131,11 +132,13 @@ export interface ChatState {
   vaultModalOpen: boolean;
   sidebarOpen: boolean;
   replyTo: MessageReplyRef | null;
+  editingMessageId: string | null;
   setSidebarOpen: (open: boolean) => void;
   setEphemeralTtl: (ttl: number | null) => void;
   setGlobalSearch: (search: string) => void;
   setVaultModalOpen: (open: boolean) => void;
   setReplyTo: (reply: MessageReplyRef | null) => void;
+  setEditingMessageId: (messageId: string | null) => void;
   // Phase 2: New actions
   addChannel: (channel: Channel) => void;
   removeDevice: (deviceId: string) => void;
@@ -167,7 +170,7 @@ export interface ChatState {
   deleteMessages: (messageIds: string[]) => Promise<void>;
   updateMessage: (
     messageId: string,
-    patch: Partial<Pick<ChatMessage, "starred" | "pinned" | "reactions">>,
+    patch: Partial<Pick<ChatMessage, "starred" | "pinned" | "reactions" | "content" | "edited">>,
   ) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateDeliveryStatus: (
@@ -189,6 +192,7 @@ interface StoredMessage {
   pinned?: boolean;
   reactions?: string[];
   replyTo?: MessageReplyRef;
+  edited?: boolean;
 }
 
 const messageStatusRank: Record<MessageStatus, number> = {
@@ -696,11 +700,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   vaultModalOpen: false,
   sidebarOpen: false,
   replyTo: null,
+  editingMessageId: null,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setEphemeralTtl: (ttl) => set({ ephemeralTtl: ttl }),
   setGlobalSearch: (search) => set({ globalSearch: search }),
   setVaultModalOpen: (open) => set({ vaultModalOpen: open }),
   setReplyTo: (reply) => set({ replyTo: reply }),
+  setEditingMessageId: (messageId) => set({ editingMessageId: messageId }),
 
   // Phase 2: New actions
   addChannel: (channel) =>
@@ -728,6 +734,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       vaultModalOpen: false,
       sidebarOpen: false,
       replyTo: null,
+      editingMessageId: null,
       typingByChat: {},
       peerTypingByChat: {},
       peerTypingAtByChat: {},
@@ -857,6 +864,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const ephemeralTimer = args[2];
     const attachment = args[3];
     const replyTo = args[4];
+    const editMessageId = args[5];
     const chatId = get().activeChatId;
     if (!chatId) throw new Error("Select a conversation before sending a message.");
     return withChatLock(chatId, async () => {
@@ -871,7 +879,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       const timestamp = Date.now();
-      const id = crypto.randomUUID();
+      const id = editMessageId ?? crypto.randomUUID();
       const base: ChatMessage = {
         id,
         chatId,
@@ -894,6 +902,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
           ...(attachment === undefined ? {} : { attachment }),
           ...(replyTo === undefined ? {} : { replyTo }),
+          ...(editMessageId === undefined ? {} : { edited: true }),
         });
         try {
           const encrypted = await encryptVaultPayload(notePlaintext, vaultKey);
@@ -922,6 +931,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...(ephemeralTimer === undefined ? {} : { ephemeralTimer }),
           ...(attachment === undefined ? {} : { attachment }),
           ...(replyTo === undefined ? {} : { replyTo }),
+          ...(editMessageId === undefined ? {} : { edited: true }),
         };
         try {
           const envelope = await buildEnvelope(
@@ -1111,6 +1121,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ? {}
           : { attachment: payload.attachment }),
         ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
+        ...(payload.edited === undefined ? {} : { edited: payload.edited }),
       };
       await saveEncryptedMessage(incoming, vaultKey);
       const isActive = get().activeChatId === chat.id;

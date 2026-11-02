@@ -25,6 +25,7 @@ export interface InnerPayload {
   ephemeralTimer?: number;
   attachment?: MessageAttachment;
   replyTo?: { id: string; alias: string; excerpt: string };
+  edited?: boolean;
 }
 
 const REPLY_REF_MAX_EXCERPT = 200;
@@ -239,7 +240,8 @@ function isValidPayload(payload: InnerPayload): boolean {
         payload.ephemeralTimer as (typeof EPHEMERAL_TIMERS)[number],
       )) &&
     (payload.attachment === undefined || isValidAttachment(payload.attachment)) &&
-    (payload.replyTo === undefined || isValidReplyRef(payload.replyTo))
+    (payload.replyTo === undefined || isValidReplyRef(payload.replyTo)) &&
+    (payload.edited === undefined || typeof payload.edited === "boolean")
   );
 }
 
