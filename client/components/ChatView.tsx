@@ -2,19 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
-import { useVaultStore } from "../store/useVaultStore";
 import MessageBubble from "./MessageBubble";
 import IconAttach from "./icons/IconAttach";
 import IconClock from "./icons/IconClock";
-import IconForward from "./icons/IconForward";
 import IconLock from "./icons/IconLock";
 import IconMoreVertical from "./icons/IconMoreVertical";
 import IconPhone from "./icons/IconPhone";
-import IconPin from "./icons/IconPin";
 import IconReply from "./icons/IconReply";
 import IconSearch from "./icons/IconSearch";
-import IconStar from "./icons/IconStar";
-import IconTrash from "./icons/IconTrash";
 import IconVideo from "./icons/IconVideo";
 import IconX from "./icons/IconX";
 import IconSend from "./icons/IconSend";
@@ -32,15 +27,12 @@ export function ChatView({
   const chats = useChatStore((s) => s.chats);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const showToast = useChatStore((s) => s.showToast);
-  const setActiveChat = useChatStore((s) => s.setActiveChat);
-  const clearChatMessages = useChatStore((s) => s.clearChatMessages);
   const ephemeralTtl = useChatStore((s) => s.ephemeralTtl);
   const setEphemeralTtl = useChatStore((s) => s.setEphemeralTtl);
   const isPeerTyping = useChatStore((s) => (chatId ? !!s.peerTypingByChat[chatId] : false));
   const broadcastTyping = useChatStore((s) => s.broadcastTyping);
   const replyTo = useChatStore((s) => s.replyTo);
   const setReplyTo = useChatStore((s) => s.setReplyTo);
-  const lockVault = useVaultStore((s) => s.lockVault);
 
   const [content, setContent] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{ name: string; mime: string; size: number; dataUrl: string } | null>(null);
@@ -97,11 +89,6 @@ export function ChatView({
     } catch (err) {
       showToast({ id: crypto.randomUUID(), message: `Send failed: ${err}`, type: "warning" });
     }
-  };
-
-  const handleClearChat = async () => {
-    if (!chatId || !chat) return;
-    await clearChatMessages(chatId);
   };
 
   const cycleEphemeralTtl = () => {

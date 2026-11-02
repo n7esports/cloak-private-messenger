@@ -6,11 +6,8 @@ import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
 import { initCrypto } from "../../lib/crypto";
 import { encodeBytes } from "../../lib/protocol";
-import IconKey from "../icons/IconKey";
 import IconCopy from "../icons/IconCopy";
 import BoxQRCode from "../icons/BoxQRCode";
-
-const TAB_ALLOWED = /^[0-9a-fA-F]+$/;
 
 export default function AddContactModal({
   open,
@@ -23,7 +20,6 @@ export default function AddContactModal({
   const [hexKey, setHexKey] = useState("");
   const [nickname, setNickname] = useState("");
   const [myCodeKey, setMyCodeKey] = useState<string>("");
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +32,8 @@ export default function AddContactModal({
   // Generate "My Code" QR whenever identity is available
   useEffect(() => {
     if (!open || tab !== "mycode" || !identity) return;
-    let cancelled = false;
     (async () => {
-      const sodium = await initCrypto();
+      await initCrypto();
       const hex = encodeBytes(identity.encryptionPublicKey);
       const payload = `cloak:${hex}`;
       setMyCodeKey(hex);
@@ -83,13 +78,7 @@ export default function AddContactModal({
           }
         }
       }
-      // Convert canvas to data URL for img fallback / preview
-      const url = canvas.toDataURL("image/png");
-      if (!cancelled) setQrDataUrl(url);
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [open, tab, identity]);
 
   // Reset when opening

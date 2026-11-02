@@ -19,8 +19,8 @@ export default function LinkedDevices({
   showToast,
 }: {
   devices: DeviceSession[];
-  removeDevice: (id: string) => void;
-  showToast: (toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
+  removeDevice: (_id: string) => void;
+  showToast: (_toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
 }) {
   const pairingCode = useMemo(() => generatePairingCode(), []);
 

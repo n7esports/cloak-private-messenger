@@ -10,7 +10,7 @@ interface AcceptContactModalProps {
   onClose: () => void;
 }
 
-export default function AcceptContactModal({ open, senderEncryptionPubKey, packet, onClose }: AcceptContactModalProps) {
+export default function AcceptContactModal({ open, senderEncryptionPubKey, packet: _packet, onClose }: AcceptContactModalProps) {
   const [nickname, setNickname] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

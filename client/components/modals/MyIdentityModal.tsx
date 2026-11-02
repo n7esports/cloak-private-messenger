@@ -6,12 +6,10 @@ import { useVaultStore } from "../../store/useVaultStore";
 import { encodeBytes } from "../../lib/protocol";
 import { generateIdentity } from "../../lib/crypto";
 import {
-  clearLocalVaultKey,
   getOrCreateLocalVaultKey,
   saveIdentityWithVaultKey,
   wipeVaultDatabase,
 } from "../../lib/vault";
-import IconKey from "../icons/IconKey";
 import IconCopy from "../icons/IconCopy";
 
 const ALIAS_STORAGE_KEY = "cloak.identity.alias";
@@ -103,7 +101,7 @@ export function MyIdentityModal({
   const deviceInfo = useMemo(() => {
     if (typeof navigator === "undefined") return "Unavailable";
     return navigator.userAgent;
-  }, [open]);
+  }, []);
 
   if (!open) return null;
 

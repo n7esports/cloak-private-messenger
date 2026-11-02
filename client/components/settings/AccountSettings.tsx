@@ -52,7 +52,7 @@ const ACCOUNT_ACTIONS = [
 export default function AccountSettings({
   showToast,
 }: {
-  showToast: (toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
+  showToast: (_toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
 }) {
   const handleAction = (id: string) => {
     showToast({ id: crypto.randomUUID(), message: `${id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} ships later`, type: "info" });

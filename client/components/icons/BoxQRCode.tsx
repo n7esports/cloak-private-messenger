@@ -8,8 +8,8 @@ const DARK = "#064e3b";
 const EMERALD = "#10B981";
 
 export default function BoxQRCode({ payload, size = 256 }: { payload: string; size?: number }) {
-  if (!payload) return null;
   const qr = useMemo(() => QRCode.create(payload, { errorCorrectionLevel: "M" }), [payload]);
+  if (!payload) return null;
   const n = qr.modules.size;
   const cell = size / n;
   const circleSize = size * 0.28;

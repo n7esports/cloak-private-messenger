@@ -2,7 +2,7 @@
 
 
 export default function GlobalError({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error;

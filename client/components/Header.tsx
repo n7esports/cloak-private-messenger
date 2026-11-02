@@ -19,8 +19,6 @@ export function Header({
  onMenuClick?: () => void;
 }) {
  const relayStatus = useChatStore((s) => s.relayStatus);
- const isRelayConnected = useChatStore((s) => s.isRelayConnected);
-
  const meta = STATUS_META[relayStatus] || STATUS_META.disconnected;
 
  return (

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
-import { SignJWT } from "jose";
+import { SignJWT } from "jose/jwt/sign";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     .setIssuedAt()
     .setExpirationTime("8h")
     .sign(secret);
-  const { pin_hash: _omitted, ...safeUser } = data;
+  const safeUser = (({ pin_hash: _pin_hash, ...rest }) => rest)(data);
   const response = NextResponse.json({ user: safeUser }, { status: 200 });
   response.cookies.set("uqzera_session", token, {
     httpOnly: true,
