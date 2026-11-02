@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
 import { useVaultStore } from "../store/useVaultStore";
+import { supabase } from "../lib/supabase";
 import MessageBubble from "./MessageBubble";
 import IconAttach from "./icons/IconAttach";
 import IconClock from "./icons/IconClock";
@@ -55,9 +56,22 @@ export function ChatView({
     if (!file) return;
     setUploading(true);
     try {
+      // Loose End 2 (F-06 follow-up): /api/upload now requires a valid Supabase
+      // session. Attach the current access token as a Bearer header, refreshing
+      // the session first so expired tokens don't cause silent 401s.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error("Not signed in — please sign in again to upload files");
+      }
+
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form,
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Upload failed" }));
         throw new Error(err.error || "Upload failed");
