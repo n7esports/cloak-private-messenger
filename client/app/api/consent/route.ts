@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         }
       }
     } catch (error) {
-      console.error("API CRASH:", error);
+      console.error("CONSENT ERROR:", error);
       user_id = undefined;
     }
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     try {
       admin = getSupabaseAdmin();
     } catch (error) {
-      console.error("API CRASH:", error);
+      console.error("CONSENT ERROR:", error);
       return NextResponse.json(
         { error: "Server misconfigured" },
         { status: 500 },
@@ -103,14 +103,14 @@ export async function POST(request: Request) {
       });
 
       if (error) {
-        console.error("API CRASH:", error);
+        console.error("CONSENT ERROR:", error);
         return NextResponse.json(
           { error: "Database insert failed", details: error.message },
           { status: 500 },
         );
       }
     } catch (err) {
-      console.error("API CRASH:", err);
+      console.error("CONSENT ERROR:", err);
       return NextResponse.json(
         { error: "Database insert failed", details: String(err) },
         { status: 500 },
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
-    console.error("API CRASH:", error);
+    console.error("CONSENT ERROR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

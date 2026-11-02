@@ -65,7 +65,7 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   }, [chats, filter, searchQuery]);
 
   return (
-    <aside className="flex h-screen w-full flex-col bg-surface-container">
+    <aside className="flex h-screen w-full flex-col bg-surface-container overflow-x-hidden">
       {/* Search */}
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-3 py-1.5">

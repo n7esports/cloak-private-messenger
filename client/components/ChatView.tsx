@@ -144,7 +144,7 @@ export function ChatView({
   return (
     <div className="flex h-full w-full flex-col bg-surface">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-border-default bg-surface px-4 py-3">
+      <header className="flex w-full items-center justify-between border-b border-border-default bg-surface px-4 py-3">
         <div className="flex items-center gap-3">
           {onBack && (
             <button onClick={onBack} className="md:hidden rounded-lg border border-border-default px-2 py-1 text-xs text-text-secondary">
@@ -224,7 +224,7 @@ export function ChatView({
       )}
 
       {/* Composer */}
-      <div className="flex-shrink-0 border-t border-border-default bg-surface">
+      <div className="flex-shrink-0 w-full border-t border-border-default bg-surface">
         {/* Reply preview */}
         {replyTo && (
           <div className="flex items-center gap-2 border-b border-border-default bg-surface/40 px-4 py-2">

@@ -32,12 +32,12 @@ export default function ChatsPage() {
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* Desktop 3-column layout */}
-      <div className="hidden md:flex">
+      <div className="hidden md:flex w-full h-full">
         <IconRail active={railTab} onSelect={setRailTab} />
-        <div className="w-[35%] min-w-[280px]">
+        <div className="w-[35%] min-w-[280px] h-full">
           <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
         </div>
-        <main className="flex-1">
+        <main className="flex-1 w-full h-full">
           {activeChatId ? (
             <ChatView chatId={activeChatId} />
           ) : (
