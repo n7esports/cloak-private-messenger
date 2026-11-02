@@ -6,12 +6,9 @@ module.exports = (phase) => ({
   images: {
     unoptimized: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // NOTE: eslint.ignoreDuringBuilds and typescript.ignoreBuildErrors were
+  // intentionally REMOVED so the Vercel build actually runs ESLint + TS
+  // validation instead of silently skipping it.
   distDir:
     process.env.UQZERA_BUILD_OUTPUT ||
     (phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next'),
