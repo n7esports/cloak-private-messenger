@@ -3,21 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import AppShell from "../../components/shell/AppShell";
 import IconRail from "../../components/shell/IconRail";
+import BottomNav from "../../components/shell/BottomNav";
 import { ChatView } from "../../components/ChatView";
 import { MyIdentityModal } from "../../components/modals/MyIdentityModal";
 import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
 import { startChatServices } from "../../store/useChatStore";
+import IconPlus from "../../components/icons/IconPlus";
 
 type MobileView = "list" | "chat";
 type RailTab = "chats" | "calls" | "starred" | "archived" | "settings";
+type BottomTab = "chats" | "calls" | "settings";
 
 export default function ChatsPage() {
   const isUnlocked = useVaultStore((state) => state.isUnlocked);
   const activeChatId = useChatStore((state) => state.activeChatId);
+  const setActiveChat = useChatStore((state) => state.setActiveChat);
   const [mobileView, setMobileView] = useState<MobileView>("list");
   const [identityOpen, setIdentityOpen] = useState(false);
   const [railTab, setRailTab] = useState<RailTab>("chats");
+  const [mobileTab, setMobileTab] = useState<BottomTab>("chats");
+  const [showFabMenu, setShowFabMenu] = useState(false);
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -29,13 +35,26 @@ export default function ChatsPage() {
 
   if (!isUnlocked) return null;
 
+  const handleChatSelect = (chatId: string) => {
+    setActiveChat(chatId);
+    setMobileView("chat");
+  };
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* Desktop 3-column layout */}
-      <div className="hidden md:flex w-full h-full">
+      <div className="hidden md:flex w-full h-full relative">
         <IconRail active={railTab} onSelect={setRailTab} />
-        <div className="w-[350px] h-full">
+        <div className="w-[350px] h-full relative">
           <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
+          {/* Desktop FAB */}
+          <button
+            onClick={() => alert("Open Contact Picker")}
+            className="absolute bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg hover:bg-primary/90"
+            title="New chat"
+          >
+            <IconPlus size={22} />
+          </button>
         </div>
         <main className="flex-1 w-full h-full">
           {activeChatId ? (
@@ -47,10 +66,18 @@ export default function ChatsPage() {
       </div>
 
       {/* Mobile single-screen layout */}
-      <div className="flex w-full flex-col md:hidden">
+      <div className="flex w-full flex-col md:hidden pb-14">
         {mobileView === "list" ? (
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
+            {/* Mobile FAB */}
+            <button
+              onClick={() => alert("Open Contact Picker")}
+              className="absolute bottom-16 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg hover:bg-primary/90"
+              title="New chat"
+            >
+              <IconPlus size={22} />
+            </button>
           </div>
         ) : (
           <div className="flex-1">
@@ -58,6 +85,9 @@ export default function ChatsPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile bottom nav */}
+      <BottomNav active={mobileTab} onSelect={setMobileTab} />
 
       <MyIdentityModal open={identityOpen} onClose={() => setIdentityOpen(false)} />
     </div>

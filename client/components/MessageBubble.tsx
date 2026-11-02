@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
 import IconCopy from "./icons/IconCopy";
@@ -30,14 +30,62 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const openMenu = () => setShowMenu(true);
+  const closeMenu = () => setShowMenu(false);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && !target.closest("[data-menu]") && menuRef.current && !menuRef.current.contains(target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [showMenu]);
 
   const alignment = isMe ? "justify-end" : "justify-start";
   const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
   const bubbleBg = isMe ? "bg-primary/20 text-on-surface" : "bg-surface-container";
 
   return (
-    <div className={`relative flex ${alignment} gap-2`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <div
+      className={`relative flex ${alignment} gap-2`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        openMenu();
+      }}
+      onTouchStart={() => {
+        longPressTimer.current = setTimeout(() => {
+          openMenu();
+        }, 500);
+      }}
+      onTouchMove={() => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onTouchEnd={() => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+    >
       <motion.div
+        ref={menuRef}
+        data-menu
         className={`max-w-[75%] rounded-xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}
         drag={isMe ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
@@ -50,15 +98,11 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
             });
           }
         }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setShowMenu(true);
-        }}
       >
         {/* Hover menu button */}
         <div className={`absolute -top-2 right-2 transition-opacity ${hovered ? "opacity-100" : "opacity-0"}`}>
           <button
-            onClick={() => setShowMenu((v) => !v)}
+            onClick={openMenu}
             className="rounded-full bg-surface border border-hairline p-1 hover:bg-surface-high"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
