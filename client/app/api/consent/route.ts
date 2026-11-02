@@ -76,43 +76,25 @@ export async function POST(request: Request) {
           // ignore invalid token
         }
       }
-    } catch (error) {
-      console.error("CONSENT ERROR:", error);
+    } catch {
       user_id = undefined;
     }
 
-    let admin: SupabaseClient;
-    try {
-      admin = getSupabaseAdmin();
-    } catch (error) {
+    const admin = getSupabaseAdmin();
+
+    const { error } = await admin.from("consent_log").insert({
+      kind,
+      version,
+      granted,
+      ip: ip || null,
+      user_id: user_id || null,
+      anon_id: anon_id || null,
+    });
+
+    if (error) {
       console.error("CONSENT ERROR:", error);
       return NextResponse.json(
-        { error: "Server misconfigured" },
-        { status: 500 },
-      );
-    }
-
-    try {
-      const { error } = await admin.from("consent_log").insert({
-        kind,
-        version,
-        granted,
-        ip: ip || null,
-        user_id: user_id || null,
-        anon_id: anon_id || null,
-      });
-
-      if (error) {
-        console.error("CONSENT ERROR:", error);
-        return NextResponse.json(
-          { error: "Database insert failed", details: error.message },
-          { status: 500 },
-        );
-      }
-    } catch (err) {
-      console.error("CONSENT ERROR:", err);
-      return NextResponse.json(
-        { error: "Database insert failed", details: String(err) },
+        { error: "Database insert failed", details: error.message },
         { status: 500 },
       );
     }
@@ -121,7 +103,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("CONSENT ERROR:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },
     );
   }

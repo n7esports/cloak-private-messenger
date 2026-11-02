@@ -34,7 +34,7 @@ export default function ChatsPage() {
       {/* Desktop 3-column layout */}
       <div className="hidden md:flex w-full h-full">
         <IconRail active={railTab} onSelect={setRailTab} />
-        <div className="w-[35%] min-w-[280px] h-full">
+        <div className="w-[350px] h-full">
           <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
         </div>
         <main className="flex-1 w-full h-full">
