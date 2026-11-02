@@ -14,9 +14,11 @@ export async function POST(request: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) return NextResponse.json({ error: "missing service key" }, { status: 500 });
   const admin = createClient(supabaseUrl, serviceKey);
-  const { data, error } = await admin.from("users").select("*").eq("alias", alias).single();
+  // Fetch pin_hash for comparison only; never return it to the client (F-01).
+  const { data, error } = await admin.from("users").select("id, alias, profile_name, created_at, pin_hash").eq("alias", alias).single();
   if (error || !data) return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
   const ok = await bcrypt.compare(pin, data.pin_hash);
   if (!ok) return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
-  return NextResponse.json({ user: data }, { status: 200 });
+  const { pin_hash: _omitted, ...safeUser } = data;
+  return NextResponse.json({ user: safeUser }, { status: 200 });
 }
