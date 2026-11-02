@@ -257,6 +257,7 @@ export class TransportManager {
   async sendEnvelope(packet: SignedEnvelope): Promise<void> {
     const recipientPubKey = packet.envelope.recipientPubKey;
     console.log("SENDING PACKET TO:", recipientPubKey, packet);
+    console.log("[REALTIME] Device sending to channel:", getInboxChannelName(recipientPubKey));
     const channel = await this.getBroadcastChannel(recipientPubKey);
     const result = await channel.send({
       type: "broadcast",
@@ -283,6 +284,7 @@ export class TransportManager {
       signerIdentity,
       decodeBytes(recipientPubKey),
     );
+    console.log("[REALTIME] Device sending to channel:", getInboxChannelName(recipientPubKey));
     const channel = await this.getBroadcastChannel(recipientPubKey);
     const result = await channel.send({
       type: "broadcast",
@@ -304,6 +306,7 @@ export class TransportManager {
   async sendTyping(signal: TypingSignal): Promise<void> {
     if (this.stopped) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    console.log("[REALTIME] Device sending to channel:", getInboxChannelName(signal.recipientPubKey));
     const channel = await this.getBroadcastChannel(signal.recipientPubKey);
     const result = await channel.send({
       type: "broadcast",
@@ -378,6 +381,7 @@ export class TransportManager {
     const supabase = await this.getSupabaseClient();
     if (this.stopped || !this.recipientPubKey || this.inboxChannel) return;
     const channelName = getInboxChannelName(this.recipientPubKey);
+    console.log("[REALTIME] Device subscribing to channel:", channelName);
     const channel = supabase.channel(channelName, {
       config: { broadcast: { self: false } },
     });
@@ -519,6 +523,7 @@ export class TransportManager {
       throw new Error("The device is offline; the envelope remains queued.");
     }
     const channelName = getInboxChannelName(recipientPubKey);
+    console.log("[REALTIME] Device subscribing to channel:", channelName);
     const existing = this.channels.get(channelName);
     if (existing) return existing;
 
