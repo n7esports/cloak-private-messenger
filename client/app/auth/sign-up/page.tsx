@@ -20,7 +20,9 @@ export default function SignUpPage() {
       profileName: (form.elements.namedItem("profileName") as HTMLInputElement).value,
     };
     try {
-      const res = await fetch("/api/auth/sign-up", {
+      // The API route folder is app/api/auth/signup (no hyphen) — the old
+      // "/api/auth/sign-up" URL 404'd on Vercel.
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

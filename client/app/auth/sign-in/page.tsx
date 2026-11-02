@@ -19,7 +19,9 @@ export default function SignInPage() {
       pin: (form.elements.namedItem("pin") as HTMLInputElement).value,
     };
     try {
-      const res = await fetch("/api/auth/sign-in", {
+      // The API route folder is app/api/auth/signin (no hyphen) — the old
+      // "/api/auth/sign-in" URL 404'd on Vercel.
+      const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
