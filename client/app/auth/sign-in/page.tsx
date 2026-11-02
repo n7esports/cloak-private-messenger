@@ -30,8 +30,8 @@ export default function SignInPage() {
         setLoading(false);
         return;
       }
-      router.push("/chats");
-      router.refresh();
+      setLoading(false);
+      router.replace("/chats");
     } catch {
       setError("Invalid credentials");
       setLoading(false);
