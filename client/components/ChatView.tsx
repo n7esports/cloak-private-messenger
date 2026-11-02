@@ -47,6 +47,7 @@ export function ChatView({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const chat = chatId ? chats.find((c) => c.id === chatId) ?? null : null;
 
@@ -93,6 +94,13 @@ export function ChatView({
       showToast({ id: crypto.randomUUID(), message: `Send failed: ${err}`, type: "warning" });
     }
   };
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 6 * 24) + "px";
+  }, [content]);
 
   const handleClearChat = async () => {
     if (!chatId || !chat) return;
@@ -275,6 +283,7 @@ export function ChatView({
               </svg>
             </button>
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={(e) => { setContent(e.target.value); handleTyping(); }}
               placeholder="Write encrypted message..."
@@ -286,6 +295,7 @@ export function ChatView({
                 }
               }}
               className="flex-1 resize-none rounded-xl border border-border-default bg-surface-container px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary outline-none focus:border-primary"
+              style={{ minHeight: "2.5rem", maxHeight: "6rem" }}
             />
             <button
               onClick={handleSend}

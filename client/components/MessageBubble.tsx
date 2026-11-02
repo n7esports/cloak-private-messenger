@@ -29,13 +29,14 @@ function formatBytes(bytes: number): string {
 export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const alignment = isMe ? "justify-end" : "justify-start";
   const bubbleMargin = isMe ? "ml-auto" : "mr-auto";
   const bubbleBg = isMe ? "bg-primary/20 text-on-surface" : "bg-surface-container";
 
   return (
-    <div className={`relative flex ${alignment} gap-2`}>
+    <div className={`relative flex ${alignment} gap-2`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <motion.div
         className={`max-w-[75%] rounded-xl px-4 py-2 ${bubbleMargin} ${bubbleBg}`}
         drag={isMe ? "x" : false}
@@ -54,6 +55,24 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
           setShowMenu(true);
         }}
       >
+        {/* Hover menu button */}
+        <div className={`absolute -top-2 right-2 transition-opacity ${hovered ? "opacity-100" : "opacity-0"}`}>
+          <button
+            onClick={() => setShowMenu((v) => !v)}
+            className="rounded-full bg-surface border border-hairline p-1 hover:bg-surface-high"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Reply</button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Copy</button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">Delete</button>
+            </div>
+          )}
+        </div>
         {/* Reply preview */}
         {message.replyTo && (
           <div className="mb-2 rounded-lg border border-hairline bg-surface/60 px-3 py-2">
