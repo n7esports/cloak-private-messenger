@@ -168,8 +168,8 @@ function validPacket(packet) {
     typeof packet.envelope.ephemeralPubKey !== "string" ||
     !validPublicKey(packet.envelope.ephemeralPubKey) ||
     typeof packet.envelope.nonce !== "string" ||
-    packet.nonce.length === 0 ||
-    packet.nonce.length > 256 ||
+    packet.envelope.nonce.length === 0 ||
+    packet.envelope.nonce.length > 256 ||
     typeof packet.envelope.ciphertext !== "string" ||
     packet.envelope.ciphertext.length === 0 ||
     packet.envelope.ciphertext.length > 10_000_000 ||
