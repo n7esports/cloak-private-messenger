@@ -389,6 +389,13 @@ export class TransportManager {
 
     channel.on(
       "broadcast",
+      { event: "*" },
+      (event: { payload?: BroadcastPayload; event?: string }) => {
+        console.log("📻 RAW BROADCAST RECEIVED:", event);
+      },
+    );
+    channel.on(
+      "broadcast",
       { event: "envelope" },
       (event: { payload?: BroadcastPayload }) => {
         console.log("REALTIME PAYLOAD RECEIVED:", event.payload);
