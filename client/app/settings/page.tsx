@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { SettingsView, type SettingsSection } from "@/components/SettingsView";
 
-const DEFAULT_SECTION: SettingsSection = "linked-devices";
+const DEFAULT_SECTION: SettingsSection = "account";
 
 export default function SettingsPage() {
   const [section, setSection] = useState<SettingsSection>(DEFAULT_SECTION);

@@ -130,6 +130,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers: new Headers(request.headers) } });
   }
 
+  // Auth gate: require a valid session cookie for protected routes
+  const isProtectedRoute = path === "/chats" || path.startsWith("/chats/") || path === "/settings" || path.startsWith("/settings/");
+  if (isProtectedRoute) {
+    const sessionToken = request.cookies.get("uqzera_session")?.value;
+    if (!sessionToken) {
+      return NextResponse.redirect(new URL("/auth/sign-in", request.url));
+    }
+    // Optionally verify JWT signature here; for now presence is enough —
+    // the API routes enforce actual validity on sensitive actions.
+  }
+
   // Maintenance / forbidden pages
   if (path === "/maintenance") {
     return new NextResponse(MAINTENANCE_HTML, {
@@ -193,6 +204,7 @@ export function middleware(request: NextRequest) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
 }
 
 export const config = {

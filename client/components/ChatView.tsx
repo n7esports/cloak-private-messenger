@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
 import { useVaultStore } from "../store/useVaultStore";
 import MessageBubble from "./MessageBubble";
@@ -18,6 +18,7 @@ import IconTrash from "./icons/IconTrash";
 import IconVideo from "./icons/IconVideo";
 import IconX from "./icons/IconX";
 import IconSend from "./icons/IconSend";
+import IconInfo from "./icons/IconInfo";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
@@ -48,6 +49,8 @@ export function ChatView({
   const [content, setContent] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{ name: string; mime: string; size: number; dataUrl: string } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [chatSearch, setChatSearch] = useState<string | null>(null);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -57,6 +60,12 @@ export function ChatView({
   const editingMessage = editingMessageId
     ? messages.find((m) => m.id === editingMessageId) ?? null
     : null;
+
+  const filteredMessages = useMemo(() => {
+    if (!chatSearch) return messages;
+    const q = chatSearch.trim().toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q));
+  }, [messages, chatSearch]);
 
   useEffect(() => {
     if (editingMessage) {
@@ -152,7 +161,7 @@ export function ChatView({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, isPeerTyping]);
+  }, [filteredMessages.length, isPeerTyping]);
 
   if (!chatId || !chat) {
     return (
@@ -176,12 +185,17 @@ export function ChatView({
               Back
             </button>
           )}
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-on-surface truncate">{chat.alias}</h3>
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary" title="Online" />
-          </div>
-          <span className="text-xs text-on-surface-variant">E2EE Direct</span>
-          <span className="text-[10px] text-on-surface-variant">Last seen {new Date(chat.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          <button onClick={() => setShowInfoPanel(true)} className="flex items-center gap-2 text-left">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
+              <span className="text-sm font-semibold text-on-surface">
+                {chat.alias.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-sm font-semibold text-on-surface truncate">{chat.alias}</h3>
+              <span className="text-[10px] text-on-surface-variant">E2EE Direct</span>
+            </div>
+          </button>
         </div>
         <div className="flex items-center gap-1">
           <button className="p-2 hover:bg-surface-high rounded-md" title="Video call">
@@ -190,7 +204,11 @@ export function ChatView({
           <button className="p-2 hover:bg-surface-high rounded-md" title="Voice call">
             <IconPhone size={18} />
           </button>
-          <button className="p-2 hover:bg-surface-high rounded-md" title="Search messages">
+          <button
+            onClick={() => setChatSearch((s) => s === null ? "" : null)}
+            className="p-2 hover:bg-surface-high rounded-md"
+            title="Search messages"
+          >
             <IconSearch size={18} />
           </button>
           <button className="p-2 hover:bg-surface-high rounded-md" title="More options">
@@ -198,6 +216,31 @@ export function ChatView({
           </button>
         </div>
       </header>
+
+      {/* In-chat search */}
+      {chatSearch !== null && (
+        <div className="border-b border-border-default bg-surface px-4 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-3 py-1.5">
+            <IconSearch size={16} className="text-text-secondary" />
+            <input
+              type="text"
+              value={chatSearch}
+              onChange={(e) => setChatSearch(e.target.value)}
+              placeholder="Search in chat..."
+              className="w-full bg-transparent text-sm outline-none"
+              autoFocus
+            />
+            <button onClick={() => setChatSearch(null)} className="p-1 hover:bg-surface-high rounded">
+              <IconX size={14} />
+            </button>
+          </div>
+          {chatSearch && (
+            <p className="mt-1 text-[10px] text-text-secondary">
+              {filteredMessages.length} of {messages.length} messages
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Ephemeral banner */}
       <div className="flex justify-center px-4 pt-3">
@@ -220,11 +263,13 @@ export function ChatView({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 pb-24">
-        {messages.length === 0 && (
-          <p className="py-8 text-center text-sm text-outline">No messages yet. Say hello.</p>
+        {filteredMessages.length === 0 && (
+          <p className="py-8 text-center text-sm text-outline">
+            {chatSearch ? "No matching messages" : "No messages yet. Say hello."}
+          </p>
         )}
         <div className="flex flex-col gap-3">
-          {messages.map((msg) => {
+          {filteredMessages.map((msg: ChatMessage) => {
             const isMe = msg.senderPubKey === "me" || msg.outgoing;
             return (
               <div key={msg.id} className={`group flex ${isMe ? "justify-end" : "justify-start"}`}>
@@ -347,6 +392,51 @@ export function ChatView({
           </div>
         </div>
       </div>
+
+      {/* Contact Info Panel — desktop modal / mobile full-screen overlay */}
+      {showInfoPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowInfoPanel(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-hairline bg-surface-container p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-on-surface">Contact Info</h2>
+              <button onClick={() => setShowInfoPanel(false)} className="p-1 hover:bg-surface rounded">
+                <IconX size={18} />
+              </button>
+            </div>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-high">
+                <span className="text-xl font-semibold text-on-surface">
+                  {chat.alias.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <h3 className="text-base font-semibold text-on-surface">{chat.alias}</h3>
+              <p className="text-xs text-text-secondary">Online</p>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
+                <span className="text-sm text-on-surface">Mute notifications</span>
+                <button className="text-xs text-text-secondary hover:text-text-primary">Toggle</button>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
+                <span className="text-sm text-on-surface">Disappearing messages</span>
+                <span className="text-xs text-text-secondary">Off</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
+                <span className="text-sm text-on-surface">Block contact</span>
+                <button className="text-xs text-status-danger hover:underline">Block</button>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
+                <span className="text-sm text-on-surface">Export chat</span>
+                <button className="text-xs text-text-secondary hover:text-text-primary">Export</button>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
+                <span className="text-sm text-on-surface">Delete chat</span>
+                <button className="text-xs text-status-danger hover:underline">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

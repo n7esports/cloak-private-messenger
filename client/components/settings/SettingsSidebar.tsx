@@ -1,17 +1,24 @@
 "use client";
 
-import IconWifi from "../icons/IconWifi";
+import { useRouter } from "next/navigation";
+import { useVaultStore } from "../../store/useVaultStore";
 import IconUser from "../icons/IconUser";
-import IconEye from "../icons/IconEye";
-import IconBell from "../icons/IconBell";
 import IconShield from "../icons/IconShield";
+import IconChat from "../icons/IconChat";
+import IconBell from "../icons/IconBell";
+import IconFile from "../icons/IconFile";
+import IconUsers from "../icons/IconUsers";
+import IconHelpCircle from "../icons/IconHelpCircle";
+import IconLogOut from "../icons/IconLogOut";
 
 const SECTIONS = [
- { id: "linked-devices", label: "Linked Devices", Icon: IconWifi },
- { id: "account", label: "Account", Icon: IconUser },
- { id: "appearance", label: "Appearance", Icon: IconEye },
- { id: "notifications", label: "Notifications", Icon: IconBell },
- { id: "privacy", label: "Privacy", Icon: IconShield },
+  { id: "account", label: "Account", Icon: IconUser },
+  { id: "privacy", label: "Privacy", Icon: IconShield },
+  { id: "chats", label: "Chats", Icon: IconChat },
+  { id: "notifications", label: "Notifications", Icon: IconBell },
+  { id: "storage", label: "Storage / Data", Icon: IconFile },
+  { id: "blocked", label: "Blocked Users", Icon: IconUsers },
+  { id: "help", label: "Help", Icon: IconHelpCircle },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -67,6 +74,28 @@ export function SettingsSidebar({
           );
         })}
       </nav>
+
+      {/* Log out */}
+      <div className="mt-auto p-2">
+        <LogOutButton />
+      </div>
     </aside>
+  );
+}
+
+function LogOutButton() {
+  const lockVault = useVaultStore((s) => s.lockVault);
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => {
+        lockVault();
+        router.push("/auth/sign-in");
+      }}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-status-danger transition hover:bg-surface"
+    >
+      <IconLogOut size={18} />
+      <span className="font-medium">Log out</span>
+    </button>
   );
 }

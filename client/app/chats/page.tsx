@@ -46,7 +46,7 @@ export default function ChatsPage() {
       <div className="hidden md:flex w-full h-full relative">
         <IconRail active={railTab} onSelect={setRailTab} />
         <div className="w-[350px] h-full relative">
-          <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
+          <AppShell onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
           {/* Desktop FAB */}
           <button
             onClick={() => alert("Open Contact Picker")}
@@ -69,7 +69,7 @@ export default function ChatsPage() {
       <div className="flex w-full flex-col md:hidden pb-14">
         {mobileView === "list" ? (
           <div className="flex-1 relative">
-            <AppShell onOpenIdentity={() => setIdentityOpen(true)} />
+            <AppShell onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
             {/* Mobile FAB */}
             <button
               onClick={() => alert("Open Contact Picker")}

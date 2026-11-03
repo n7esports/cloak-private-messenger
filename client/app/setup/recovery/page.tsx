@@ -17,6 +17,7 @@ export default function SetupRecoveryPage() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const seedRef = useRef<Uint8Array | null>(null);
   const mnemonicRef = useRef<string | null>(null);
 
@@ -51,10 +52,12 @@ export default function SetupRecoveryPage() {
       setError("One or more words are incorrect. Please try again.");
       return;
     }
-    // Store mnemonic for recovery entry. In production, this would be
-    // encrypted and persisted server-side or via secure storage.
+    if (!confirmed) {
+      setError("Please confirm you have saved your recovery phrase.");
+      return;
+    }
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("UQZERA.recovery.v1", recovery.mnemonic);
+      window.localStorage.setItem("UQZERA.recovery.confirmed", "1");
     }
     setDone(true);
   };
@@ -139,11 +142,21 @@ export default function SetupRecoveryPage() {
 
         {error && <p className="mt-3 text-sm text-error">{error}</p>}
 
+        <label className="mt-4 flex items-center gap-2 text-sm text-secondary">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="h-4 w-4 rounded border-border-default accent-emerald"
+          />
+          I have saved my recovery phrase in a safe place
+        </label>
+
         <button
           onClick={handleVerify}
-          className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
+          className="mt-4 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
         >
-          Verify and save
+          Verify and continue
         </button>
       </div>
     </div>

@@ -69,6 +69,7 @@ export interface ChatSummary {
   theme?: string;
   listId?: string;
   blocked?: boolean;
+  archived?: boolean;
 }
 
 export interface MessageReplyRef {
@@ -178,6 +179,9 @@ export interface ChatState {
     status: Exclude<MessageStatus, "queued">,
     signerEncryptionPubKey?: string,
   ) => Promise<void>;
+  togglePinChat: (chatId: string) => Promise<void>;
+  toggleMuteChat: (chatId: string) => Promise<void>;
+  toggleArchiveChat: (chatId: string) => Promise<void>;
 }
 
 interface StoredMessage {
@@ -204,6 +208,13 @@ const messageStatusRank: Record<MessageStatus, number> = {
 const ephemeralExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const TYPING_THROTTLE_MS = 2_500;
 const TYPING_EXPIRY_MS = 6_000;
+const READ_RECEIPTS_KEY = "cloak.settings.privacy.readReceipts";
+
+function isReadReceiptsEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  const val = window.localStorage.getItem(READ_RECEIPTS_KEY);
+  return val === null ? true : val === "true";
+}
 
 // Per-chat async mutex: serialize ratchet operations so concurrent sends/
 // receives on the same chat cannot read the same chain key and overwrite
@@ -319,7 +330,10 @@ function isChatSummary(value: unknown): value is ChatSummary {
       typeof value.theme === "string") &&
     (!("listId" in value) ||
       value.listId === undefined ||
-      typeof value.listId === "string")
+      typeof value.listId === "string") &&
+    (!("archived" in value) ||
+      value.archived === undefined ||
+      typeof value.archived === "boolean")
   );
 }
 
@@ -1147,7 +1161,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
       try {
         await transportManager.publishReceipt(packet.id, "delivered", senderKey, identity);
-        if (isActive) {
+        if (isActive && isReadReceiptsEnabled()) {
           await transportManager.publishReceipt(packet.id, "read", senderKey, identity);
         }
       } catch (error) {
@@ -1179,7 +1193,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         { ...message, status: "read" },
         vaultKey,
       );
-      if (chat.kind === "direct") {
+      if (chat.kind === "direct" && isReadReceiptsEnabled()) {
         try {
           await transportManager.publishReceipt(
             message.id,
@@ -1385,6 +1399,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messagesMap: { ...state.messagesMap, [chatId]: [] },
       activeChatId: state.activeChatId === chatId ? null : state.activeChatId,
     }));
+  },
+
+  togglePinChat: async (chatId) => {
+    const { vaultKey } = getVaultMaterial();
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    if (!chat) return;
+    const updated = { ...chat, pinned: !chat.pinned };
+    await saveEncryptedChat(updated, vaultKey);
+    set((state) => ({ chats: replaceChat(state.chats, updated) }));
+  },
+
+  toggleMuteChat: async (chatId) => {
+    const { vaultKey } = getVaultMaterial();
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    if (!chat) return;
+    const updated = { ...chat, mutedForever: !chat.mutedForever, mutedUntil: chat.mutedForever ? undefined : Date.now() };
+    await saveEncryptedChat(updated, vaultKey);
+    set((state) => ({ chats: replaceChat(state.chats, updated) }));
+  },
+
+  toggleArchiveChat: async (chatId) => {
+    const { vaultKey } = getVaultMaterial();
+    const chat = get().chats.find((entry) => entry.id === chatId);
+    if (!chat) return;
+    const updated = { ...chat, archived: !chat.archived };
+    await saveEncryptedChat(updated, vaultKey);
+    set((state) => ({ chats: replaceChat(state.chats, updated) }));
   },
 
   loadChats: async () => {

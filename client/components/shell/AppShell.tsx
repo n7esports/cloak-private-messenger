@@ -9,6 +9,9 @@ import IconUsers from "../icons/IconUsers";
 import IconSearch from "../icons/IconSearch";
 import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
+import IconPin from "../icons/IconPin";
+import IconBellOff from "../icons/IconBellOff";
+import IconMoreVertical from "../icons/IconMoreVertical";
 import AddContactModal from "../modals/AddContactModal";
 import AcceptContactModal from "../modals/AcceptContactModal";
 import { useVaultStore } from "../../store/useVaultStore";
@@ -34,14 +37,18 @@ const formatTime = (ts: number) => {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => void }) {
+export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdentity?: () => void; onSelectChat?: (chatId: string) => void }) {
   const chats = useChatStore((s: ChatState) => s.chats);
   const activeChatId = useChatStore((s: ChatState) => s.activeChatId);
   const setActiveChat = useChatStore((s: ChatState) => s.setActiveChat);
+  const togglePinChat = useChatStore((s: ChatState) => s.togglePinChat);
+  const toggleMuteChat = useChatStore((s: ChatState) => s.toggleMuteChat);
+  const toggleArchiveChat = useChatStore((s: ChatState) => s.toggleArchiveChat);
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddContact, setShowAddContact] = useState(false);
   const [acceptRequest, setAcceptRequest] = useState<{ senderKey: string; packet: unknown } | null>(null);
+  const [menuChatId, setMenuChatId] = useState<string | null>(null);
   const pendingRequests = useChatStore((s: ChatState) => s.pendingRequests);
   const dismissPendingRequest = useChatStore((s: ChatState) => s.dismissPendingRequest);
   const isUnlocked = useVaultStore((s) => s.isUnlocked);
@@ -51,8 +58,16 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
     if (isUnlocked) void loadChats().catch(() => {});
   }, [isUnlocked, loadChats]);
 
+  useEffect(() => {
+    const handleClick = () => setMenuChatId(null);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
+
   const filtered = useMemo(() => {
     let list = [...chats];
+    // Hide archived chats from the main list
+    list = list.filter((c) => !c.archived);
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter((c) => c.alias.toLowerCase().includes(q));
@@ -129,35 +144,80 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
         ) : (
           filtered.map((chat) => {
             const preview = chat.kind === "notes" ? "Private Notes" : chat.alias;
+            const isMenuOpen = menuChatId === chat.id;
             return (
-              <button
+              <div
                 key={chat.id}
-                onClick={() => setActiveChat(chat.id)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
-                  activeChatId === chat.id ? "bg-[#059669]" : "hover:bg-surface"
-                }`}
+                className="relative flex w-full items-center px-4 py-3 text-left transition hover:bg-surface"
               >
-                <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
-                  <span className="text-sm font-semibold text-on-surface">
-                    {chat.alias.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface-container bg-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-on-surface">{chat.alias}</span>
-                    <span className="flex-shrink-0 text-[10px] text-on-surface-variant">{formatTime(chat.updatedAt)}</span>
+                <button
+                  onClick={() => onSelectChat?.(chat.id)}
+                  className={`flex w-full items-center gap-3 text-left transition ${
+                    activeChatId === chat.id ? "bg-[#059669]" : ""
+                  }`}
+                >
+                  <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
+                    <span className="text-sm font-semibold text-on-surface">
+                      {chat.alias.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface-container bg-primary" />
                   </div>
-                  <div className="mt-0.5 flex items-center justify-between gap-2">
-                    <span className="truncate text-xs text-on-surface-variant">{preview}</span>
-                    {chat.unreadCount > 0 && (
-                      <span className="flex-shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-on-primary">
-                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-on-surface">{chat.alias}</span>
+                        {chat.pinned && <IconPin size={12} className="text-primary flex-shrink-0" />}
+                        {(chat.mutedForever || (chat.mutedUntil && chat.mutedUntil > Date.now())) && (
+                          <IconBellOff size={12} className="text-text-secondary flex-shrink-0" />
+                        )}
+                      </div>
+                      <span className="flex-shrink-0 text-[10px] text-on-surface-variant">{formatTime(chat.updatedAt)}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="truncate text-xs text-on-surface-variant">{preview}</span>
+                      {chat.unreadCount > 0 && (
+                        <span className="flex-shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-on-primary">
+                          {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuChatId(isMenuOpen ? null : chat.id);
+                  }}
+                  className="p-1 hover:bg-surface-high rounded-md"
+                >
+                  <IconMoreVertical size={14} />
+                </button>
+                {isMenuOpen && (
+                  <div className="absolute right-2 top-12 z-20 w-40 rounded-lg border border-hairline bg-surface-container py-1 shadow-lg">
+                    <button
+                      onClick={() => { togglePinChat(chat.id); setMenuChatId(null); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-on-surface hover:bg-surface"
+                    >
+                      <IconPin size={14} />
+                      {chat.pinned ? "Unpin" : "Pin"}
+                    </button>
+                    <button
+                      onClick={() => { toggleMuteChat(chat.id); setMenuChatId(null); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-on-surface hover:bg-surface"
+                    >
+                      <IconBellOff size={14} />
+                      {chat.mutedForever ? "Unmute" : "Mute"}
+                    </button>
+                    <button
+                      onClick={() => { toggleArchiveChat(chat.id); setMenuChatId(null); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-on-surface hover:bg-surface"
+                    >
+                      <IconTrash2 size={14} />
+                      {chat.archived ? "Unarchive" : "Archive"}
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })
         )}
