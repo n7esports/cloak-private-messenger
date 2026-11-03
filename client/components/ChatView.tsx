@@ -19,8 +19,15 @@ import IconVideo from "./icons/IconVideo";
 import IconX from "./icons/IconX";
 import IconSend from "./icons/IconSend";
 import IconInfo from "./icons/IconInfo";
+import IconMic from "./icons/IconMic";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
+
+function formatTimer(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
 
 export function ChatView({
   chatId,
@@ -51,9 +58,48 @@ export function ChatView({
   const [uploading, setUploading] = useState(false);
   const [chatSearch, setChatSearch] = useState<string | null>(null);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Mock recording timer
+  useEffect(() => {
+    if (!isRecording) return;
+    const id = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isRecording]);
+
+  const cancelRecording = () => {
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const sendRecording = () => {
+    if (!chatId) return;
+    const voiceMessage = {
+      id: crypto.randomUUID(),
+      chatId,
+      senderPubKey: "me",
+      content: "Voice note",
+      type: "voice",
+      status: "queued" as const,
+      timestamp: Date.now(),
+      outgoing: true,
+      duration: recordingSeconds,
+    };
+    useChatStore.setState((state) => ({
+      messagesMap: {
+        ...state.messagesMap,
+        [chatId]: [...(state.messagesMap[chatId] ?? []), voiceMessage as any],
+      },
+    }));
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
 
   const chat = chatId ? chats.find((c) => c.id === chatId) ?? null : null;
 
@@ -268,9 +314,22 @@ export function ChatView({
             {chatSearch ? "No matching messages" : "No messages yet. Say hello."}
           </p>
         )}
+        {filteredMessages.length === 0 && !chatSearch && (
+          <div className="flex justify-center">
+            <VoiceNoteBubble durationSeconds={42} />
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           {filteredMessages.map((msg: ChatMessage) => {
             const isMe = msg.senderPubKey === "me" || msg.outgoing;
+            const msgType = (msg as any).type;
+            if (msgType === "voice") {
+              return (
+                <div key={msg.id} className={`group flex ${isMe ? "justify-end" : "justify-start"}`}>
+                  <VoiceNoteBubble durationSeconds={(msg as any).duration ?? 0} isMe={isMe} />
+                </div>
+              );
+            }
             return (
               <div key={msg.id} className={`group flex ${isMe ? "justify-end" : "justify-start"}`}>
                 <MessageBubble message={msg} isMe={isMe} />
@@ -348,50 +407,79 @@ export function ChatView({
               <IconAttach size={16} />
             </button>
             <button
-              onClick={cycleEphemeralTtl}
-              title="Ephemeral TTL"
-              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
+              onClick={() => setIsRecording((v) => !v)}
+              title="Voice note"
+              className={`rounded-lg border p-2 text-xs transition ${
+                isRecording
+                  ? "border-status-danger bg-status-danger/10 text-status-danger"
+                  : "border-border-default bg-surface-container text-text-secondary hover:text-text-primary"
+              }`}
             >
-              <IconClock size={16} />
+              <IconMic size={16} />
+            </button>
+            {!isRecording && (
+              <>
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => { setContent(e.target.value); handleTyping(); }}
+                  placeholder={editingMessageId ? "Edit message..." : "Write encrypted message..."}
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="flex-1 resize-none rounded-xl border border-border-default bg-surface-container px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary outline-none focus:border-primary"
+                  style={{ minHeight: "2.5rem", maxHeight: "6rem" }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!content.trim() && !pendingAttachment && !editingMessageId}
+                  className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-on-primary transition hover:bg-primary/90 disabled:opacity-40"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <IconSend size={16} />
+                    {editingMessageId ? "Save" : "Encrypt & Send"}
+                  </span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recording UI — replaces composer when active */}
+      {isRecording && (
+        <div className="flex-shrink-0 w-full border-t border-border-default bg-surface px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inset-0 rounded-full bg-status-danger animate-ping opacity-75" />
+              <span className="relative rounded-full bg-status-danger h-3 w-3" />
+            </span>
+            <span className="text-xs font-medium text-status-danger">Recording...</span>
+            <span className="text-xs text-text-secondary">{formatTimer(recordingSeconds)}</span>
+            <div className="flex-1" />
+            <button
+              onClick={cancelRecording}
+              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
+              title="Cancel"
+            >
+              <IconTrash size={16} />
             </button>
             <button
-              title="Voice message"
-              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="22" />
-              </svg>
-            </button>
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => { setContent(e.target.value); handleTyping(); }}
-              placeholder={editingMessageId ? "Edit message..." : "Write encrypted message..."}
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              className="flex-1 resize-none rounded-xl border border-border-default bg-surface-container px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary outline-none focus:border-primary"
-              style={{ minHeight: "2.5rem", maxHeight: "6rem" }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!content.trim() && !pendingAttachment && !editingMessageId}
-              className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-on-primary transition hover:bg-primary/90 disabled:opacity-40"
+              onClick={sendRecording}
+              className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-on-primary transition hover:bg-primary/90"
             >
               <span className="flex items-center gap-1.5">
                 <IconSend size={16} />
-                {editingMessageId ? "Save" : "Encrypt & Send"}
+                Send
               </span>
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Contact Info Panel — desktop modal / mobile full-screen overlay */}
       {showInfoPanel && (
@@ -437,6 +525,51 @@ export function ChatView({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface VoiceNoteBubbleProps {
+  durationSeconds: number;
+  isMe?: boolean;
+}
+
+function VoiceNoteBubble({ durationSeconds, isMe = true }: VoiceNoteBubbleProps) {
+  const bars = Array.from({ length: 20 }, () => Math.random() * 100);
+
+  return (
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`flex max-w-[75%] items-center gap-3 rounded-xl px-4 py-3 ${
+          isMe ? "bg-primary/20 text-on-surface" : "bg-surface-container"
+        }`}
+      >
+        <button className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+        </button>
+        <div className="flex items-center gap-0.5">
+          {bars.map((height, i) => (
+            <span
+              key={i}
+              className="w-1 rounded-full bg-primary"
+              style={{ height: `${Math.max(8, height)}%`, minHeight: "4px" }}
+            />
+          ))}
+        </div>
+        <span className="text-xs text-text-secondary">{formatTimer(durationSeconds)}</span>
+      </div>
     </div>
   );
 }

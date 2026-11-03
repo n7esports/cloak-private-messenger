@@ -19,7 +19,7 @@ const ITEMS: { id: RailTab; icon: typeof IconChat }[] = [
 
 export default function IconRail({ active, onSelect }: { active: RailTab; onSelect: (tab: RailTab) => void }) {
   return (
-    <aside className="flex h-screen w-14 flex-col items-center border-r border-hairline bg-surface-container py-3 gap-1">
+    <aside className="flex h-screen w-14 flex-shrink-0 flex-col items-center border-r border-hairline bg-surface-container py-3 gap-1">
       {ITEMS.map(({ id, icon: Icon }) => (
         <button
           key={id}

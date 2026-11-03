@@ -13,6 +13,7 @@ import IconPin from "../icons/IconPin";
 import IconBellOff from "../icons/IconBellOff";
 import IconMoreVertical from "../icons/IconMoreVertical";
 import AddContactModal from "../modals/AddContactModal";
+import NewChatModal from "../modals/NewChatModal";
 import AcceptContactModal from "../modals/AcceptContactModal";
 import { useVaultStore } from "../../store/useVaultStore";
 
@@ -47,6 +48,7 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const [acceptRequest, setAcceptRequest] = useState<{ senderKey: string; packet: unknown } | null>(null);
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
   const pendingRequests = useChatStore((s: ChatState) => s.pendingRequests);
@@ -130,7 +132,7 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
       {/* Chats header */}
       <div className="px-4 py-2 flex items-center justify-between">
         <span className="text-sm font-semibold">Chats</span>
-        <button onClick={() => setShowAddContact(true)} className="rounded-lg p-1.5 hover:bg-surface-high">
+        <button onClick={() => setShowNewChat(true)} className="rounded-lg p-1.5 hover:bg-surface-high">
           <IconPlus size={16} />
         </button>
       </div>
@@ -224,6 +226,7 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
       </div>
 
       <AddContactModal open={showAddContact} onClose={() => setShowAddContact(false)} />
+      <NewChatModal open={showNewChat} onClose={() => setShowNewChat(false)} />
       <AcceptContactModal
         open={!!acceptRequest}
         senderEncryptionPubKey={acceptRequest?.senderKey || ""}

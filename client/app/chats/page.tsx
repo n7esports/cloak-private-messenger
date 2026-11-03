@@ -10,6 +10,7 @@ import { useChatStore } from "../../store/useChatStore";
 import { useVaultStore } from "../../store/useVaultStore";
 import { startChatServices } from "../../store/useChatStore";
 import IconPlus from "../../components/icons/IconPlus";
+import CallsPage from "../calls/page";
 
 type MobileView = "list" | "chat";
 type RailTab = "chats" | "calls" | "starred" | "archived" | "settings";
@@ -57,7 +58,9 @@ export default function ChatsPage() {
           </button>
         </div>
         <main className="flex-1 w-full h-full">
-          {activeChatId ? (
+          {railTab === "calls" ? (
+            <CallsPage />
+          ) : activeChatId ? (
             <ChatView chatId={activeChatId} />
           ) : (
             <WelcomePanel />
@@ -67,7 +70,11 @@ export default function ChatsPage() {
 
       {/* Mobile single-screen layout */}
       <div className="flex w-full flex-col md:hidden pb-14">
-        {mobileView === "list" ? (
+        {mobileTab === "calls" ? (
+          <div className="flex-1">
+            <CallsPage />
+          </div>
+        ) : mobileView === "list" ? (
           <div className="flex-1 relative">
             <AppShell onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
             {/* Mobile FAB */}
