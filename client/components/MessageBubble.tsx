@@ -3,18 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
+import IconReply from "./icons/IconReply";
 import IconCopy from "./icons/IconCopy";
-import IconDownload from "./icons/IconDownload";
-import IconFile from "./icons/IconFile";
-import IconFlag from "./icons/IconFlag";
 import IconForward from "./icons/IconForward";
 import IconPin from "./icons/IconPin";
-import IconReply from "./icons/IconReply";
 import IconStar from "./icons/IconStar";
+import IconInfo from "./icons/IconInfo";
 import IconTrash from "./icons/IconTrash";
 import IconX from "./icons/IconX";
 import IconCheck from "./icons/IconCheck";
 import IconCheckDouble from "./icons/IconCheckDouble";
+import IconFile from "./icons/IconFile";
+import IconDownload from "./icons/IconDownload";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -93,6 +93,11 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     }
     current.updateMessage(message.id, { reactions });
     setShowReactions(false);
+    setShowMenu(false);
+  };
+
+  const copyText = async () => {
+    await navigator.clipboard.writeText(message.content);
     setShowMenu(false);
   };
 
@@ -225,19 +230,26 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
 
         {/* Context menu */}
         {showMenu && !showReactions && (
-          <div className="absolute top-full mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
+          <div className="absolute top-full mt-1 w-44 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
             <button onClick={startReply} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
               <IconReply size={14} /> Reply
             </button>
-            {canEdit && (
-              <button onClick={startEdit} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-                <IconCopy size={14} /> Edit
-              </button>
-            )}
-            <button onClick={() => setShowReactions(true)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconStar size={14} /> React
+            <button onClick={copyText} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconCopy size={14} /> Copy
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-surface-high">
+            <button onClick={() => { console.log("Forward message"); setShowMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconForward size={14} /> Forward
+            </button>
+            <button onClick={() => { console.log("Pin message"); setShowMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconPin size={14} /> Pin
+            </button>
+            <button onClick={() => { console.log("Star message"); setShowMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconStar size={14} /> Star
+            </button>
+            <button onClick={() => { console.log("Message info"); setShowMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
+              <IconInfo size={14} /> Message Info
+            </button>
+            <button onClick={() => { console.log("Delete message"); setShowMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-surface-high">
               <IconTrash size={14} /> Delete
             </button>
           </div>

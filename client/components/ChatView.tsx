@@ -20,6 +20,11 @@ import IconX from "./icons/IconX";
 import IconSend from "./icons/IconSend";
 import IconInfo from "./icons/IconInfo";
 import IconMic from "./icons/IconMic";
+import IconImage from "./icons/IconImage";
+import IconFile from "./icons/IconFile";
+import IconMapPin from "./icons/IconMapPin";
+import IconUserPlus from "./icons/IconUserPlus";
+import IconBarChart from "./icons/IconBarChart";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
@@ -58,6 +63,7 @@ export function ChatView({
   const [uploading, setUploading] = useState(false);
   const [chatSearch, setChatSearch] = useState<string | null>(null);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -239,7 +245,9 @@ export function ChatView({
             </div>
             <div className="flex flex-col">
               <h3 className="text-sm font-semibold text-on-surface truncate">{chat.alias}</h3>
-              <span className="text-[10px] text-on-surface-variant">E2EE Direct</span>
+              <span className={`text-[10px] ${isPeerTyping ? "text-status-success" : "text-on-surface-variant"}`}>
+                {isPeerTyping ? "typing..." : "E2EE Direct"}
+              </span>
             </div>
           </button>
         </div>
@@ -399,10 +407,9 @@ export function ChatView({
               accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,text/plain"
             />
             <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              onClick={() => setShowAttachmentPicker((v) => !v)}
               title="Attach file"
-              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary disabled:opacity-50"
+              className="rounded-lg border border-border-default bg-surface-container p-2 text-xs text-text-secondary transition hover:text-text-primary"
             >
               <IconAttach size={16} />
             </button>
@@ -481,6 +488,72 @@ export function ChatView({
         </div>
       )}
 
+      {/* Attachment Picker */}
+      {showAttachmentPicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setShowAttachmentPicker(false)}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t border-hairline bg-surface-container p-4 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-on-surface">Attach</h3>
+              <button onClick={() => setShowAttachmentPicker(false)} className="p-1 hover:bg-surface rounded">
+                <IconX size={18} />
+              </button>
+            </div>
+            <div className="grid grid-cols-5 gap-4">
+              <button
+                onClick={() => {
+                  setShowAttachmentPicker(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
+              >
+                <IconImage size={24} className="text-text-primary" />
+                <span className="text-[10px] text-text-secondary">Photos</span>
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Attach document");
+                  setShowAttachmentPicker(false);
+                }}
+                className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
+              >
+                <IconFile size={24} className="text-text-primary" />
+                <span className="text-[10px] text-text-secondary">Documents</span>
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Attach location");
+                  setShowAttachmentPicker(false);
+                }}
+                className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
+              >
+                <IconMapPin size={24} className="text-text-primary" />
+                <span className="text-[10px] text-text-secondary">Location</span>
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Attach contact");
+                  setShowAttachmentPicker(false);
+                }}
+                className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
+              >
+                <IconUserPlus size={24} className="text-text-primary" />
+                <span className="text-[10px] text-text-secondary">Contact</span>
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Attach poll");
+                  setShowAttachmentPicker(false);
+                }}
+                className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
+              >
+                <IconBarChart size={24} className="text-text-primary" />
+                <span className="text-[10px] text-text-secondary">Poll</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Contact Info Panel — desktop modal / mobile full-screen overlay */}
       {showInfoPanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowInfoPanel(false)}>
@@ -498,9 +571,18 @@ export function ChatView({
                 </span>
               </div>
               <h3 className="text-base font-semibold text-on-surface">{chat.alias}</h3>
-              <p className="text-xs text-text-secondary">Online</p>
+              <p className="text-xs text-text-secondary">+1 (555) 0123-4567</p>
+              <p className="text-xs text-text-secondary">Hey there! I am using UQZERA.</p>
             </div>
             <div className="mt-6 flex flex-col gap-3">
+              <div className="rounded-xl border border-hairline bg-surface p-3">
+                <p className="text-xs font-medium text-text-secondary mb-2">Media</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg bg-surface-high border border-hairline" />
+                  ))}
+                </div>
+              </div>
               <div className="flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
                 <span className="text-sm text-on-surface">Mute notifications</span>
                 <button className="text-xs text-text-secondary hover:text-text-primary">Toggle</button>

@@ -10,6 +10,7 @@ import IconFile from "../icons/IconFile";
 import IconUsers from "../icons/IconUsers";
 import IconHelpCircle from "../icons/IconHelpCircle";
 import IconLogOut from "../icons/IconLogOut";
+import IconShieldOff from "../icons/IconShieldOff";
 
 const SECTIONS = [
   { id: "account", label: "Account", Icon: IconUser },
@@ -18,6 +19,7 @@ const SECTIONS = [
   { id: "notifications", label: "Notifications", Icon: IconBell },
   { id: "storage", label: "Storage / Data", Icon: IconFile },
   { id: "blocked", label: "Blocked Users", Icon: IconUsers },
+  { id: "linked-devices", label: "Linked Devices", Icon: IconShieldOff },
   { id: "help", label: "Help", Icon: IconHelpCircle },
 ] as const;
 

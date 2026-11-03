@@ -9,8 +9,9 @@ import ChatsSettings from "./settings/ChatsSettings";
 import StorageSettings from "./settings/StorageSettings";
 import BlockedUsers from "./settings/BlockedUsers";
 import HelpSettings from "./settings/HelpSettings";
+import LinkedDevices from "./settings/LinkedDevices";
 
-export type SettingsSection = "account" | "privacy" | "chats" | "notifications" | "storage" | "blocked" | "help";
+export type SettingsSection = "account" | "privacy" | "chats" | "notifications" | "storage" | "blocked" | "linked-devices" | "help";
 
 export function SettingsView({ section }: { section: SettingsSection }) {
   const showToast = useChatStore((s) => s.showToast);
@@ -69,6 +70,15 @@ export function SettingsView({ section }: { section: SettingsSection }) {
             <p className="mt-1 text-xs text-outline">Contacts you have blocked.</p>
             <div className="mt-6 flex flex-col gap-6">
               <BlockedUsers />
+            </div>
+          </>
+        )}
+        {section === "linked-devices" && (
+          <>
+            <h1 className="font-sans text-xl font-semibold text-on-surface">Linked Devices</h1>
+            <p className="mt-1 text-xs text-outline">Manage devices with access to your account.</p>
+            <div className="mt-6 flex flex-col gap-6">
+              <LinkedDevices />
             </div>
           </>
         )}
