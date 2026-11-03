@@ -38,7 +38,6 @@ import {
   type EncryptedChatRecord,
   type EncryptedMessageRecord,
 } from "../lib/vault";
-import { supabase } from "../lib/supabase";
 import {
   registerMemoryKeyCleanup,
   useVaultStore,
@@ -158,6 +157,7 @@ export interface ChatState {
     ephemeralTimer?: number,
     attachment?: MessageAttachment,
     replyTo?: MessageReplyRef,
+    editMessageId?: string,
   ) => Promise<ChatMessage>;
   receiveMessage: (packet: SignedEnvelope) => Promise<void>;
   receiveTyping: (signal: TypingSignal) => Promise<void>;
