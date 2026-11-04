@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import AppShell from "../../components/shell/AppShell";
+import AppShell, { type RailTab } from "../../components/shell/AppShell";
 import IconRail from "../../components/shell/IconRail";
 import BottomNav from "../../components/shell/BottomNav";
 import { ChatView } from "../../components/ChatView";
@@ -13,8 +13,14 @@ import IconPlus from "../../components/icons/IconPlus";
 import CallsPage from "../calls/page";
 
 type MobileView = "list" | "chat";
-type RailTab = "chats" | "calls" | "starred" | "archived" | "settings";
 type BottomTab = "chats" | "calls" | "settings";
+
+/** Map the mobile bottom-nav tab onto the left icon rail so both stay in sync. */
+const MOBILE_TO_RAIL: Record<BottomTab, RailTab> = {
+  chats: "chats",
+  calls: "calls",
+  settings: "settings",
+};
 
 export default function ChatsPage() {
   const isUnlocked = useVaultStore((state) => state.isUnlocked);
@@ -24,7 +30,6 @@ export default function ChatsPage() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const [railTab, setRailTab] = useState<RailTab>("chats");
   const [mobileTab, setMobileTab] = useState<BottomTab>("chats");
-  const [showFabMenu, setShowFabMenu] = useState(false);
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -33,6 +38,20 @@ export default function ChatsPage() {
       startChatServices();
     }
   }, [isUnlocked]);
+
+  // Keep the icon rail in sync with the mobile bottom nav (and vice versa).
+  const handleMobileTab = (tab: BottomTab) => {
+    setMobileTab(tab);
+    setRailTab(MOBILE_TO_RAIL[tab]);
+    setMobileView("list");
+  };
+
+  const handleRailTab = (tab: RailTab) => {
+    setRailTab(tab);
+    if (tab === "chats" || tab === "calls" || tab === "settings") {
+      setMobileTab(tab as BottomTab);
+    }
+  };
 
   if (!isUnlocked) return null;
 
@@ -45,21 +64,37 @@ export default function ChatsPage() {
     <div className="flex h-full w-full overflow-hidden">
       {/* Desktop 3-column layout */}
       <div className="hidden md:flex w-full h-full relative">
-        <IconRail active={railTab} onSelect={setRailTab} />
+        <IconRail active={railTab} onSelect={handleRailTab} />
         <div className="w-[350px] h-full relative">
-          <AppShell onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
-          {/* Desktop FAB */}
-          <button
-            onClick={() => alert("Open Contact Picker")}
-            className="absolute bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg hover:bg-primary/90"
-            title="New chat"
-          >
-            <IconPlus size={22} />
-          </button>
+          <AppShell
+            railTab={railTab}
+            onOpenIdentity={() => setIdentityOpen(true)}
+            onSelectChat={handleChatSelect}
+          />
+          {/* Desktop FAB (new chat) — only meaningful on the chats tab */}
+          {(railTab === "chats" || railTab === "starred" || railTab === "archived") && (
+            <button
+              onClick={() => alert("Open Contact Picker")}
+              className="absolute bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg hover:bg-primary/90"
+              title="New chat"
+            >
+              <IconPlus size={22} />
+            </button>
+          )}
         </div>
         <main className="flex-1 w-full h-full">
           {railTab === "calls" ? (
-            <CallsPage />
+            <div className="text-sm text-on-surface-variant p-6">
+              Select a conversation to see it here. Use the Calls tab in the left column to browse call history.
+            </div>
+          ) : railTab === "settings" ? (
+            <div className="text-sm text-on-surface-variant p-6">
+              Settings are shown in the middle column. Pick a section to edit it.
+            </div>
+          ) : railTab === "starred" || railTab === "archived" ? (
+            <div className="text-sm text-on-surface-variant p-6">
+              Select a conversation from the {railTab === "starred" ? "starred" : "archived"} list to open it here.
+            </div>
           ) : activeChatId ? (
             <ChatView chatId={activeChatId} />
           ) : (
@@ -68,15 +103,19 @@ export default function ChatsPage() {
         </main>
       </div>
 
-      {/* Mobile single-screen layout */}
+      {/* Mobile single-screen layout — mobileTab now fully switches screens */}
       <div className="flex w-full flex-col md:hidden pb-14">
         {mobileTab === "calls" ? (
           <div className="flex-1">
             <CallsPage />
           </div>
+        ) : mobileTab === "settings" ? (
+          <div className="flex-1">
+            <AppShell railTab="settings" onSelectChat={handleChatSelect} />
+          </div>
         ) : mobileView === "list" ? (
           <div className="flex-1 relative">
-            <AppShell onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
+            <AppShell railTab={railTab === "chats" ? "chats" : railTab} onOpenIdentity={() => setIdentityOpen(true)} onSelectChat={handleChatSelect} />
             {/* Mobile FAB */}
             <button
               onClick={() => alert("Open Contact Picker")}
@@ -94,7 +133,7 @@ export default function ChatsPage() {
       </div>
 
       {/* Mobile bottom nav */}
-      <BottomNav active={mobileTab} onSelect={setMobileTab} />
+      <BottomNav active={mobileTab} onSelect={handleMobileTab} />
 
       <MyIdentityModal open={identityOpen} onClose={() => setIdentityOpen(false)} />
     </div>
@@ -112,7 +151,7 @@ function WelcomePanel() {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
           className="text-primary"

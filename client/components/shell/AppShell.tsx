@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
 import { useChatStore, type ChatState, type ChatSummary } from "../../store/useChatStore";
-import IconChat from "../icons/IconChat";
 import IconStar from "../icons/IconStar";
 import IconTrash2 from "../icons/IconTrash2";
-import IconUsers from "../icons/IconUsers";
 import IconSearch from "../icons/IconSearch";
-import IconX from "../icons/IconX";
 import IconPlus from "../icons/IconPlus";
 import IconPin from "../icons/IconPin";
 import IconBellOff from "../icons/IconBellOff";
@@ -15,7 +13,13 @@ import IconMoreVertical from "../icons/IconMoreVertical";
 import AddContactModal from "../modals/AddContactModal";
 import NewChatModal from "../modals/NewChatModal";
 import AcceptContactModal from "../modals/AcceptContactModal";
+import CallList from "../CallList";
+import { SettingsSidebar } from "../settings/SettingsSidebar";
+import { SettingsView, type SettingsSection } from "../SettingsView";
 import { useVaultStore } from "../../store/useVaultStore";
+import type { CallRecord } from "../../app/calls/page";
+
+export type RailTab = "chats" | "calls" | "starred" | "archived" | "settings";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -38,16 +42,67 @@ const formatTime = (ts: number) => {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdentity?: () => void; onSelectChat?: (chatId: string) => void }) {
+const MOCK_CALLS: CallRecord[] = [
+  {
+    id: "call-1",
+    name: "Ada Lovelace",
+    type: "outgoing",
+    timestamp: Date.now() - 60 * 60 * 1000,
+    duration: 184,
+  },
+  {
+    id: "call-2",
+    name: "Alan Turing",
+    type: "missed",
+    timestamp: Date.now() - 26 * 60 * 60 * 1000,
+  },
+];
+
+/**
+ * Middle column of the app shell. The `railTab` state (owned by
+ * app/chats/page.tsx and driven by IconRail / BottomNav) decides what this
+ * column renders: chat list, call history, settings, or starred/archived.
+ */
+export default function AppShell({
+  railTab = "chats",
+  onOpenIdentity,
+  onSelectChat,
+}: {
+  railTab?: RailTab;
+  onOpenIdentity?: () => void;
+  onSelectChat?: (_chatId: string) => void;
+}) {
+  switch (railTab) {
+    case "calls":
+      return <CallsColumn />;
+    case "settings":
+      return <SettingsColumn />;
+    case "starred":
+      return <StarredColumn onSelectChat={onSelectChat} />;
+    case "archived":
+      return <ArchivedColumn onSelectChat={onSelectChat} />;
+    case "chats":
+    default:
+      return <ChatsColumn onOpenIdentity={onOpenIdentity} onSelectChat={onSelectChat} />;
+  }
+}
+
+/* ---------------------------------- Chats ---------------------------------- */
+
+function ChatsColumn({
+  onOpenIdentity,
+  onSelectChat,
+}: {
+  onOpenIdentity?: () => void;
+  onSelectChat?: (_chatId: string) => void;
+}) {
   const chats = useChatStore((s: ChatState) => s.chats);
   const activeChatId = useChatStore((s: ChatState) => s.activeChatId);
-  const setActiveChat = useChatStore((s: ChatState) => s.setActiveChat);
   const togglePinChat = useChatStore((s: ChatState) => s.togglePinChat);
   const toggleMuteChat = useChatStore((s: ChatState) => s.toggleMuteChat);
   const toggleArchiveChat = useChatStore((s: ChatState) => s.toggleArchiveChat);
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddContact, setShowAddContact] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const [acceptRequest, setAcceptRequest] = useState<{ senderKey: string; packet: unknown } | null>(null);
   const [menuChatId, setMenuChatId] = useState<string | null>(null);
@@ -83,8 +138,13 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
 
   return (
     <aside className="flex h-screen w-full flex-col bg-surface-container overflow-x-hidden">
+      {/* Brand header — logo image replaces the old "UQZERA" wordmark */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <Image src="/LOGO.PNG" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+      </div>
+
       {/* Search */}
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-2 pb-2">
         <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-3 py-1.5">
           <IconSearch size={16} className="text-text-secondary" />
           <input
@@ -158,7 +218,10 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
                     activeChatId === chat.id ? "bg-[#059669]" : ""
                   }`}
                 >
-                  <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
+                  <div
+                    onClick={(e) => { e.stopPropagation(); onOpenIdentity?.(); }}
+                    className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-high"
+                  >
                     <span className="text-sm font-semibold text-on-surface">
                       {chat.alias.slice(0, 2).toUpperCase()}
                     </span>
@@ -225,7 +288,8 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
         )}
       </div>
 
-      <AddContactModal open={showAddContact} onClose={() => setShowAddContact(false)} />
+      {/* Avatar acts as the identity entry point when a handler is provided */}
+      <AddContactModal open={false} onClose={() => undefined} />
       <NewChatModal open={showNewChat} onClose={() => setShowNewChat(false)} />
       <AcceptContactModal
         open={!!acceptRequest}
@@ -234,5 +298,114 @@ export default function AppShell({ onOpenIdentity, onSelectChat }: { onOpenIdent
         onClose={() => setAcceptRequest(null)}
       />
     </aside>
+  );
+}
+
+/* ---------------------------------- Calls ---------------------------------- */
+
+function CallsColumn() {
+  const [activeCall, setActiveCall] = useState<CallRecord | null>(null);
+  return (
+    <div className="flex h-screen w-full flex-col bg-surface-container">
+      <header className="border-b border-hairline px-4 py-3">
+        <h1 className="text-sm font-semibold text-on-surface">Calls</h1>
+      </header>
+      <div className="flex-1 overflow-hidden">
+        {activeCall ? (
+          <div className="p-4 text-sm text-on-surface-variant">
+            Ongoing call with {activeCall.name}. Use the Calls screen to manage it.
+          </div>
+        ) : (
+          <CallList calls={MOCK_CALLS} onCall={(call) => setActiveCall(call)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------- Settings -------------------------------- */
+
+function SettingsColumn() {
+  const [section, setSection] = useState<SettingsSection>("account");
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-surface-container">
+      <SettingsSidebar active={section} onSelect={setSection} />
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <SettingsView section={section} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- Starred / Archived ---------------------------- */
+
+function StarredColumn({ onSelectChat }: { onSelectChat?: (chatId: string) => void }) {
+  const chats = useChatStore((s: ChatState) => s.chats);
+  const starred = chats.filter((c) => c.favorite || c.pinned);
+  return (
+    <aside className="flex h-screen w-full flex-col bg-surface-container">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <Image src="/LOGO.PNG" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+      </div>
+      <div className="px-4 py-2 flex items-center gap-2">
+        <IconStar size={16} className="text-primary" />
+        <span className="text-sm font-semibold">Starred</span>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {starred.length === 0 ? (
+          <Placeholder text="No starred chats yet. Star a conversation to pin it here." />
+        ) : (
+          starred.map((chat) => <ChatRow key={chat.id} chat={chat} onSelectChat={onSelectChat} />)
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function ArchivedColumn({ onSelectChat }: { onSelectChat?: (chatId: string) => void }) {
+  const chats = useChatStore((s: ChatState) => s.chats);
+  const archived = chats.filter((c) => !!c.archived);
+  return (
+    <aside className="flex h-screen w-full flex-col bg-surface-container">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <Image src="/LOGO.PNG" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+      </div>
+      <div className="px-4 py-2 flex items-center gap-2">
+        <IconTrash2 size={16} className="text-primary" />
+        <span className="text-sm font-semibold">Archived</span>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {archived.length === 0 ? (
+          <Placeholder text="Nothing archived. Archived conversations will show up here." />
+        ) : (
+          archived.map((chat) => <ChatRow key={chat.id} chat={chat} onSelectChat={onSelectChat} />)
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function ChatRow({ chat, onSelectChat }: { chat: ChatSummary; onSelectChat?: (chatId: string) => void }) {
+  return (
+    <button
+      onClick={() => onSelectChat?.(chat.id)}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface"
+    >
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-high">
+        <span className="text-sm font-semibold text-on-surface">{chat.alias.slice(0, 2).toUpperCase()}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm font-semibold text-on-surface">{chat.alias}</p>
+        <p className="text-[10px] text-on-surface-variant">{formatTime(chat.updatedAt)}</p>
+      </div>
+    </button>
+  );
+}
+
+function Placeholder({ text }: { text: string }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6 text-center text-xs text-on-surface-variant">
+      {text}
+    </div>
   );
 }
