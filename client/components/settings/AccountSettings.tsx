@@ -59,14 +59,14 @@ export default function AccountSettings({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-full">
       {ACCOUNT_ACTIONS.map(({ id, label, description, icon: Icon, variant, disabled }) => (
         <div
           key={id}
-          className="rounded-2xl border border-outline-variant/50 bg-surface-container/60 p-4"
+          className="w-full min-w-0 rounded-2xl border border-outline-variant/50 bg-surface-container/60 p-4"
         >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
+          <div className="flex items-center justify-between gap-4 w-full min-w-0">
+            <div className="flex items-start gap-3 min-w-0">
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                   variant === "danger"
@@ -74,17 +74,17 @@ export default function AccountSettings({
                     : "bg-accent-subtle text-accent-emerald"
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={16} className="shrink-0" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p
-                  className={`text-sm font-medium ${
+                  className={`text-sm font-medium break-words ${
                     variant === "danger" ? "text-status-danger" : "text-on-surface"
                   }`}
                 >
                   {label}
                 </p>
-                <p className="mt-0.5 text-xs text-outline">{description}</p>
+                <p className="mt-0.5 text-xs text-outline break-words">{description}</p>
               </div>
             </div>
             <button
