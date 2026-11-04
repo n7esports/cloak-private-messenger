@@ -6,12 +6,6 @@ module.exports = (phase) => ({
   images: {
     unoptimized: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   distDir:
     process.env.UQZERA_BUILD_OUTPUT ||
     (phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next'),
