@@ -141,7 +141,7 @@ function ChatsColumn({
     <aside className="flex h-screen w-full flex-col bg-surface-container overflow-x-hidden">
       {/* Brand header — logo image replaces the old "UQZERA" wordmark */}
       <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-        <Image src="/logo.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+        <Image src="/logo-withoutbg.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
       </div>
 
       {/* Search */}
@@ -346,7 +346,7 @@ function StarredColumn({ onSelectChat }: { onSelectChat?: (chatId: string) => vo
   return (
     <aside className="flex h-screen w-full flex-col bg-surface-container">
       <div className="flex items-center gap-2 px-4 py-3">
-        <Image src="/logo.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+        <Image src="/logo-withoutbg.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
       </div>
       <div className="px-4 py-2 flex items-center gap-2">
         <IconStar size={16} className="text-primary" />
@@ -369,7 +369,7 @@ function ArchivedColumn({ onSelectChat }: { onSelectChat?: (chatId: string) => v
   return (
     <aside className="flex h-screen w-full flex-col bg-surface-container">
       <div className="flex items-center gap-2 px-4 py-3">
-        <Image src="/logo.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
+        <Image src="/logo-withoutbg.png" alt="UQZERA" width={128} height={32} className="h-8 w-auto" unoptimized />
       </div>
       <div className="px-4 py-2 flex items-center gap-2">
         <IconTrash2 size={16} className="text-primary" />
