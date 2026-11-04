@@ -41,8 +41,10 @@ export default function CallList({ calls, onCall }: CallListProps) {
         )}
         <div className="flex flex-col">
           {calls.map((call) => (
-            <button
+            <div
               key={call.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onCall(call)}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-high"
             >
@@ -73,7 +75,7 @@ export default function CallList({ calls, onCall }: CallListProps) {
               >
                 <IconPhone size={16} />
               </button>
-            </button>
+            </div>
           ))}
         </div>
       </div>

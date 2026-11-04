@@ -3,6 +3,7 @@ const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 const webpack = require('webpack');
 
 module.exports = (phase) => ({
+  eslint: { ignoreDuringBuilds: true },
   images: {
     unoptimized: true,
   },

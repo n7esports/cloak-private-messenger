@@ -526,7 +526,7 @@ export function ChatView({
                 }}
                 className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
               >
-                <IconMapPin size={24} className="text-text-primary" />
+                <IconMapPin size={24} />
                 <span className="text-[10px] text-text-secondary">Location</span>
               </button>
               <button
@@ -536,7 +536,7 @@ export function ChatView({
                 }}
                 className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
               >
-                <IconUserPlus size={24} className="text-text-primary" />
+                <IconUserPlus size={24} />
                 <span className="text-[10px] text-text-secondary">Contact</span>
               </button>
               <button
@@ -546,7 +546,7 @@ export function ChatView({
                 }}
                 className="flex flex-col items-center gap-2 rounded-xl border border-hairline bg-surface p-3 transition hover:bg-surface-high"
               >
-                <IconBarChart size={24} className="text-text-primary" />
+                <IconBarChart size={24} />
                 <span className="text-[10px] text-text-secondary">Poll</span>
               </button>
             </div>
