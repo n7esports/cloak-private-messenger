@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jwtVerify } from "jose/jwt/verify";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -17,9 +18,13 @@ async function virusScanStub(_data: ArrayBuffer): Promise<boolean> {
 }
 
 async function sign(payload: string): Promise<string> {
+  const secret = process.env.UPLOAD_HMAC_SECRET;
+  if (!secret) {
+    throw new Error("UPLOAD_HMAC_SECRET is not configured");
+  }
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode("upload-secret"),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -28,8 +33,33 @@ async function sign(payload: string): Promise<string> {
   return Buffer.from(sig).toString("hex");
 }
 
+// Loose End 3: verify the app's HttpOnly session cookie (same jose verification
+// logic as middleware.ts) instead of a Supabase Auth Bearer token.
+async function hasValidSession(request: Request): Promise<boolean> {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const match = cookieHeader.match(/(?:^|;\s*)uqzera_session=([^;]+)/);
+  const token = match ? decodeURIComponent(match[1]) : undefined;
+  if (!token) return false;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) return false; // fail closed if misconfigured
+  try {
+    await jwtVerify(token, new TextEncoder().encode(secret), {
+      issuer: "uqzera",
+      audience: "uqzera-web",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
+    // F-06 fix: require a valid authenticated session before accepting uploads.
+    if (!(await hasValidSession(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const form = await request.formData();
     const file = form.get("file") as File | null;
     if (!file) {

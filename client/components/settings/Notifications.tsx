@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useChatStore } from "../../store/useChatStore";
 import IconBellOff from "../icons/IconBellOff";
 
@@ -74,7 +74,7 @@ export default function NotificationSettings() {
   );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (_v: boolean) => void; }) {
   return (
     <button
       role="switch"

@@ -47,7 +47,7 @@ export default function PrivacySettings() {
   );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (_v: boolean) => void }) {
   return (
     <button
       role="switch"

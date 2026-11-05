@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "dexie": "^4.4.6",
     "framer-motion": "^12.43.0",
+    "jose": "^6.2.15",
     "jsqr": "^1.4.0",
     "libsodium-wrappers-sumo": "^0.8.4",
     "next": "^14.0.0",

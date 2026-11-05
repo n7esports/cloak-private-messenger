@@ -1,44 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  verifyChallengeWords,
-  disposeMnemonic,
-  MNEMONIC_CHALLENGE_POSITIONS,
-} from "@/lib/recovery";
+import Link from "next/link";
+import { validateRecoveryPhrase, disposeMnemonic } from "@/lib/recovery";
 
 export default function UnlockRecoveryPage() {
   const router = useRouter();
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [phrase, setPhrase] = useState("");
+  const phraseRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const storedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      storedRef.current = window.localStorage.getItem("UQZERA.recovery.v1");
-    }
-    return () => {
-      disposeMnemonic(storedRef.current || "");
-      storedRef.current = null;
-    };
-  }, []);
 
   const handleVerify = () => {
-    const mnemonic = storedRef.current;
-    if (!mnemonic) {
-      setError("No recovery phrase found. Please set one up first.");
+    setError(null);
+    const normalized = phrase.trim().replace(/\s+/g, " ");
+    if (normalized.length === 0) {
+      setError("Please enter your recovery phrase.");
       return;
     }
-    const answerList = MNEMONIC_CHALLENGE_POSITIONS.map((pos) => answers[pos]?.trim() || "");
-    if (answerList.some((a) => a.length === 0)) {
-      setError("Please fill in all challenge words.");
-      return;
-    }
-    const ok = verifyChallengeWords(mnemonic, MNEMONIC_CHALLENGE_POSITIONS, answerList);
+    // SECURITY FIX (F-14 follow-up): the recovery phrase is entered by the
+    // user here and validated against the BIP-39 checksum locally. It is
+    // NEVER read from or written to localStorage — the setup flow no longer
+    // persists it anywhere. The transient copy is released immediately after
+    // validation.
+    phraseRef.current = normalized;
+    const ok = validateRecoveryPhrase(phraseRef.current);
+    disposeMnemonic(phraseRef.current);
+    phraseRef.current = null;
     if (!ok) {
-      setError("One or more words are incorrect. Please try again.");
+      setError("That recovery phrase is not valid. Check for typos or missing words.");
       return;
     }
     setDone(true);
@@ -52,7 +43,8 @@ export default function UnlockRecoveryPage() {
             Verified
           </h1>
           <p className="mt-2 text-sm text-secondary">
-            Recovery phrase confirmed.
+            Recovery phrase confirmed. Your encrypted vault stays on this
+            device; nothing about this phrase was stored in the browser.
           </p>
           <button
             onClick={() => router.replace("/lock")}
@@ -72,25 +64,22 @@ export default function UnlockRecoveryPage() {
           Recovery
         </h1>
         <p className="mt-2 text-sm text-secondary">
-          Enter words {MNEMONIC_CHALLENGE_POSITIONS.join(", ")} from your recovery phrase.
+          Enter the full 24-word recovery phrase you wrote down during setup.
+          We only check its checksum locally — the phrase never leaves this
+          device and is not stored anywhere.
         </p>
 
-        <div className="mt-6 flex flex-col gap-3">
-          {MNEMONIC_CHALLENGE_POSITIONS.map((pos) => (
-            <div key={pos} className="flex items-center gap-3">
-              <span className="w-8 text-right text-xs text-outline">#{pos}</span>
-              <input
-                type="text"
-                value={answers[pos] || ""}
-                onChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [pos]: e.target.value }))
-                }
-                className="flex-1 rounded-xl border border-default bg-input px-4 py-2 text-sm text-primary outline-none focus:border-default"
-                autoComplete="off"
-              />
-            </div>
-          ))}
-        </div>
+        <textarea
+          value={phrase}
+          onChange={(e) => setPhrase(e.target.value)}
+          rows={5}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          placeholder="word word word …"
+          className="mt-6 w-full rounded-xl border border-default bg-input px-4 py-3 font-mono text-sm text-primary outline-none focus:border-default"
+        />
 
         {error && <p className="mt-3 text-sm text-error">{error}</p>}
 
@@ -100,6 +89,13 @@ export default function UnlockRecoveryPage() {
         >
           Verify
         </button>
+
+        <p className="mt-4 text-center text-xs text-secondary">
+          Lost your phrase?{" "}
+          <Link href="/setup/recovery" className="text-accent-emerald hover:underline">
+            Generate a new one
+          </Link>
+        </p>
       </div>
     </div>
   );

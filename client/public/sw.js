@@ -9,6 +9,8 @@
 
 const SHELL_CACHE = 'UQZERA-shell-v1';
 const SHELL_ASSETS = ['/', '/manifest.json', '/favicon.svg'];
+// F-42: strict TTL for the offline navigation fallback (1 hour).
+const SHELL_TTL_MS = 60 * 60 * 1000;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -61,19 +63,47 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Navigations: network-first so a fresh shell is always preferred, falling
-  // back to the cached shell when offline.
+  // back to the cached shell when offline. F-39/F-42: authenticated HTML must
+  // never be persisted — responses marked no-store/no-cache/private are passed
+  // through untouched, and everything else is stored with a strict TTL and
+  // pruned on activation.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          void caches.open(SHELL_CACHE).then((cache) => cache.put('/', copy));
+          const cacheControl = (response.headers.get('cache-control') || '').toLowerCase();
+          const mustNotStore =
+            !response.ok ||
+            cacheControl.includes('no-store') ||
+            cacheControl.includes('no-cache') ||
+            cacheControl.includes('private');
+          if (!mustNotStore) {
+            const copy = response.clone();
+            void caches.open(SHELL_CACHE).then((cache) => {
+              cache.put('/', copy);
+              cache.put('/__shell_cached_at', new Response(String(Date.now())));
+            });
+          }
           return response;
         })
         .catch(() =>
           caches
             .match('/')
-            .then((cached) => cached || caches.match('/index.html'))
+            .then(async (cached) => {
+              if (!cached) return caches.match('/index.html');
+              // Strict TTL: an expired shell fallback is dropped rather than
+              // served, so stale authenticated HTML cannot linger in the cache.
+              const stamp = await caches.match('/__shell_cached_at');
+              const cachedAt = stamp ? Number(await stamp.text()) : 0;
+              if (!cachedAt || Date.now() - cachedAt > SHELL_TTL_MS) {
+                void caches.open(SHELL_CACHE).then((cache) => {
+                  cache.delete('/');
+                  cache.delete('/__shell_cached_at');
+                });
+                return undefined;
+              }
+              return cached;
+            })
         )
     );
     return;
@@ -99,6 +129,9 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
+  // F-42: never render push payload content. The server sends opaque signals
+  // only; even if a malicious/misconfigured payload carried text, we ignore
+  // event.data entirely so no message content can leak onto the lock screen.
   event.waitUntil(
     self.registration.showNotification('UQZERA', {
       body: 'New encrypted message received',

@@ -36,7 +36,7 @@ export function zeroizeUint8Array(buffer: Uint8Array): void {
   buffer.fill(0);
 }
 
-export function disposeMnemonic(mnemonic: string): void {
+export function disposeMnemonic(_mnemonic: string): void {
   // Strings are immutable in JS. Any sensitive material derived from the
   // mnemonic must live in Uint8Arrays and be zeroized explicitly. The string
   // itself is released by removing references (React state cleanup, nulling vars).

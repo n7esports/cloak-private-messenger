@@ -450,12 +450,12 @@ export async function createRatchetSession(
   );
   const firstToSecond = sodium.crypto_generichash(
     sodium.crypto_secretbox_KEYBYTES,
-    textEncoder.encode("cloak-chain-step-v"),
+    textEncoder.encode("cloak-chain-v1|initiator-to-responder"),
     root,
   );
   const secondToFirst = sodium.crypto_generichash(
     sodium.crypto_secretbox_KEYBYTES,
-    textEncoder.encode("cloak-chain-step-v"),
+    textEncoder.encode("cloak-chain-v1|responder-to-initiator"),
     root,
   );
   shared.fill(0);

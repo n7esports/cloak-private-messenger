@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { useChatStore, type ChatState, type ChatSummary } from "../../store/useChatStore";
 import IconChat from "../icons/IconChat";
 import IconChannel from "../icons/IconChannel";
@@ -59,7 +58,6 @@ export default function AppShell({ onOpenIdentity }: { onOpenIdentity?: () => vo
   const [showAddContact, setShowAddContact] = useState(false);
   const [acceptRequest, setAcceptRequest] = useState<{ senderKey: string; packet: unknown } | null>(null);
   const pendingRequests = useChatStore((s: ChatState) => s.pendingRequests);
-  const acceptPendingRequest = useChatStore((s: ChatState) => s.acceptPendingRequest);
   const dismissPendingRequest = useChatStore((s: ChatState) => s.dismissPendingRequest);
   const isUnlocked = useVaultStore((s) => s.isUnlocked);
   const loadChats = useChatStore((s: ChatState) => s.loadChats);

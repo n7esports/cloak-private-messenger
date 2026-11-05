@@ -21,7 +21,7 @@ export function SettingsSidebar({
   onSelect,
 }: {
   active: SectionId;
-  onSelect: (id: SectionId) => void;
+  onSelect: (_id: SectionId) => void;
 }) {
   return (
     <aside className="flex h-full w-60 flex-col border-r border-hairline bg-surface-container">

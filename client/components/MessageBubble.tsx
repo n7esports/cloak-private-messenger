@@ -3,15 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useChatStore, type ChatMessage } from "../store/useChatStore";
-import IconCopy from "./icons/IconCopy";
 import IconDownload from "./icons/IconDownload";
 import IconFile from "./icons/IconFile";
-import IconFlag from "./icons/IconFlag";
-import IconForward from "./icons/IconForward";
-import IconPin from "./icons/IconPin";
-import IconReply from "./icons/IconReply";
-import IconStar from "./icons/IconStar";
-import IconTrash from "./icons/IconTrash";
 import IconX from "./icons/IconX";
 import IconCheck from "./icons/IconCheck";
 import IconCheckDouble from "./icons/IconCheckDouble";
@@ -27,7 +20,6 @@ function formatBytes(bytes: number): string {
 }
 
 export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
-  const [showMenu, setShowMenu] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
 
   const alignment = isMe ? "justify-end" : "justify-start";
@@ -49,10 +41,6 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
             });
           }
         }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setShowMenu(true);
-        }}
       >
         {/* Reply preview */}
         {message.replyTo && (
@@ -67,10 +55,7 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
           <div className="mb-2 flex items-center gap-2 rounded-lg border border-border-default bg-surface/60 px-3 py-2">
             <IconFile size={18} />
             <span className="flex-1 truncate text-xs text-text-primary">{message.attachment.name}</span>
-            <span className="text-[10px] text-text-secondary">{(message.attachment.size / 1024).toFixed(0)} KB</span>
-            <button className="rounded border border-border-default px-2 py-0.5 text-[10px] text-text-primary transition hover:bg-surface-high">
-              Decrypt
-            </button>
+            <span className="text-[10px] text-text-secondary">{formatBytes(message.attachment.size)}</span>
           </div>
         )}
 
@@ -105,33 +90,6 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
             {new Date(message.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
           </span>
         </div>
-
-        {/* Context menu */}
-        {showMenu && (
-          <div className="absolute top-full mt-1 w-40 rounded-lg border border-hairline bg-surface-container shadow-panel z-50">
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconReply size={14} /> Reply
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconCopy size={14} /> Copy
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconForward size={14} /> Forward
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconPin size={14} /> Pin
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconStar size={14} /> Star
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-surface-high">
-              <IconFlag size={14} /> Report
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-surface-high">
-              <IconTrash size={14} /> Delete
-            </button>
-          </div>
-        )}
 
         {/* Media viewer */}
         {showMedia && message.attachment?.data && (

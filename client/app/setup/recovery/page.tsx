@@ -16,6 +16,7 @@ export default function SetupRecoveryPage() {
   const [recovery, setRecovery] = useState<RecoveryResult | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [savedConfirmed, setSavedConfirmed] = useState(false);
   const [done, setDone] = useState(false);
   const seedRef = useRef<Uint8Array | null>(null);
   const mnemonicRef = useRef<string | null>(null);
@@ -51,11 +52,10 @@ export default function SetupRecoveryPage() {
       setError("One or more words are incorrect. Please try again.");
       return;
     }
-    // Store mnemonic for recovery entry. In production, this would be
-    // encrypted and persisted server-side or via secure storage.
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("UQZERA.recovery.v1", recovery.mnemonic);
-    }
+    // SECURITY FIX (F-14): the mnemonic is intentionally NOT persisted to
+    // localStorage (or any other browser storage). The user has already
+    // confirmed they wrote it down via the challenge-word check above and
+    // the explicit "I saved my recovery phrase" confirmation below.
     setDone(true);
   };
 
@@ -67,7 +67,9 @@ export default function SetupRecoveryPage() {
             Recovery saved
           </h1>
           <p className="mt-2 text-sm text-secondary">
-            Your recovery phrase has been stored. Keep it safe.
+            Your recovery phrase was verified and is not stored on this
+            device. Keep your written copy safe — it is the only way to
+            recover your account.
           </p>
           <button
             onClick={() => router.replace("/chats")}
@@ -137,11 +139,26 @@ export default function SetupRecoveryPage() {
           ))}
         </div>
 
+        <label className="mt-6 flex items-start gap-3 text-sm text-secondary">
+          <input
+            type="checkbox"
+            checked={savedConfirmed}
+            onChange={(e) => setSavedConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-emerald"
+          />
+          <span>
+            I have written down all 24 words in order and stored them in a
+            safe place. UQZERA cannot recover this phrase for me — it is
+            never saved on this device.
+          </span>
+        </label>
+
         {error && <p className="mt-3 text-sm text-error">{error}</p>}
 
         <button
           onClick={handleVerify}
-          className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90"
+          disabled={!savedConfirmed}
+          className="mt-6 w-full rounded-xl accent-emerald py-3 text-sm font-medium transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Verify and save
         </button>

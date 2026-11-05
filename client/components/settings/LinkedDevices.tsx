@@ -19,8 +19,8 @@ export default function LinkedDevices({
   showToast,
 }: {
   devices: DeviceSession[];
-  removeDevice: (id: string) => void;
-  showToast: (toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
+  removeDevice: (_id: string) => void;
+  showToast: (_toast: { id: string; message: string; type?: "success" | "info" | "warning" }) => void;
 }) {
   const pairingCode = useMemo(() => generatePairingCode(), []);
 
@@ -89,6 +89,9 @@ export default function LinkedDevices({
               {!d.isCurrent && (
                 <button
                   onClick={() => {
+                    // F-13: local-only revocation — the device key/session is removed
+                    // from this client's state, but the server has no idea yet.
+                    console.warn("TODO: Implement server-side revocation");
                     removeDevice(d.id);
                     showToast({
                       id: crypto.randomUUID(),

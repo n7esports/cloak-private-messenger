@@ -57,7 +57,6 @@ export async function verifyTOTP(secret: string, token: string): Promise<boolean
   const counter = Math.floor(epoch / 30);
   const window = 1;
 
-  const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
     keyBytes as unknown as ArrayBuffer,

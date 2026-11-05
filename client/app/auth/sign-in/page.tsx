@@ -19,19 +19,23 @@ export default function SignInPage() {
       pin: (form.elements.namedItem("pin") as HTMLInputElement).value,
     };
     try {
-      const res = await fetch("/api/auth/sign-in", {
+      const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error || "Invalid credentials");
+        if (res.status === 500) {
+          setError("Server error, check terminal");
+        } else {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error || "Invalid credentials");
+        }
         setLoading(false);
         return;
       }
-      router.push("/chats");
-      router.refresh();
+      setLoading(false);
+      router.replace("/chats");
     } catch {
       setError("Invalid credentials");
       setLoading(false);

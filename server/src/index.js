@@ -21,6 +21,9 @@ const DEFAULT_MAX_CONNECTIONS = 500;
 const DEFAULT_RELAY_RATE_LIMIT = 60;
 const DEFAULT_RELAY_RATE_WINDOW_MS = 10_000;
 const RELAY_RATE_MAX_ENTRIES = 10_000;
+// Per-IP limiter for the relay endpoints: max 30 requests per minute.
+const IP_RATE_LIMIT = 30;
+const IP_RATE_WINDOW_MS = 60_000;
 const MAX_ROUTES_PER_CONNECTION = 64;
 const WS_PING_INTERVAL_MS = 30_000;
 const WS_PING_TIMEOUT_MS = 10_000;
@@ -50,6 +53,10 @@ const allowedOrigins = new Set([
 // 32-byte length and canonical round-trip are enforced in validPublicKey
 // itself; this gates character set and shape only.
 const PUBLIC_KEY_RE = /^[A-Za-z0-9+/]{43}=$/;
+// NEW-11: base64url form of a 32-byte key — same alphabet as queue ids but
+// exactly 43 chars with no '=' padding (32 bytes -> 43 full chars + 1 leftover
+// nibble, which base64url encodes without the trailing '=').
+const PUBLIC_KEY_URL_RE = /^[A-Za-z0-9_-]{43}$/;
 // Queue ids are minted here as randomBytes(16).toString("base64url"):
 // base64url alphabet, no padding, exactly 22 chars.
 const QUEUE_ID_RE = /^[A-Za-z0-9_-]{22}$/;
@@ -59,6 +66,11 @@ const routes = new Map();
 const subscribers = new Map();
 const relayRateLimits = new Map();
 let queuedBytes = 0;
+// F-19/F-21: the legacy queue API (create/push/pull, `queues` map) is counted
+// against the same server-wide MAX_QUEUED_BYTES budget as the /relay route's
+// per-recipient queues. Without this, a caller could exhaust memory through
+// the legacy path even though pushRoute() was budget-checked.
+let legacyQueuedBytes = 0;
 let liveConnections = 0;
 
 // Structured logging (M3): append-only JSONL of security-relevant events so
@@ -124,6 +136,31 @@ function consumeRelayRateAllowance(key, limit, windowMs) {
   return { allowed: entry.count <= limit, retryAfterMs: Math.max(0, entry.resetAt - now) };
 }
 
+// Basic in-memory per-IP rate limiter (sliding window): max 30 requests per
+// minute. Once an entry hits its cap it is blocked until the window resets;
+// entries are pruned lazily and the map is size-capped so a spoofing flood
+// cannot exhaust memory through the limiter itself.
+const ipRequestLog = new Map();
+
+function checkIpRateLimit(ip, limit = IP_RATE_LIMIT, windowMs = IP_RATE_WINDOW_MS) {
+  const now = Date.now();
+  let record = ipRequestLog.get(ip);
+  if (!record || now >= record.resetAt) {
+    record = { count: 0, resetAt: now + windowMs };
+    ipRequestLog.set(ip, record);
+  }
+  if (record.count >= limit) {
+    return { allowed: false, retryAfterMs: Math.max(0, record.resetAt - now) };
+  }
+  record.count += 1;
+  if (ipRequestLog.size > RELAY_RATE_MAX_ENTRIES) {
+    for (const [key, entry] of ipRequestLog) {
+      if (now >= entry.resetAt) ipRequestLog.delete(key);
+    }
+  }
+  return { allowed: true, retryAfterMs: 0 };
+}
+
 function send(socket, value) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value));
 }
@@ -139,12 +176,21 @@ function isAllowedOrigin(origin) {
 }
 
 function validPublicKey(value) {
-  return (
-    typeof value === "string" &&
-    PUBLIC_KEY_RE.test(value) &&
-    Buffer.from(value, "base64").length === 32 &&
-    Buffer.from(value, "base64").toString("base64") === value
-  );
+  // NEW-11: accept both standard Base64 (client lib sodium `to_base64`, padded
+  // with '=') and Base64URL (no padding, '-_/+' substitutions), since callers
+  // outside the browser may encode keys in either alphabet. Canonical
+  // round-trip on the matching alphabet is still enforced so malleable
+  // encodings are rejected.
+  if (typeof value !== "string") return false;
+  if (PUBLIC_KEY_RE.test(value)) {
+    const decoded = Buffer.from(value, "base64");
+    return decoded.length === 32 && decoded.toString("base64") === value;
+  }
+  if (PUBLIC_KEY_URL_RE.test(value)) {
+    const decoded = Buffer.from(value, "base64url");
+    return decoded.length === 32 && decoded.toString("base64url") === value;
+  }
+  return false;
 }
 
 function validPacket(packet) {
@@ -168,8 +214,8 @@ function validPacket(packet) {
     typeof packet.envelope.ephemeralPubKey !== "string" ||
     !validPublicKey(packet.envelope.ephemeralPubKey) ||
     typeof packet.envelope.nonce !== "string" ||
-    packet.nonce.length === 0 ||
-    packet.nonce.length > 256 ||
+    packet.envelope.nonce.length === 0 ||
+    packet.envelope.nonce.length > 256 ||
     typeof packet.envelope.ciphertext !== "string" ||
     packet.envelope.ciphertext.length === 0 ||
     packet.envelope.ciphertext.length > 10_000_000 ||
@@ -346,7 +392,17 @@ function processRelayRequest(request, respond, socket = null) {
       respond({ status: "error", message: "Queue not found or full", id: request.id });
       return true;
     }
-    pending.push({ payload: request.payload, createdAt: Date.now() });
+    // F-19/F-21: enforce the same global queued-bytes budget the /relay route
+    // uses. Entry bytes are measured like queueEntryBytes() so both paths draw
+    // from an equivalent accounting of the server-wide memory limit.
+    const entryBytes = queueEntryBytes({ id: request.queueId, message: request.payload });
+    if (legacyQueuedBytes + entryBytes > MAX_QUEUED_BYTES) {
+      securityLog("legacy_queue_budget_exhausted", { queueId: request.queueId });
+      respond({ status: "error", message: "Server queue memory budget exhausted", id: request.id });
+      return true;
+    }
+    legacyQueuedBytes += entryBytes;
+    pending.push({ payload: request.payload, createdAt: Date.now(), entryBytes });
     respond({ status: "ok", action: "push", queueId: request.queueId, id: request.id });
     return true;
   }
@@ -362,6 +418,9 @@ function processRelayRequest(request, respond, socket = null) {
       return true;
     }
     const messages = pending.map((entry) => entry.payload);
+    // F-19/F-21: release the pulled entries' bytes back to the global budget.
+    for (const entry of pending) legacyQueuedBytes -= entry.entryBytes ?? 0;
+    if (legacyQueuedBytes < 0) legacyQueuedBytes = 0;
     queues.delete(request.queueId);
     respond({ status: "ok", action: "pull", queueId: request.queueId, messages, id: request.id });
     return true;
@@ -385,7 +444,14 @@ function pruneExpiredMessages() {
 function pruneExpiredQueues() {
   const cutoff = Date.now() - MESSAGE_TTL_MS;
   for (const [queueId, pending] of queues) {
-    const kept = pending.filter((entry) => entry.createdAt > cutoff);
+    // F-19/F-21: expired legacy entries release their bytes back to the global
+    // budget, mirroring removeQueuedBytes() for the /relay route queues.
+    const kept = [];
+    for (const entry of pending) {
+      if (entry.createdAt > cutoff) kept.push(entry);
+      else legacyQueuedBytes -= entry.entryBytes ?? 0;
+    }
+    if (legacyQueuedBytes < 0) legacyQueuedBytes = 0;
     if (kept.length === 0) queues.delete(queueId);
     else if (kept.length !== pending.length) queues.set(queueId, kept);
   }
@@ -421,12 +487,9 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
-  // Per-IP rate limit on the relay POST endpoint (C4/H2).
-  const rate = consumeRelayRateAllowance(
-    `http:${clientIp}`,
-    RELAY_HTTP_RATE_LIMIT,
-    RELAY_HTTP_RATE_WINDOW_MS,
-  );
+  // Per-IP rate limit on the relay POST endpoint (C4/H2), backed by the
+  // basic in-memory limiter: max 30 requests/minute/IP -> 429 Too Many Requests.
+  const rate = checkIpRateLimit(`http:${clientIp}`);
   if (!rate.allowed) {
     securityLog("rate_limited", { clientIp, transport: "http" });
     response.writeHead(429, { "retry-after": String(Math.ceil(rate.retryAfterMs / 1000)) }).end();
@@ -535,6 +598,12 @@ wss.on("connection", (socket, request) => {
   };
 
   socket.on("message", (message) => {
+    // Per-IP rate limit on relay traffic: max 30 requests/minute/IP.
+    if (!checkIpRateLimit(`ws:${clientIp}`).allowed) {
+      securityLog("rate_limited", { clientIp, transport: "websocket_ip_limit" });
+      send(socket, { status: "error", message: "Too many relay requests" });
+      return;
+    }
     if (!allowMessage()) {
       securityLog("rate_limited", { clientIp, transport: "websocket" });
       send(socket, { status: "error", message: "Too many relay requests" });

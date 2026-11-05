@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useVaultStore } from "../store/useVaultStore";
-import { useChatStore } from "../store/useChatStore";
 
 export function Providers({ children }: { children: React.ReactNode }) {
  const [isReady, setIsReady] = useState(false);
